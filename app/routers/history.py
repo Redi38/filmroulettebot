@@ -1,0 +1,76 @@
+"""History commands."""
+from __future__ import annotations
+
+from datetime import datetime
+
+from aiogram import Router
+from aiogram.filters import Command
+from aiogram.types import Message
+
+from app.db.database import load_history, clear_user_history, get_stats
+from app.utils import esc
+
+router = Router()
+
+CAT_MAP = {
+    "movies": "Фильмы",
+    "cartoons": "Мультфильмы",
+    "series": "Сериалы",
+    "dc": "DC",
+    "marvel": "Marvel"
+}
+
+
+@router.message(Command("history"))
+async def history_cmd(msg: Message) -> None:
+    hist = await load_history(msg.from_user.id)  # type: ignore[union-attr]
+    if not hist:
+        await msg.answer("📜 История пуста.")
+        return
+
+    films_list = []
+    series_list = []
+
+    for h in hist:
+        cat_code = h["category"]
+        title = h["title"]
+        dt = datetime.fromtimestamp(h["timestamp"]).strftime("%d.%m.%Y %H:%M")
+        cat_ru = CAT_MAP.get(cat_code, cat_code)
+
+        # Строка строго по твоему шаблону
+        line = f"{esc(title)} [{cat_ru}] — {dt}"
+
+        if cat_code == "series":
+            series_list.append(line)
+        else:
+            # Фильмы, мульты, dc и marvel идут в общую первую категорию
+            films_list.append(line)
+
+    parts = []
+    if films_list:
+        lines = "\n".join(f"{i+1}. {line}" for i, line in enumerate(films_list))
+        parts.append(f"🎬 Фильмы и мультфильмы:\n{lines}")
+
+    if series_list:
+        lines = "\n".join(f"{i+1}. {line}" for i, line in enumerate(series_list))
+        parts.append(f"📺 Сериалы:\n{lines}")
+
+    text = "\n\n".join(parts)
+    await msg.answer(text)
+
+
+@router.message(Command("clear_history"))
+async def clear_history_cmd(msg: Message) -> None:
+    await clear_user_history(msg.from_user.id)  # type: ignore[union-attr]
+    await msg.answer("🧹 Ваша история очищена.")
+
+
+@router.message(Command("stats"))
+async def stats_cmd(msg: Message) -> None:
+    d = await get_stats(msg.from_user.id)  # type: ignore[union-attr]
+    await msg.answer(
+        f"📈 Статистика просмотра:\n"
+        f"• Фильмы: {d['movies']}\n"
+        f"• Мульты: {d['cartoons']}\n"
+        f"• Сериалы: {d['series']}"
+    )

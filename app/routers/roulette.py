@@ -25,14 +25,8 @@ from app.utils import esc
 logger = logging.getLogger(__name__)
 router = Router()
 
-# Лёгкий кэш "последней случайной категории" для кнопки "🔄 Начать".
-# Не пользовательский ввод и не критичен при потере — держим в памяти без FSM.
 _last_category: dict[int, str] = {}
 
-# Кэш "последний показанный на карточке ПОЛНЫЙ title" по chat_id.
-# Нужен потому, что callback_data (Confirm/Reroll/Sequel) хранит title,
-# усечённый до 30 символов — этого достаточно для кнопок, но недостаточно
-# для точных операций с БД (delete), если название длиннее 30 символов.
 _full_title_cache: dict[int, str] = {}
 
 TMDB_TIMEOUT = 6  # seconds
@@ -244,15 +238,8 @@ async def sequel_yes(call: CallbackQuery, callback_data: SequelYesCB) -> None:
 
     text_to_send = f"🔄 <b>{esc(item)}</b> → <b>{esc(new_item)}</b>\n\nВыберите действие в меню."
 
-    # Финальное сообщение — уже не карточка фильма, постер тут не нужен.
-    # Если сообщение было с фото, удаляем его, а не редактируем caption —
-    # иначе старая картинка остаётся висеть под новым текстом.
     if call.message.photo or call.message.document or call.message.video or call.message.animation:
-        try:
-            await call.message.delete()
-        except TelegramBadRequest as e:
-            logger.warning("sequel_yes: failed to delete photo message: %s", e)
-        await call.message.answer(text_to_send, reply_markup=None)
+        await call.message.edit_caption(caption=text_to_send, reply_markup=None)
     else:
         await call.message.edit_text(text=text_to_send, reply_markup=None)
 
@@ -270,13 +257,9 @@ async def sequel_no(call: CallbackQuery, callback_data: SequelNoCB) -> None:
     await delete_item(cat, item)
     text_to_send = f"❌ <b>{esc(item)}</b> удалён из «{ru}»."
 
-    # Аналогично sequel_yes: убираем постер, а не оставляем его под финальным текстом.
+    # Аналогично sequel_yes: редактируем caption на месте, без delete+answer.
     if call.message.photo or call.message.document or call.message.video or call.message.animation:
-        try:
-            await call.message.delete()
-        except TelegramBadRequest as e:
-            logger.warning("sequel_no: failed to delete photo message: %s", e)
-        await call.message.answer(text_to_send, reply_markup=None)
+        await call.message.edit_caption(caption=text_to_send, reply_markup=None)
     else:
         await call.message.edit_text(text=text_to_send, reply_markup=None)
 
@@ -372,8 +355,6 @@ async def back_main(call: CallbackQuery, callback_data: BackMainCB) -> None:
         cat = CODE_TO_CAT.get(code, "movies")
         ru = CAT_RU.get(cat, cat)
         if call.message.photo or call.message.document or call.message.video or call.message.animation:
-            # Если вернулись из карточки с постером в меню категории, медиа лучше удалить,
-            # чтобы отобразить чистое текстовое меню выбора
             try:
                 await call.message.delete()
                 await call.message.answer(f"🎲 Категория: <b>{ru}</b>", reply_markup=spin_kb(cat))

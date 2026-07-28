@@ -37,11 +37,16 @@ def _back_row(cb_data: str, text: str = "⬅️ Назад") -> list[InlineKeybo
 
 # ─── Reply keyboard ────────────────────────────────────────────────────────────
 def main_kb() -> ReplyKeyboardMarkup:
-    return ReplyKeyboardMarkup(keyboard=[
-        [KeyboardButton(text="🎬 Рулетка Фильм")],
-        [KeyboardButton(text="📺 Рулетка Сериал"), KeyboardButton(text="🎥 Рулетка Мульт")],
-        [KeyboardButton(text="🔄 Начать")],
-    ], resize_keyboard=True)
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="🎬 Рулетка Фильм")],
+            [KeyboardButton(text="📺 Рулетка Сериал"), KeyboardButton(text="🎥 Рулетка Мульт")],
+            [KeyboardButton(text="🔄 Начать")],
+        ],
+        resize_keyboard=True,
+        is_persistent=True,
+        input_field_placeholder="Выберите действие…",
+    )
 
 # ─── Inline keyboards ──────────────────────────────────────────────────────────
 def spin_kb(cat: str) -> InlineKeyboardMarkup:

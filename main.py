@@ -7,7 +7,8 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 from app.config import settings
 from app.db.database import init_db
-from app.routers import roulette, upcoming, admin, history
+from app.routers import roulette, upcoming, dc_marvel, history
+from app.services.tmdb import close_client
 
 logging.basicConfig(
     level=logging.INFO,
@@ -27,9 +28,12 @@ async def main() -> None:
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
     dp = Dispatcher(storage=MemoryStorage())
-    dp.include_routers(roulette.router, upcoming.router, admin.router, history.router)
+    dp.include_routers(roulette.router, upcoming.router, dc_marvel.router, history.router)
     logger.info("🚀 Bot started")
-    await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
+    try:
+        await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
+    finally:
+        await close_client()
 
 
 if __name__ == "__main__":

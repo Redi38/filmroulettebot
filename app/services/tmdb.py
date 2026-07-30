@@ -20,6 +20,25 @@ _MAX_RETRIES = 3
 _BACKOFF_BASE = 1.0  # seconds
 _RETRYABLE_STATUSES = {429, 500, 502, 503, 504}
 
+# Единый клиент на весь процесс — переиспользует TCP/TLS-соединения (keep-alive)
+# вместо накладных расходов на новое соединение при каждом запросе к TMDb.
+_client: httpx.AsyncClient | None = None
+
+
+def _get_client() -> httpx.AsyncClient:
+    global _client
+    if _client is None:
+        _client = httpx.AsyncClient(timeout=10)
+    return _client
+
+
+async def close_client() -> None:
+    """Close the shared client on bot shutdown."""
+    global _client
+    if _client is not None:
+        await _client.aclose()
+        _client = None
+
 # Готовая карточка (title/overview/rating/...) меняется редко — кэшируем на сутки.
 INFO_CACHE_TTL = 24 * 3600
 # Сырые результаты поиска для /upcoming — TTL короче, т.к. даты выхода важно сверять свежими.
@@ -31,10 +50,10 @@ async def _get(path: str, **params: Any) -> dict[str, Any] | None:
     params.setdefault("language", "ru-RU")
     url = f"{_BASE}{path}"
 
+    client = _get_client()
     for attempt in range(1, _MAX_RETRIES + 1):
         try:
-            async with httpx.AsyncClient(timeout=10) as client:
-                resp = await client.get(url, params=params)
+            resp = await client.get(url, params=params)
 
             if resp.status_code in _RETRYABLE_STATUSES and attempt < _MAX_RETRIES:
                 retry_after = resp.headers.get("Retry-After")

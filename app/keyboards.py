@@ -27,6 +27,8 @@ class UpcomingMoveTargetCB(CallbackData, prefix="upmv"): code: str
 class UpcomingCheckMoveCB(CallbackData, prefix="upck"): title_idx: int
 class UpcomingCheckMoveToCB(CallbackData, prefix="upckmv"): title_idx: int; code: str
 class UpcomingAddCB(CallbackData, prefix="upadd"): pass
+class PageCB(CallbackData, prefix="pg"): scope: str; page: int
+class NoopCB(CallbackData, prefix="noop"): pass
 
 # ─── Helpers ───────────────────────────────────────────────────────────────────
 def styled_btn(text: str, callback_data: str, style: str = "primary") -> InlineKeyboardButton:
@@ -34,6 +36,18 @@ def styled_btn(text: str, callback_data: str, style: str = "primary") -> InlineK
 
 def _back_row(cb_data: str, text: str = "⬅️ Назад") -> list[InlineKeyboardButton]:
     return [styled_btn(text=text, callback_data=cb_data, style="primary")]
+
+def pagination_row(scope: str, page: int, total_pages: int) -> list[InlineKeyboardButton] | None:
+    """Prev/page-indicator/next row. Returns None if there's nothing to paginate."""
+    if total_pages <= 1:
+        return None
+    prev_cb = PageCB(scope=scope, page=page - 1).pack() if page > 1 else NoopCB().pack()
+    next_cb = PageCB(scope=scope, page=page + 1).pack() if page < total_pages else NoopCB().pack()
+    return [
+        styled_btn("◀️", prev_cb, "primary" if page > 1 else "secondary"),
+        styled_btn(f"{page}/{total_pages}", NoopCB().pack(), "secondary"),
+        styled_btn("▶️", next_cb, "primary" if page < total_pages else "secondary"),
+    ]
 
 # ─── Reply keyboard ────────────────────────────────────────────────────────────
 def main_kb() -> ReplyKeyboardMarkup:
@@ -66,10 +80,13 @@ def after_roll_kb(cat: str, choice: str) -> InlineKeyboardMarkup:
         _back_row(BackMainCB(target="main").pack())
     ])
 
-def edit_menu_kb(cat: str) -> InlineKeyboardMarkup:
+def edit_menu_kb(cat: str, page_row: list[InlineKeyboardButton] | None = None) -> InlineKeyboardMarkup:
     code = CAT_TO_CODE[cat]
-    rows = [[styled_btn("➕ Добавить", AddItemCB(code=code).pack(), "success"),
-             styled_btn("➖ Удалить", DeleteMenuCB(code=code).pack(), "danger")]]
+    rows: list[list[InlineKeyboardButton]] = []
+    if page_row:
+        rows.append(page_row)
+    rows.append([styled_btn("➕ Добавить", AddItemCB(code=code).pack(), "success"),
+                 styled_btn("➖ Удалить", DeleteMenuCB(code=code).pack(), "danger")])
     if cat not in ("dc", "marvel"):
         rows.append(_back_row(BackMainCB(target=f"sp__{code}").pack()))
     return InlineKeyboardMarkup(inline_keyboard=rows)
@@ -88,14 +105,16 @@ def sequel_kb(cat: str, title: str) -> InlineKeyboardMarkup:
         styled_btn("❌ Нет", SequelNoCB(code=code, title=short_title).pack(), "danger"),
     ]])
 
-def upcoming_menu_kb() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [styled_btn("➕ Добавить", UpcomingAddCB().pack(), "success"),
-         styled_btn("📤 Перенести", UpcomingMoveCB(action="move").pack(), "primary"),
-         styled_btn("🗑 Удалить", UpcomingMoveCB(action="del").pack(), "danger")],
-        [styled_btn("🔍 Проверить вышедшие", UpcomingMoveCB(action="check").pack(), "success")],
-        _back_row(BackMainCB(target="main").pack())
-    ])
+def upcoming_menu_kb(page_row: list[InlineKeyboardButton] | None = None) -> InlineKeyboardMarkup:
+    rows: list[list[InlineKeyboardButton]] = []
+    if page_row:
+        rows.append(page_row)
+    rows.append([styled_btn("➕ Добавить", UpcomingAddCB().pack(), "success"),
+                 styled_btn("📤 Перенести", UpcomingMoveCB(action="move").pack(), "primary"),
+                 styled_btn("🗑 Удалить", UpcomingMoveCB(action="del").pack(), "danger")])
+    rows.append([styled_btn("🔍 Проверить вышедшие", UpcomingMoveCB(action="check").pack(), "success")])
+    rows.append(_back_row(BackMainCB(target="main").pack()))
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 def upcoming_list_kb(items: list[str]) -> InlineKeyboardMarkup:
     rows = [[styled_btn(f"📂 {title[:60]}", UpcomingSelectCB(idx=i).pack(), "primary")] for i, title in enumerate(items)]

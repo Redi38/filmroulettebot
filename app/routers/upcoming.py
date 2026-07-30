@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from datetime import datetime
 from typing import Any
 
@@ -17,14 +18,14 @@ from app.db.database import (
 from app.states import UpcomingStates
 from app.keyboards import (
     upcoming_menu_kb, upcoming_list_kb, upcoming_targets_kb,
-    upcoming_delete_kb, BackMainCB,
+    upcoming_delete_kb, BackMainCB, pagination_row, PageCB,
     UpcomingMoveCB, UpcomingSelectCB, UpcomingDeleteOneCB, UpcomingMoveTargetCB,
     UpcomingCheckMoveCB, UpcomingCheckMoveToCB, UpcomingAddCB,
     released_check_kb, released_move_to_kb,
     CODE_TO_CAT, CAT_RU,
 )
 from app.services.tmdb import check_upcoming_released
-from app.utils import esc
+from app.utils import esc, render_numbered_list, paginate
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -32,6 +33,11 @@ router = Router()
 # Промежуточный выбор между callback'ами (не текстовый ввод) — не критично держать вне FSM.
 _up_sel_title: dict[int, str] = {}
 _check_cache: dict[int, list[dict[str, Any]]] = {}
+
+# Rate-limit на "Проверить вышедшие" — каждый тайтл в списке дёргает TMDb,
+# поэтому не даём вызывать проверку чаще, чем раз в CHECK_COOLDOWN секунд на юзера.
+_last_check_at: dict[int, float] = {}
+CHECK_COOLDOWN = 60  # seconds
 
 
 def _fmt_date(date_str: str) -> str:
@@ -103,8 +109,10 @@ async def _check_text_and_kb(chat_id: int) -> tuple[str, InlineKeyboardMarkup]:
 async def upcoming_cmd(msg: Message, state: FSMContext) -> None:
     await state.clear()
     items = await get_upcoming_movies()
-    text = "\n".join(f"{i + 1}. {esc(t)}" for i, t in enumerate(items)) if items else "(список пуст)"
-    await msg.answer(f"<b>🎬 Ожидаемые фильмы:</b>\n\n{text}", reply_markup=upcoming_menu_kb())
+    _, page, total_pages = paginate(items, 1)
+    text = render_numbered_list(items, page)
+    row = pagination_row("up", page, total_pages)
+    await msg.answer(f"<b>🎬 Ожидаемые фильмы:</b>\n\n{text}", reply_markup=upcoming_menu_kb(row))
 
 
 @router.message(Command("add_upcoming"))
@@ -163,6 +171,16 @@ async def up_add_start(call: CallbackQuery, state: FSMContext) -> None:
 async def up_check(call: CallbackQuery) -> None:
     if not isinstance(call.message, Message):
         return
+    user_id = call.from_user.id
+    now = time.monotonic()
+    elapsed = now - _last_check_at.get(user_id, 0.0)
+    if elapsed < CHECK_COOLDOWN:
+        wait = int(CHECK_COOLDOWN - elapsed)
+        await call.answer(f"⏱ Подождите {wait} сек. перед повторной проверкой.", show_alert=True)
+        return
+    _last_check_at[user_id] = now
+
+    await call.answer()
     await call.message.edit_text("⏳ Проверяем по базе TMDb...", reply_markup=None)
     chat_id = call.message.chat.id
     text, kb = await _check_text_and_kb(chat_id)
@@ -277,8 +295,22 @@ async def up_back_to_menu(call: CallbackQuery) -> None:
         return
     await call.answer()
     items = await get_upcoming_movies()
-    text = "\n".join(f"{i + 1}. {esc(t)}" for i, t in enumerate(items)) if items else "(список пуст)"
-    await call.message.edit_text(f"<b>🎬 Ожидаемые фильмы:</b>\n\n{text}", reply_markup=upcoming_menu_kb())
+    _, page, total_pages = paginate(items, 1)
+    text = render_numbered_list(items, page)
+    row = pagination_row("up", page, total_pages)
+    await call.message.edit_text(f"<b>🎬 Ожидаемые фильмы:</b>\n\n{text}", reply_markup=upcoming_menu_kb(row))
+
+
+@router.callback_query(PageCB.filter(F.scope == "up"))
+async def up_page(call: CallbackQuery, callback_data: PageCB) -> None:
+    if not isinstance(call.message, Message):
+        return
+    await call.answer()
+    items = await get_upcoming_movies()
+    _, page, total_pages = paginate(items, callback_data.page)
+    text = render_numbered_list(items, page)
+    row = pagination_row("up", page, total_pages)
+    await call.message.edit_text(f"<b>🎬 Ожидаемые фильмы:</b>\n\n{text}", reply_markup=upcoming_menu_kb(row))
 
 
 @router.callback_query(BackMainCB.filter(F.target == "upsel"))

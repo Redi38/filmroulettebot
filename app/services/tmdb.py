@@ -92,6 +92,28 @@ async def _get(path: str, **params: Any) -> dict[str, Any] | None:
     return None
 
 
+def _best_match(results: list[dict[str, Any]], query: str, title_field: str = "title") -> dict[str, Any] | None:
+    """Pick the most likely correct result instead of blindly trusting results[0].
+
+    TMDb sorts search results by its own relevance score, which is often just
+    popularity — a well-known remake or a same-named low-effort title can
+    outrank the film the user actually meant. We prefer an exact
+    case-insensitive title match (ties broken by popularity), and only fall
+    back to "most popular of all results" when nothing matches exactly.
+    """
+    if not results:
+        return None
+    q = query.strip().casefold()
+
+    def _titles(r: dict[str, Any]) -> set[str]:
+        alt = title_field.replace("title", "original_title") if "title" in title_field else "original_name"
+        return {str(r.get(title_field, "")).casefold(), str(r.get(alt, "")).casefold()}
+
+    exact = [r for r in results if q in _titles(r)]
+    pool = exact or results
+    return max(pool, key=lambda r: r.get("popularity") or 0)
+
+
 async def _search_movie_cached(title: str) -> dict[str, Any] | None:
     """Cached wrapper around /search/movie — shared between get_movie_info
     and check_upcoming_released so repeated lookups of the same title
@@ -115,7 +137,9 @@ async def get_movie_info(title: str) -> dict[str, Any] | None:
     data = await _search_movie_cached(title)
     if not data or not data.get("results"):
         return None
-    movie = data["results"][0]
+    movie = _best_match(data["results"], title, title_field="title")
+    if movie is None:
+        return None
     mid = movie["id"]
     details = await _get(f"/movie/{mid}") or {}
     credits = await _get(f"/movie/{mid}/credits") or {}
@@ -142,7 +166,9 @@ async def get_series_info(title: str) -> dict[str, Any] | None:
     data = await _get("/search/tv", query=title)
     if not data or not data.get("results"):
         return None
-    series = data["results"][0]
+    series = _best_match(data["results"], title, title_field="name")
+    if series is None:
+        return None
     sid = series["id"]
     details = await _get(f"/tv/{sid}") or {}
     credits = await _get(f"/tv/{sid}/credits") or {}

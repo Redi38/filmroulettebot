@@ -27,15 +27,15 @@ router = Router()
 
 _last_category: dict[int, str] = {}
 
-_full_title_cache: dict[int, str] = {}
+_full_title_cache: dict[tuple[int, int], str] = {}
 
 TMDB_TIMEOUT = 6  # seconds
 
 
-def _resolve_title(chat_id: int, short_title: str) -> str:
-    """Return the full title for the last spun card in this chat, falling back
+def _resolve_title(chat_id: int, message_id: int, short_title: str) -> str:
+    """Return the full title for this specific card, falling back
     to the (possibly truncated) title from callback_data if cache is empty/stale."""
-    cached = _full_title_cache.get(chat_id)
+    cached = _full_title_cache.get((chat_id, message_id))
     return cached if cached else short_title
 
 
@@ -91,6 +91,7 @@ async def reroll_cb(call: CallbackQuery, callback_data: RerollCB) -> None:
         return
     await call.answer()
     cat = CODE_TO_CAT[callback_data.code]
+    _full_title_cache.pop((call.message.chat.id, call.message.message_id), None)
 
     try:
         await call.message.delete()
@@ -108,9 +109,7 @@ async def _spin(msg: Message, category: str) -> None:
         await msg.answer("❌ Список пуст.")
         return
     choice = random.choice(items)
-    chat_id = msg.chat.id
-    _full_title_cache[chat_id] = choice
-    user_id = msg.from_user.id if msg.from_user else chat_id
+    user_id = msg.from_user.id if msg.from_user else msg.chat.id
     await save_history(user_id, category, choice)
 
     temp_msg = await msg.answer("🌀 Крутим рулетку…")
@@ -125,22 +124,27 @@ async def _spin_edit(msg: Message, category: str, choice: str | None = None) -> 
             await msg.edit_text("❌ Список пуст.", reply_markup=spin_kb(category))
             return
         choice = random.choice(items)
-        chat_id = msg.chat.id
-        _full_title_cache[chat_id] = choice
-        user_id = msg.from_user.id if msg.from_user else chat_id
+        user_id = msg.from_user.id if msg.from_user else msg.chat.id
         await save_history(user_id, category, choice)
 
     caption, poster = await _build_card(category, choice)
     kb = after_roll_kb(category, choice)
+    chat_id = msg.chat.id
     try:
         if poster:
             await msg.delete()
-            await msg.answer_photo(poster, caption=caption, reply_markup=kb)
+            final_msg = await msg.answer_photo(poster, caption=caption, reply_markup=kb)
         else:
-            await msg.edit_text(caption[:4096], reply_markup=kb)
+            final_msg = await msg.edit_text(caption[:4096], reply_markup=kb)
     except TelegramBadRequest as e:
         logger.warning("_spin_edit: failed to update card for %r: %s", choice, e)
-        await msg.edit_text(caption[:4096], reply_markup=kb)
+        final_msg = await msg.edit_text(caption[:4096], reply_markup=kb)
+
+    # Кэшируем полный title под id ИМЕННО этого финального сообщения карточки —
+    # важно записывать после отправки/редактирования, т.к. фото-карточка
+    # создаётся заново (delete+answer_photo) с новым message_id.
+    if isinstance(final_msg, Message):
+        _full_title_cache[(chat_id, final_msg.message_id)] = choice
 
 
 async def _build_card(category: str, title: str) -> tuple[str, str | None]:
@@ -193,7 +197,7 @@ async def confirm_cb(call: CallbackQuery, callback_data: ConfirmCB) -> None:
 
     cat = CODE_TO_CAT[callback_data.code]
     chat_id = call.message.chat.id
-    item = _resolve_title(chat_id, callback_data.title)
+    item = _resolve_title(chat_id, call.message.message_id, callback_data.title)
 
     reply_kb = sequel_kb(cat, item)
     text_to_send = f"🎬 Добавить продолжение для <b>{esc(item)}</b>?"
@@ -211,14 +215,16 @@ async def confirm_cb(call: CallbackQuery, callback_data: ConfirmCB) -> None:
             )
     except TelegramBadRequest as e:
         logger.warning("confirm_cb: edit failed for %r, falling back to delete+answer: %s", item, e)
+        _full_title_cache.pop((chat_id, call.message.message_id), None)
         try:
             await call.message.delete()
         except TelegramBadRequest as e2:
             logger.warning("confirm_cb: failed to delete message: %s", e2)
-        await call.message.answer(
+        new_msg = await call.message.answer(
             text=text_to_send,
             reply_markup=reply_kb,
         )
+        _full_title_cache[(chat_id, new_msg.message_id)] = item
 
 
 @router.callback_query(SequelYesCB.filter())
@@ -228,7 +234,7 @@ async def sequel_yes(call: CallbackQuery, callback_data: SequelYesCB) -> None:
     await call.answer()
     cat = CODE_TO_CAT[callback_data.code]
     chat_id = call.message.chat.id
-    item = _resolve_title(chat_id, callback_data.title)
+    item = _resolve_title(chat_id, call.message.message_id, callback_data.title)
 
     m = re.search(r"(.+?)\s(\d+)$", item)
     new_item = f"{m.group(1)} {int(m.group(2)) + 1}" if m else f"{item} 2"
@@ -238,13 +244,15 @@ async def sequel_yes(call: CallbackQuery, callback_data: SequelYesCB) -> None:
 
     text_to_send = f"🔄 <b>{esc(item)}</b> → <b>{esc(new_item)}</b>\n\nВыберите действие в меню."
 
+    # Редактируем сообщение на месте вместо delete+answer: Telegram не даёт
+    # снять фото через edit, но зато caption редактируется гарантированно
+    # в одном и том же сообщении — без риска, что delete() не пройдёт
+    # (старое сообщение >48ч, нет прав и т.д.) и уведомление придёт отдельно.
     if call.message.photo or call.message.document or call.message.video or call.message.animation:
         await call.message.edit_caption(caption=text_to_send, reply_markup=None)
     else:
         await call.message.edit_text(text=text_to_send, reply_markup=None)
-
-
-@router.callback_query(SequelNoCB.filter())
+    _full_title_cache.pop((chat_id, call.message.message_id), None)
 async def sequel_no(call: CallbackQuery, callback_data: SequelNoCB) -> None:
     if not isinstance(call.message, Message):
         return
@@ -252,7 +260,7 @@ async def sequel_no(call: CallbackQuery, callback_data: SequelNoCB) -> None:
     cat = CODE_TO_CAT[callback_data.code]
     ru = CAT_RU.get(cat, cat)
     chat_id = call.message.chat.id
-    item = _resolve_title(chat_id, callback_data.title)
+    item = _resolve_title(chat_id, call.message.message_id, callback_data.title)
 
     await delete_item(cat, item)
     text_to_send = f"❌ <b>{esc(item)}</b> удалён из «{ru}»."
@@ -262,6 +270,7 @@ async def sequel_no(call: CallbackQuery, callback_data: SequelNoCB) -> None:
         await call.message.edit_caption(caption=text_to_send, reply_markup=None)
     else:
         await call.message.edit_text(text=text_to_send, reply_markup=None)
+    _full_title_cache.pop((chat_id, call.message.message_id), None)
 
 
 @router.callback_query(EditMenuCB.filter())

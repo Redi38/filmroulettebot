@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     DB_PATH: str = "bot_data.db"
     LOG_LEVEL: str = "INFO"
 
+    WATCH_LINK_TEMPLATE: str = ""
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 

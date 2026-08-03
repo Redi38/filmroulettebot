@@ -1,5 +1,8 @@
 """Shared utilities."""
 import html
+from urllib.parse import quote_plus
+
+from app.config import settings
 
 DEFAULT_PAGE_SIZE = 20
 
@@ -7,6 +10,16 @@ DEFAULT_PAGE_SIZE = 20
 def esc(text: str) -> str:
     """Escape HTML special characters."""
     return html.escape(str(text))
+
+
+def build_watch_link(title: str) -> str | None:
+    """Build the "смотреть" link for a title using WATCH_LINK_TEMPLATE from
+    config/.env, e.g. WATCH_LINK_TEMPLATE=https://kinogo.my/index.php?do=search&subaction=search&story={query}
+    Returns None if no template is configured."""
+    template = settings.WATCH_LINK_TEMPLATE
+    if not template:
+        return None
+    return template.format(query=quote_plus(title))
 
 
 def paginate(items: list[str], page: int, page_size: int = DEFAULT_PAGE_SIZE) -> tuple[list[str], int, int]:

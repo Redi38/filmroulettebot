@@ -20,7 +20,7 @@ from app.keyboards import (
     SequelYesCB, SequelNoCB, BackMainCB, CODE_TO_CAT, CAT_RU,
 )
 from app.services.tmdb import get_movie_info, get_series_info
-from app.utils import esc
+from app.utils import esc, build_watch_link
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -127,27 +127,24 @@ async def _spin_edit(msg: Message, category: str, choice: str | None = None) -> 
         user_id = msg.from_user.id if msg.from_user else msg.chat.id
         await save_history(user_id, category, choice)
 
-    caption, poster = await _build_card(category, choice)
+    caption, caption_short, poster = await _build_card(category, choice)
     kb = after_roll_kb(category, choice)
     chat_id = msg.chat.id
     try:
         if poster:
             await msg.delete()
-            final_msg = await msg.answer_photo(poster, caption=caption, reply_markup=kb)
+            final_msg = await msg.answer_photo(poster, caption=caption_short, reply_markup=kb)
         else:
             final_msg = await msg.edit_text(caption[:4096], reply_markup=kb)
     except TelegramBadRequest as e:
         logger.warning("_spin_edit: failed to update card for %r: %s", choice, e)
         final_msg = await msg.edit_text(caption[:4096], reply_markup=kb)
 
-    # Кэшируем полный title под id ИМЕННО этого финального сообщения карточки —
-    # важно записывать после отправки/редактирования, т.к. фото-карточка
-    # создаётся заново (delete+answer_photo) с новым message_id.
     if isinstance(final_msg, Message):
         _full_title_cache[(chat_id, final_msg.message_id)] = choice
 
 
-async def _build_card(category: str, title: str) -> tuple[str, str | None]:
+async def _build_card(category: str, title: str) -> tuple[str, str, str | None]:
     try:
         if category == "series":
             info = await asyncio.wait_for(get_series_info(title), timeout=TMDB_TIMEOUT) or {}
@@ -157,31 +154,42 @@ async def _build_card(category: str, title: str) -> tuple[str, str | None]:
         logger.warning("_build_card: TMDB timeout for %r (%s)", title, category)
         info = {}
 
-    if category == "series":
-        desc = _trim(info.get("overview", ""))
-        caption = (
-            f"📺 <b><code>{esc(info.get('title', title))}</code></b>\n\n"
-            f"🗓 Дата выхода: {esc(str(info.get('release_date', '—')))}\n"
-            f"⭐️ Рейтинг: {esc(str(info.get('rating', '—')))}\n"
-            f"🎭 Жанры: {esc(info.get('genres', '—'))}\n"
-            f"👥 Актёры: {esc(info.get('actors', '—'))}\n"
-            f"📚 Сезонов: {esc(str(info.get('seasons', '—')))}\n"
-            f"🎥 Эпизодов: {esc(str(info.get('episodes', '—')))}\n\n"
-            f"📖 {esc(desc)}"
-        )
-    else:
-        desc = _trim(info.get("overview", ""))
+    display_title = info.get("title", title)
+    link = build_watch_link(display_title)
+    link_line = f'\n\n🔗 <a href="{esc(link)}">Смотреть онлайн</a>' if link else ""
+
+    def _render(desc_limit: int) -> str:
+        desc = _trim(info.get("overview", ""), desc_limit)
+        if category == "series":
+            return (
+                f"📺 <b><code>{esc(display_title)}</code></b>\n\n"
+                f"🗓 Дата выхода: {esc(str(info.get('release_date', '—')))}\n"
+                f"⭐️ Рейтинг: {esc(str(info.get('rating', '—')))}\n"
+                f"🎭 Жанры: {esc(info.get('genres', '—'))}\n"
+                f"👥 Актёры: {esc(info.get('actors', '—'))}\n"
+                f"📚 Сезонов: {esc(str(info.get('seasons', '—')))}\n"
+                f"🎥 Эпизодов: {esc(str(info.get('episodes', '—')))}\n\n"
+                f"📖 {esc(desc)}{link_line}"
+            )
         emoji = "🎬" if category == "movies" else "🎥"
-        caption = (
-            f"{emoji} <b><code>{esc(info.get('title', title))}</code></b>\n\n"
+        return (
+            f"{emoji} <b><code>{esc(display_title)}</code></b>\n\n"
             f"🗓 Дата выхода: {esc(str(info.get('release_date', '—')))}\n"
             f"⭐️ Рейтинг: {esc(str(info.get('rating', '—')))}\n"
             f"⏳ Длительность: {esc(str(info.get('runtime', '—')))} мин.\n"
             f"🎭 Жанры: {esc(info.get('genres', '—'))}\n"
             f"👥 Актёры: {esc(info.get('actors', '—'))}\n\n"
-            f"📖 {esc(desc)}"
+            f"📖 {esc(desc)}{link_line}"
         )
-    return caption, info.get("poster_url")
+
+    # Полная версия (для текстовых сообщений, лимит 4096) — с длинным описанием.
+    caption = _render(desc_limit=900)
+    # Короткая версия под лимит подписи к фото (1024 символа) — короче описание,
+    # чтобы точно уложиться целиком и не резать <a>/<code> теги посередине.
+    caption_short = _render(desc_limit=250)
+    if len(caption_short) > 1024:
+        caption_short = _render(desc_limit=80)
+    return caption, caption_short, info.get("poster_url")
 
 
 def _trim(text: str, limit: int = 900) -> str:
@@ -244,10 +252,6 @@ async def sequel_yes(call: CallbackQuery, callback_data: SequelYesCB) -> None:
 
     text_to_send = f"🔄 <b>{esc(item)}</b> → <b>{esc(new_item)}</b>\n\nВыберите действие в меню."
 
-    # Редактируем сообщение на месте вместо delete+answer: Telegram не даёт
-    # снять фото через edit, но зато caption редактируется гарантированно
-    # в одном и том же сообщении — без риска, что delete() не пройдёт
-    # (старое сообщение >48ч, нет прав и т.д.) и уведомление придёт отдельно.
     if call.message.photo or call.message.document or call.message.video or call.message.animation:
         await call.message.edit_caption(caption=text_to_send, reply_markup=None)
     else:
@@ -265,7 +269,6 @@ async def sequel_no(call: CallbackQuery, callback_data: SequelNoCB) -> None:
     await delete_item(cat, item)
     text_to_send = f"❌ <b>{esc(item)}</b> удалён из «{ru}»."
 
-    # Аналогично sequel_yes: редактируем caption на месте, без delete+answer.
     if call.message.photo or call.message.document or call.message.video or call.message.animation:
         await call.message.edit_caption(caption=text_to_send, reply_markup=None)
     else:

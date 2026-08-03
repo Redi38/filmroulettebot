@@ -25,7 +25,7 @@ from app.keyboards import (
     CODE_TO_CAT, CAT_RU,
 )
 from app.services.tmdb import check_upcoming_released
-from app.utils import esc, render_numbered_list, paginate
+from app.utils import esc, render_numbered_list, paginate, safe_edit_text
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -140,7 +140,7 @@ async def up_move(call: CallbackQuery) -> None:
     if not items:
         await call.answer("❌ Нет ожидаемых фильмов.", show_alert=True)
     else:
-        await call.message.edit_text("📤 Выберите фильм для переноса:", reply_markup=upcoming_list_kb(items))
+        await safe_edit_text(call.message, "📤 Выберите фильм для переноса:", reply_markup=upcoming_list_kb(items))
 
 
 @router.callback_query(UpcomingMoveCB.filter(F.action == "del"))
@@ -152,7 +152,7 @@ async def up_delete_menu(call: CallbackQuery) -> None:
     if not items:
         await call.answer("❌ Нет ожидаемых фильмов.", show_alert=True)
         return
-    await call.message.edit_text("🗑 Удалить из ожидаемых:", reply_markup=upcoming_delete_kb(items))
+    await safe_edit_text(call.message, "🗑 Удалить из ожидаемых:", reply_markup=upcoming_delete_kb(items))
 
 
 @router.callback_query(UpcomingAddCB.filter())
@@ -161,7 +161,7 @@ async def up_add_start(call: CallbackQuery, state: FSMContext) -> None:
         return
     await call.answer()
     await state.set_state(UpcomingStates.waiting_title)
-    await call.message.edit_text(
+    await safe_edit_text(call.message, 
         "✏️ Введите название фильма для добавления в ожидаемые:\n\n<i>Для отмены — /upcoming</i>",
         reply_markup=None,
     )
@@ -181,10 +181,10 @@ async def up_check(call: CallbackQuery) -> None:
     _last_check_at[user_id] = now
 
     await call.answer()
-    await call.message.edit_text("⏳ Проверяем по базе TMDb...", reply_markup=None)
+    await safe_edit_text(call.message, "⏳ Проверяем по базе TMDb...", reply_markup=None)
     chat_id = call.message.chat.id
     text, kb = await _check_text_and_kb(chat_id)
-    await call.message.edit_text(text, reply_markup=kb)
+    await safe_edit_text(call.message, text, reply_markup=kb)
 
 
 @router.callback_query(UpcomingDeleteOneCB.filter())
@@ -201,12 +201,12 @@ async def up_delete_one(call: CallbackQuery, callback_data: UpcomingDeleteOneCB)
 
     items = await get_upcoming_movies()
     if items:
-        await call.message.edit_text(
+        await safe_edit_text(call.message, 
             f"🗑 <b>{esc(title)}</b> удалён.\n\nУдалить ещё:",
             reply_markup=upcoming_delete_kb(items)
         )
     else:
-        await call.message.edit_text("Список ожидаемых пуст.", reply_markup=upcoming_menu_kb())
+        await safe_edit_text(call.message, "Список ожидаемых пуст.", reply_markup=upcoming_menu_kb())
 
 
 @router.callback_query(UpcomingSelectCB.filter())
@@ -220,7 +220,7 @@ async def up_select_title(call: CallbackQuery, callback_data: UpcomingSelectCB) 
         return
     title = items[callback_data.idx]
     _up_sel_title[call.message.chat.id] = title
-    await call.message.edit_text(f"📤 Куда перенести <b>{esc(title)}</b>?", reply_markup=upcoming_targets_kb())
+    await safe_edit_text(call.message, f"📤 Куда перенести <b>{esc(title)}</b>?", reply_markup=upcoming_targets_kb())
 
 
 @router.callback_query(UpcomingMoveTargetCB.filter())
@@ -236,7 +236,7 @@ async def up_move_to(call: CallbackQuery, callback_data: UpcomingMoveTargetCB) -
         return
     await add_item(target_cat, title)
     await delete_upcoming_movie(title)
-    await call.message.edit_text(f"✅ <b>{esc(title)}</b> перенесён в {ru}.", reply_markup=upcoming_menu_kb())
+    await safe_edit_text(call.message, f"✅ <b>{esc(title)}</b> перенесён в {ru}.", reply_markup=upcoming_menu_kb())
 
 
 # ─── Check-release move callbacks ─────────────────────────────────────────────
@@ -253,7 +253,7 @@ async def up_check_pick(call: CallbackQuery, callback_data: UpcomingCheckMoveCB)
         return
     entry = cache[idx]
     title = str(entry["title"])
-    await call.message.edit_text(
+    await safe_edit_text(call.message, 
         f"📤 Куда перенести вышедший фильм <b>{esc(title)}</b>?",
         reply_markup=released_move_to_kb(idx)
     )
@@ -282,9 +282,9 @@ async def up_check_move_to(call: CallbackQuery, callback_data: UpcomingCheckMove
 
     if new_cache:
         text, kb = await _check_text_and_kb(call.message.chat.id)
-        await call.message.edit_text(f"✅ Фильм перенесён!\n\n{text}", reply_markup=kb)
+        await safe_edit_text(call.message, f"✅ Фильм перенесён!\n\n{text}", reply_markup=kb)
     else:
-        await call.message.edit_text("✅ Все вышедшие фильмы успешно перенесены!", reply_markup=upcoming_menu_kb())
+        await safe_edit_text(call.message, "✅ Все вышедшие фильмы успешно перенесены!", reply_markup=upcoming_menu_kb())
 
 
 # ─── Navigation ────────────────────────────────────────────────────────────────
@@ -298,7 +298,7 @@ async def up_back_to_menu(call: CallbackQuery) -> None:
     _, page, total_pages = paginate(items, 1)
     text = render_numbered_list(items, page)
     row = pagination_row("up", page, total_pages)
-    await call.message.edit_text(f"<b>🎬 Ожидаемые фильмы:</b>\n\n{text}", reply_markup=upcoming_menu_kb(row))
+    await safe_edit_text(call.message, f"<b>🎬 Ожидаемые фильмы:</b>\n\n{text}", reply_markup=upcoming_menu_kb(row))
 
 
 @router.callback_query(PageCB.filter(F.scope == "up"))
@@ -310,7 +310,7 @@ async def up_page(call: CallbackQuery, callback_data: PageCB) -> None:
     _, page, total_pages = paginate(items, callback_data.page)
     text = render_numbered_list(items, page)
     row = pagination_row("up", page, total_pages)
-    await call.message.edit_text(f"<b>🎬 Ожидаемые фильмы:</b>\n\n{text}", reply_markup=upcoming_menu_kb(row))
+    await safe_edit_text(call.message, f"<b>🎬 Ожидаемые фильмы:</b>\n\n{text}", reply_markup=upcoming_menu_kb(row))
 
 
 @router.callback_query(BackMainCB.filter(F.target == "upsel"))
@@ -320,9 +320,9 @@ async def up_back_to_titles(call: CallbackQuery) -> None:
     await call.answer()
     items = await get_upcoming_movies()
     if items:
-        await call.message.edit_text("📤 Выберите фильм для переноса:", reply_markup=upcoming_list_kb(items))
+        await safe_edit_text(call.message, "📤 Выберите фильм для переноса:", reply_markup=upcoming_list_kb(items))
     else:
-        await call.message.edit_text("❌ Нет ожидаемых фильмов.", reply_markup=upcoming_menu_kb())
+        await safe_edit_text(call.message, "❌ Нет ожидаемых фильмов.", reply_markup=upcoming_menu_kb())
 
 
 # ─── Text input handler (waiting for a title) ─────────────────────────────────

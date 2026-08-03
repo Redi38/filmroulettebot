@@ -7,7 +7,7 @@ from aiogram.types import Message, CallbackQuery
 
 from app.db.database import get_items
 from app.keyboards import edit_menu_kb, pagination_row, PageCB, NoopCB
-from app.utils import render_numbered_list, paginate
+from app.utils import render_numbered_list, paginate, safe_edit_text
 
 router = Router()
 
@@ -44,7 +44,7 @@ async def dc_marvel_page(call: CallbackQuery, callback_data: PageCB) -> None:
     cat = callback_data.scope
     text, total_pages = await _render(cat, callback_data.page)
     row = pagination_row(cat, callback_data.page, total_pages)
-    await call.message.edit_text(text, reply_markup=edit_menu_kb(cat, row))
+    await safe_edit_text(call.message, text, reply_markup=edit_menu_kb(cat, row))
 
 
 @router.callback_query(NoopCB.filter())

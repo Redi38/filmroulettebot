@@ -1,8 +1,14 @@
 """Shared utilities."""
 import html
+import logging
 from urllib.parse import quote_plus
 
+from aiogram.exceptions import TelegramBadRequest
+from aiogram.types import Message
+
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_PAGE_SIZE = 20
 
@@ -10,6 +16,21 @@ DEFAULT_PAGE_SIZE = 20
 def esc(text: str) -> str:
     """Escape HTML special characters."""
     return html.escape(str(text))
+
+
+async def safe_edit_text(message: Message, text: str, reply_markup=None) -> None:
+    """edit_text wrapper that swallows Telegram's "message is not modified"
+    error — this happens whenever a user taps a button that would render the
+    exact same text+keyboard already on screen (e.g. double-tapping a menu
+    button when the underlying list hasn't changed). It's harmless and not
+    worth crashing the handler over; any other TelegramBadRequest is a real
+    problem and re-raised.
+    """
+    try:
+        await message.edit_text(text, reply_markup=reply_markup)
+    except TelegramBadRequest as e:
+        if "message is not modified" not in str(e):
+            raise
 
 
 def build_watch_link(title: str) -> str | None:

@@ -20,7 +20,8 @@ from app.keyboards import (
     SequelYesCB, SequelNoCB, BackMainCB, CODE_TO_CAT, CAT_RU,
 )
 from app.services.tmdb import get_movie_info, get_series_info
-from app.utils import esc, build_watch_link
+from app.services.watch_link import find_watch_page_url
+from app.utils import esc, build_watch_link, safe_edit_text
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -155,7 +156,7 @@ async def _build_card(category: str, title: str) -> tuple[str, str, str | None]:
         info = {}
 
     display_title = info.get("title", title)
-    link = build_watch_link(display_title)
+    link = await find_watch_page_url(display_title) or build_watch_link(display_title)
     link_line = f'\n\n🔗 <a href="{esc(link)}">Смотреть онлайн</a>' if link else ""
 
     def _render(desc_limit: int) -> str:
@@ -182,10 +183,7 @@ async def _build_card(category: str, title: str) -> tuple[str, str, str | None]:
             f"📖 {esc(desc)}{link_line}"
         )
 
-    # Полная версия (для текстовых сообщений, лимит 4096) — с длинным описанием.
     caption = _render(desc_limit=900)
-    # Короткая версия под лимит подписи к фото (1024 символа) — короче описание,
-    # чтобы точно уложиться целиком и не резать <a>/<code> теги посередине.
     caption_short = _render(desc_limit=250)
     if len(caption_short) > 1024:
         caption_short = _render(desc_limit=80)
@@ -257,6 +255,9 @@ async def sequel_yes(call: CallbackQuery, callback_data: SequelYesCB) -> None:
     else:
         await call.message.edit_text(text=text_to_send, reply_markup=None)
     _full_title_cache.pop((chat_id, call.message.message_id), None)
+
+
+@router.callback_query(SequelNoCB.filter())
 async def sequel_no(call: CallbackQuery, callback_data: SequelNoCB) -> None:
     if not isinstance(call.message, Message):
         return
@@ -285,7 +286,8 @@ async def edit_menu_cb(call: CallbackQuery, callback_data: EditMenuCB) -> None:
     ru = CAT_RU.get(cat, cat)
     items = await get_items(cat)
     text = "\n".join(f"{i + 1}. {esc(x)}" for i, x in enumerate(items)) if items else "(список пуст)"
-    await call.message.edit_text(
+    await safe_edit_text(
+        call.message,
         f"✏️ <b>{ru}</b> — управление списком:\n\n{text}",
         reply_markup=edit_menu_kb(cat),
     )
@@ -300,7 +302,8 @@ async def add_item_start(call: CallbackQuery, callback_data: AddItemCB, state: F
     ru = CAT_RU.get(cat, cat)
     await state.set_state(AddItemStates.waiting_title)
     await state.update_data(category=cat)
-    await call.message.edit_text(
+    await safe_edit_text(
+        call.message,
         f"✏️ Введите название для добавления в <b>{ru}</b>:\n\n<i>Для отмены — /start</i>",
         reply_markup=None,
     )
@@ -315,9 +318,9 @@ async def delete_menu(call: CallbackQuery, callback_data: DeleteMenuCB) -> None:
     ru = CAT_RU.get(cat, cat)
     items = await get_items(cat)
     if not items:
-        await call.message.edit_text(f"❌ Список «<b>{ru}</b>» пуст.", reply_markup=edit_menu_kb(cat))
+        await safe_edit_text(call.message, f"❌ Список «<b>{ru}</b>» пуст.", reply_markup=edit_menu_kb(cat))
         return
-    await call.message.edit_text(f"🗑 Удалить из «<b>{ru}</b>»:", reply_markup=delete_list_kb(cat, items))
+    await safe_edit_text(call.message, f"🗑 Удалить из «<b>{ru}</b>»:", reply_markup=delete_list_kb(cat, items))
 
 
 @router.callback_query(DeleteItemCB.filter())
@@ -333,12 +336,14 @@ async def delete_item_cb(call: CallbackQuery, callback_data: DeleteItemCB) -> No
         await delete_item(cat, title)
         items = await get_items(cat)
         if items:
-            await call.message.edit_text(
+            await safe_edit_text(
+                call.message,
                 f"🗑 Удалить из «<b>{ru}</b>»:\n<i>({esc(title)} удалён)</i>",
                 reply_markup=delete_list_kb(cat, items),
             )
         else:
-            await call.message.edit_text(
+            await safe_edit_text(
+                call.message,
                 f"✅ <b>{esc(title)}</b> удалён. Список «{ru}» теперь пуст.",
                 reply_markup=edit_menu_kb(cat),
             )
@@ -360,7 +365,7 @@ async def back_main(call: CallbackQuery, callback_data: BackMainCB) -> None:
             if call.message.photo or call.message.document or call.message.video or call.message.animation:
                 await call.message.edit_caption(caption="Возврат в меню...", reply_markup=None)
             else:
-                await call.message.edit_text("Возврат в меню...", reply_markup=None)
+                await safe_edit_text(call.message, "Возврат в меню...", reply_markup=None)
         await call.message.answer("🎉 Выберите действие:", reply_markup=main_kb())
     elif target.startswith("sp__"):
         code = target[4:]
@@ -374,7 +379,7 @@ async def back_main(call: CallbackQuery, callback_data: BackMainCB) -> None:
                 logger.warning("back_main: failed to delete photo message: %s", e)
                 await call.message.edit_caption(caption=f"🎲 Категория: <b>{ru}</b>", reply_markup=spin_kb(cat))
         else:
-            await call.message.edit_text(f"🎲 Категория: <b>{ru}</b>", reply_markup=spin_kb(cat))
+            await safe_edit_text(call.message, f"🎲 Категория: <b>{ru}</b>", reply_markup=spin_kb(cat))
 
 
 @router.message(AddItemStates.waiting_title, F.text & ~F.text.startswith("/"))

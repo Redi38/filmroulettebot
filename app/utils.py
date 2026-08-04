@@ -33,6 +33,15 @@ async def safe_edit_text(message: Message, text: str, reply_markup=None) -> None
             raise
 
 
+async def safe_edit_caption(message: Message, caption: str, reply_markup=None) -> None:
+    """Same as safe_edit_text but for photo captions (edit_caption)."""
+    try:
+        await message.edit_caption(caption=caption, reply_markup=reply_markup)
+    except TelegramBadRequest as e:
+        if "message is not modified" not in str(e):
+            raise
+
+
 def build_watch_link(title: str) -> str | None:
     """Build the "смотреть" link for a title using WATCH_LINK_TEMPLATE from
     config/.env, e.g. WATCH_LINK_TEMPLATE=https://kinogo.my/index.php?do=search&subaction=search&story={query}

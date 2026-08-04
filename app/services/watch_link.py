@@ -11,6 +11,7 @@ never raises for that; it just returns None.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from urllib.parse import quote_plus
@@ -22,6 +23,8 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 _TIMEOUT = 5  # seconds — this is best-effort, don't hold up the card render
+_MAX_RETRIES = 2
+_RETRY_DELAY = 0.7  # seconds
 _client: httpx.AsyncClient | None = None
 
 # .../<category-slug>/<numeric-id>-<title-slug>.html — matches kinogo.my,
@@ -57,11 +60,22 @@ async def find_watch_page_url(title: str) -> str | None:
 
     search_url = template.format(query=quote_plus(title))
 
-    try:
-        resp = await _get_client().get(search_url)
-        resp.raise_for_status()
-    except (httpx.HTTPError, httpx.TimeoutException) as e:
-        logger.warning("find_watch_page_url: request failed for %r: %s", title, e)
+    resp = None
+    for attempt in range(1, _MAX_RETRIES + 1):
+        try:
+            resp = await _get_client().get(search_url)
+            resp.raise_for_status()
+            break
+        except (httpx.HTTPError, httpx.TimeoutException) as e:
+            if attempt == _MAX_RETRIES:
+                logger.warning("find_watch_page_url: request failed for %r after %d attempts: %s",
+                                title, attempt, e)
+                return None
+            logger.info("find_watch_page_url: attempt %d failed for %r (%s), retrying…",
+                        attempt, title, e)
+            await asyncio.sleep(_RETRY_DELAY)
+
+    if resp is None:
         return None
 
     domain = resp.url.host

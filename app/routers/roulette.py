@@ -21,7 +21,7 @@ from app.keyboards import (
 )
 from app.services.tmdb import get_movie_info, get_series_info
 from app.services.watch_link import find_watch_page_url
-from app.utils import esc, build_watch_link, safe_edit_text
+from app.utils import esc, build_watch_link, safe_edit_text, safe_edit_caption
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -145,18 +145,28 @@ async def _spin_edit(msg: Message, category: str, choice: str | None = None) -> 
         _full_title_cache[(chat_id, final_msg.message_id)] = choice
 
 
-async def _build_card(category: str, title: str) -> tuple[str, str, str | None]:
+async def _fetch_tmdb_info(category: str, title: str) -> dict:
     try:
         if category == "series":
-            info = await asyncio.wait_for(get_series_info(title), timeout=TMDB_TIMEOUT) or {}
-        else:
-            info = await asyncio.wait_for(get_movie_info(title), timeout=TMDB_TIMEOUT) or {}
+            return await asyncio.wait_for(get_series_info(title), timeout=TMDB_TIMEOUT) or {}
+        return await asyncio.wait_for(get_movie_info(title), timeout=TMDB_TIMEOUT) or {}
     except asyncio.TimeoutError:
         logger.warning("_build_card: TMDB timeout for %r (%s)", title, category)
-        info = {}
+        return {}
+
+
+async def _build_card(category: str, title: str) -> tuple[str, str, str | None]:
+    tmdb_task = asyncio.create_task(_fetch_tmdb_info(category, title))
+    kinogo_task = asyncio.create_task(find_watch_page_url(title))
+    info, direct_link = await asyncio.gather(tmdb_task, kinogo_task)
 
     display_title = info.get("title", title)
-    link = await find_watch_page_url(display_title) or build_watch_link(display_title)
+    if direct_link:
+        link = direct_link
+    elif display_title != title:
+        link = await find_watch_page_url(display_title) or build_watch_link(display_title)
+    else:
+        link = build_watch_link(display_title)
     link_line = f'\n\n🔗 <a href="{esc(link)}">Смотреть онлайн</a>' if link else ""
 
     def _render(desc_limit: int) -> str:
@@ -210,15 +220,9 @@ async def confirm_cb(call: CallbackQuery, callback_data: ConfirmCB) -> None:
 
     try:
         if call.message.photo or call.message.document or call.message.video or call.message.animation:
-            await call.message.edit_caption(
-                caption=text_to_send,
-                reply_markup=reply_kb,
-            )
+            await safe_edit_caption(call.message, caption=text_to_send, reply_markup=reply_kb)
         else:
-            await call.message.edit_text(
-                text=text_to_send,
-                reply_markup=reply_kb,
-            )
+            await safe_edit_text(call.message, text=text_to_send, reply_markup=reply_kb)
     except TelegramBadRequest as e:
         logger.warning("confirm_cb: edit failed for %r, falling back to delete+answer: %s", item, e)
         _full_title_cache.pop((chat_id, call.message.message_id), None)
@@ -251,9 +255,9 @@ async def sequel_yes(call: CallbackQuery, callback_data: SequelYesCB) -> None:
     text_to_send = f"🔄 <b>{esc(item)}</b> → <b>{esc(new_item)}</b>\n\nВыберите действие в меню."
 
     if call.message.photo or call.message.document or call.message.video or call.message.animation:
-        await call.message.edit_caption(caption=text_to_send, reply_markup=None)
+        await safe_edit_caption(call.message, caption=text_to_send, reply_markup=None)
     else:
-        await call.message.edit_text(text=text_to_send, reply_markup=None)
+        await safe_edit_text(call.message, text=text_to_send, reply_markup=None)
     _full_title_cache.pop((chat_id, call.message.message_id), None)
 
 
@@ -271,9 +275,9 @@ async def sequel_no(call: CallbackQuery, callback_data: SequelNoCB) -> None:
     text_to_send = f"❌ <b>{esc(item)}</b> удалён из «{ru}»."
 
     if call.message.photo or call.message.document or call.message.video or call.message.animation:
-        await call.message.edit_caption(caption=text_to_send, reply_markup=None)
+        await safe_edit_caption(call.message, caption=text_to_send, reply_markup=None)
     else:
-        await call.message.edit_text(text=text_to_send, reply_markup=None)
+        await safe_edit_text(call.message, text=text_to_send, reply_markup=None)
     _full_title_cache.pop((chat_id, call.message.message_id), None)
 
 
@@ -363,7 +367,7 @@ async def back_main(call: CallbackQuery, callback_data: BackMainCB) -> None:
         except TelegramBadRequest as e:
             logger.warning("back_main: failed to delete message: %s", e)
             if call.message.photo or call.message.document or call.message.video or call.message.animation:
-                await call.message.edit_caption(caption="Возврат в меню...", reply_markup=None)
+                await safe_edit_caption(call.message, caption="Возврат в меню...", reply_markup=None)
             else:
                 await safe_edit_text(call.message, "Возврат в меню...", reply_markup=None)
         await call.message.answer("🎉 Выберите действие:", reply_markup=main_kb())
@@ -377,7 +381,7 @@ async def back_main(call: CallbackQuery, callback_data: BackMainCB) -> None:
                 await call.message.answer(f"🎲 Категория: <b>{ru}</b>", reply_markup=spin_kb(cat))
             except TelegramBadRequest as e:
                 logger.warning("back_main: failed to delete photo message: %s", e)
-                await call.message.edit_caption(caption=f"🎲 Категория: <b>{ru}</b>", reply_markup=spin_kb(cat))
+                await safe_edit_caption(call.message, caption=f"🎲 Категория: <b>{ru}</b>", reply_markup=spin_kb(cat))
         else:
             await safe_edit_text(call.message, f"🎲 Категория: <b>{ru}</b>", reply_markup=spin_kb(cat))
 

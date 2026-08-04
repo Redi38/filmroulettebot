@@ -5,6 +5,7 @@ import asyncio
 import logging
 import random
 import re
+import time
 
 from aiogram import Router, F
 from aiogram.filters import CommandStart
@@ -31,6 +32,21 @@ _last_category: dict[int, str] = {}
 _full_title_cache: dict[tuple[int, int], str] = {}
 
 TMDB_TIMEOUT = 6  # seconds
+
+_last_roll_at: dict[int, float] = {}
+ROLL_COOLDOWN = 1.5  # seconds
+
+
+def _roll_on_cooldown(user_id: int) -> float:
+    """Returns remaining cooldown seconds (0 if not on cooldown). Updates the
+    timestamp as a side effect only when NOT on cooldown, so a burst of taps
+    during the cooldown window doesn't keep pushing the window forward."""
+    now = time.monotonic()
+    elapsed = now - _last_roll_at.get(user_id, 0.0)
+    if elapsed < ROLL_COOLDOWN:
+        return ROLL_COOLDOWN - elapsed
+    _last_roll_at[user_id] = now
+    return 0.0
 
 
 def _resolve_title(chat_id: int, message_id: int, short_title: str) -> str:
@@ -64,6 +80,12 @@ async def open_spin_menu(msg: Message) -> None:
 
 @router.message(F.text == "🔄 Начать")
 async def random_start(msg: Message) -> None:
+    user_id = msg.from_user.id if msg.from_user else msg.chat.id
+    wait = _roll_on_cooldown(user_id)
+    if wait > 0:
+        await msg.answer(f"⏳ Подожди {wait:.1f} сек. перед следующим роллом.")
+        return
+
     all_cats = ["movies", "cartoons", "series"]
 
     non_empty = [c for c in all_cats if await get_items(c)]
@@ -79,6 +101,11 @@ async def random_start(msg: Message) -> None:
 async def spin_cb(call: CallbackQuery, callback_data: SpinCB) -> None:
     if not isinstance(call.message, Message):
         return
+    user_id = call.from_user.id
+    wait = _roll_on_cooldown(user_id)
+    if wait > 0:
+        await call.answer(f"⏳ Подожди {wait:.1f} сек.", show_alert=False)
+        return
     await call.answer()
     cat = CODE_TO_CAT[callback_data.code]
     await call.message.edit_text("🌀 Крутим рулетку…", reply_markup=None)
@@ -89,6 +116,11 @@ async def spin_cb(call: CallbackQuery, callback_data: SpinCB) -> None:
 @router.callback_query(RerollCB.filter())
 async def reroll_cb(call: CallbackQuery, callback_data: RerollCB) -> None:
     if not isinstance(call.message, Message):
+        return
+    user_id = call.from_user.id
+    wait = _roll_on_cooldown(user_id)
+    if wait > 0:
+        await call.answer(f"⏳ Подожди {wait:.1f} сек.", show_alert=False)
         return
     await call.answer()
     cat = CODE_TO_CAT[callback_data.code]

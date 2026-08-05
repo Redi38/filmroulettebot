@@ -15,6 +15,7 @@ class RerollCB(CallbackData, prefix="rr"): code: str
 class ConfirmCB(CallbackData, prefix="cf"): code: str; title: str
 class EditMenuCB(CallbackData, prefix="em"): code: str
 class AddItemCB(CallbackData, prefix="ad"): code: str
+class DeleteMenuCB(CallbackData, prefix="dlm"): code: str
 class DeleteItemCB(CallbackData, prefix="del"): code: str; idx: int
 class SequelYesCB(CallbackData, prefix="sqy"): code: str; title: str
 class SequelNoCB(CallbackData, prefix="sqn"): code: str; title: str
@@ -80,31 +81,21 @@ def after_roll_kb(cat: str, choice: str) -> InlineKeyboardMarkup:
         _back_row(BackMainCB(target="main").pack())
     ])
 
-def edit_menu_kb(
-    cat: str,
-    page_row: list[InlineKeyboardButton] | None = None,
-    items: list[str] | None = None,
-) -> InlineKeyboardMarkup:
-    """Управление списком категории.
-
-    Если передан `items`, рендерит для каждого элемента отдельную кнопку
-    "🗑 <название>" (сразу удаляет по одному тапу) — так экран редактирования
-    и экран удаления объединены в один шаг. Если `items` не передан (например,
-    вызов из dc_marvel.py, где элементы не удаляются с этого экрана),
-    поведение остаётся прежним — просто кнопки навигации.
-    """
+def edit_menu_kb(cat: str, page_row: list[InlineKeyboardButton] | None = None) -> InlineKeyboardMarkup:
     code = CAT_TO_CODE[cat]
     rows: list[list[InlineKeyboardButton]] = []
-    if items:
-        rows.extend(
-            [styled_btn(f"🗑 {item[:55]}", DeleteItemCB(code=code, idx=i).pack(), "danger")]
-            for i, item in enumerate(items)
-        )
     if page_row:
         rows.append(page_row)
-    rows.append([styled_btn("➕ Добавить", AddItemCB(code=code).pack(), "success")])
+    rows.append([styled_btn("➕ Добавить", AddItemCB(code=code).pack(), "success"),
+                 styled_btn("➖ Удалить", DeleteMenuCB(code=code).pack(), "danger")])
     if cat not in ("dc", "marvel"):
         rows.append(_back_row(BackMainCB(target=f"sp__{code}").pack()))
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+def delete_list_kb(cat: str, items: list[str]) -> InlineKeyboardMarkup:
+    code = CAT_TO_CODE[cat]
+    rows = [[styled_btn(f"🗑 {item[:60]}", DeleteItemCB(code=code, idx=i).pack(), "danger")] for i, item in enumerate(items)]
+    rows.append(_back_row(EditMenuCB(code=code).pack()))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 def cancel_input_kb(target: str) -> InlineKeyboardMarkup:

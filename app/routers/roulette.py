@@ -16,10 +16,11 @@ from aiogram.exceptions import TelegramBadRequest
 from app.db.database import get_items, add_item, delete_item, save_history, item_exists
 from app.states import AddItemStates
 from app.keyboards import (
-    main_kb, spin_kb, after_roll_kb, edit_menu_kb, sequel_kb, cancel_input_kb,
-    SpinCB, RerollCB, ConfirmCB, EditMenuCB, AddItemCB, DeleteItemCB,
-    SequelYesCB, SequelNoCB, CancelInputCB, BackMainCB, CODE_TO_CAT, CAT_RU,
+    main_kb, spin_kb, after_roll_kb, edit_menu_kb, delete_list_kb, sequel_kb, cancel_input_kb,
+    SpinCB, RerollCB, ConfirmCB, EditMenuCB, AddItemCB, DeleteMenuCB, DeleteItemCB,
+    SequelYesCB, SequelNoCB, CancelInputCB, BackMainCB, CODE_TO_CAT, CAT_RU, pagination_row,
 )
+from app.routers.dc_marvel import _render as render_dc_marvel_list
 from app.services.tmdb import get_movie_info, get_series_info
 from app.services.watch_link import find_watch_page_url
 from app.utils import esc, build_watch_link, safe_edit_text, safe_edit_caption, smart_replace, stars
@@ -194,17 +195,14 @@ async def _build_card(category: str, title: str) -> tuple[str, str, str | None]:
         link = await find_watch_page_url(display_title) or build_watch_link(display_title)
     else:
         link = build_watch_link(display_title)
-    link_line = f'\n\n🔗 <a href="{esc(link)}">Смотреть онлайн</a>' if link else ""
+    link_line = f'\n\n▶️ <a href="{esc(link)}">Смотреть онлайн</a>' if link else ""
 
-    cat_label = {"movies": "Рулетка · Фильмы", "cartoons": "Рулетка · Мульты", "series": "Рулетка · Сериалы"}
-    breadcrumb = f"<i>{cat_label.get(category, 'Рулетка')}</i>\n"
     rating_line = f"⭐ Рейтинг: {stars(info.get('rating'))}\n"
 
     def _render(desc_limit: int) -> str:
         desc = _trim(info.get("overview", ""), desc_limit)
         if category == "series":
             return (
-                f"{breadcrumb}"
                 f"📺 <b><code>{esc(display_title)}</code></b>\n\n"
                 f"{rating_line}"
                 f"🗓 Дата выхода: {esc(str(info.get('release_date', '—')))}\n"
@@ -217,7 +215,6 @@ async def _build_card(category: str, title: str) -> tuple[str, str, str | None]:
             )
         emoji = "🎬" if category == "movies" else "🎥"
         return (
-            f"{breadcrumb}"
             f"{emoji} <b><code>{esc(display_title)}</code></b>\n\n"
             f"{rating_line}"
             f"🗓 Дата выхода: {esc(str(info.get('release_date', '—')))}\n"
@@ -303,16 +300,18 @@ async def edit_menu_cb(call: CallbackQuery, callback_data: EditMenuCB) -> None:
         return
     await call.answer()
     cat = CODE_TO_CAT[callback_data.code]
+    if cat in ("dc", "marvel"):
+        text, total_pages = await render_dc_marvel_list(cat, 1)
+        row = pagination_row(cat, 1, total_pages)
+        await safe_edit_text(call.message, text, reply_markup=edit_menu_kb(cat, row))
+        return
     ru = CAT_RU.get(cat, cat)
     items = await get_items(cat)
-    if items:
-        text = f"✏️ <b>{ru}</b> — нажмите на тайтл, чтобы удалить его:"
-    else:
-        text = f"✏️ <b>{ru}</b> — список пуст."
+    text = "\n".join(f"{i + 1}. {esc(x)}" for i, x in enumerate(items)) if items else "(список пуст)"
     await safe_edit_text(
         call.message,
-        text,
-        reply_markup=edit_menu_kb(cat, items=items),
+        f"✏️ <b>{ru}</b> — управление списком:\n\n{text}",
+        reply_markup=edit_menu_kb(cat),
     )
 
 
@@ -332,35 +331,46 @@ async def add_item_start(call: CallbackQuery, callback_data: AddItemCB, state: F
     )
 
 
-@router.callback_query(DeleteItemCB.filter())
-async def delete_item_cb(call: CallbackQuery, callback_data: DeleteItemCB) -> None:
-    """Удаление тайтла прямо с экрана редактирования списка (1 тап,
-    без отдельного промежуточного экрана "Удалить")."""
+@router.callback_query(DeleteMenuCB.filter())
+async def delete_menu(call: CallbackQuery, callback_data: DeleteMenuCB) -> None:
     if not isinstance(call.message, Message):
         return
+    await call.answer()
     cat = CODE_TO_CAT[callback_data.code]
     ru = CAT_RU.get(cat, cat)
     items = await get_items(cat)
-    if not (0 <= callback_data.idx < len(items)):
-        await call.answer("⚠ Ошибка удаления.", show_alert=True)
+    if not items:
+        await safe_edit_text(call.message, f"❌ Список «<b>{ru}</b>» пуст.", reply_markup=edit_menu_kb(cat))
         return
+    await safe_edit_text(call.message, f"🗑 Удалить из «<b>{ru}</b>»:", reply_markup=delete_list_kb(cat, items))
 
-    title = items[callback_data.idx]
-    await delete_item(cat, title)
-    await call.answer(f"🗑 Удалено: {title[:40]}")
+
+@router.callback_query(DeleteItemCB.filter())
+async def delete_item_cb(call: CallbackQuery, callback_data: DeleteItemCB) -> None:
+    if not isinstance(call.message, Message):
+        return
+    await call.answer()
+    cat = CODE_TO_CAT[callback_data.code]
+    ru = CAT_RU.get(cat, cat)
     items = await get_items(cat)
-    if items:
-        await safe_edit_text(
-            call.message,
-            f"✏️ <b>{ru}</b> — нажмите на тайтл, чтобы удалить его:",
-            reply_markup=edit_menu_kb(cat, items=items),
-        )
+    if 0 <= callback_data.idx < len(items):
+        title = items[callback_data.idx]
+        await delete_item(cat, title)
+        items = await get_items(cat)
+        if items:
+            await safe_edit_text(
+                call.message,
+                f"🗑 Удалить из «<b>{ru}</b>»:\n<i>({esc(title)} удалён)</i>",
+                reply_markup=delete_list_kb(cat, items),
+            )
+        else:
+            await safe_edit_text(
+                call.message,
+                f"✅ <b>{esc(title)}</b> удалён. Список «{ru}» теперь пуст.",
+                reply_markup=edit_menu_kb(cat),
+            )
     else:
-        await safe_edit_text(
-            call.message,
-            f"✅ <b>{esc(title)}</b> удалён. Список «{ru}» теперь пуст.",
-            reply_markup=edit_menu_kb(cat),
-        )
+        await call.answer("⚠ Ошибка удаления.", show_alert=True)
 
 
 @router.callback_query(BackMainCB.filter(F.target.in_({"main", "sp__m", "sp__c", "sp__s", "sp__dc", "sp__mv"})))
@@ -381,8 +391,6 @@ async def back_main(call: CallbackQuery, callback_data: BackMainCB) -> None:
         cat = CODE_TO_CAT.get(code, "movies")
         ru = CAT_RU.get(cat, cat)
         text = f"🎲 Категория: <b>{ru}</b>"
-        # переход из карточки (возможно, с фото) обратно в текстовое меню
-        # категории — это смена типа контента, поэтому delete+answer, а не edit
         has_media = bool(call.message.photo or call.message.document or call.message.video or call.message.animation)
         if has_media:
             try:

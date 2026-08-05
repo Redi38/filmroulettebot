@@ -16,13 +16,13 @@ from aiogram.exceptions import TelegramBadRequest
 from app.db.database import get_items, add_item, delete_item, save_history, item_exists
 from app.states import AddItemStates
 from app.keyboards import (
-    main_kb, spin_kb, after_roll_kb, edit_menu_kb, delete_list_kb, sequel_kb,
-    SpinCB, RerollCB, ConfirmCB, EditMenuCB, AddItemCB, DeleteMenuCB, DeleteItemCB,
-    SequelYesCB, SequelNoCB, BackMainCB, CODE_TO_CAT, CAT_RU,
+    main_kb, spin_kb, after_roll_kb, edit_menu_kb, sequel_kb, cancel_input_kb,
+    SpinCB, RerollCB, ConfirmCB, EditMenuCB, AddItemCB, DeleteItemCB,
+    SequelYesCB, SequelNoCB, CancelInputCB, BackMainCB, CODE_TO_CAT, CAT_RU,
 )
 from app.services.tmdb import get_movie_info, get_series_info
 from app.services.watch_link import find_watch_page_url
-from app.utils import esc, build_watch_link, safe_edit_text, safe_edit_caption
+from app.utils import esc, build_watch_link, safe_edit_text, safe_edit_caption, smart_replace, stars
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -126,14 +126,9 @@ async def reroll_cb(call: CallbackQuery, callback_data: RerollCB) -> None:
     cat = CODE_TO_CAT[callback_data.code]
     _full_title_cache.pop((call.message.chat.id, call.message.message_id), None)
 
-    try:
-        await call.message.delete()
-    except TelegramBadRequest as e:
-        logger.warning("reroll_cb: failed to delete message %s: %s", call.message.message_id, e)
-
-    temp_msg = await call.message.answer("🌀 Перекручиваем…")
+    msg = await smart_replace(call.message, text="🌀 Перекручиваем…", caption="🌀 Перекручиваем…", reply_markup=None)
     await asyncio.sleep(0.6)
-    await _spin_edit(temp_msg, cat)
+    await _spin_edit(msg, cat)
 
 
 async def _spin(msg: Message, category: str) -> None:
@@ -201,28 +196,36 @@ async def _build_card(category: str, title: str) -> tuple[str, str, str | None]:
         link = build_watch_link(display_title)
     link_line = f'\n\n🔗 <a href="{esc(link)}">Смотреть онлайн</a>' if link else ""
 
+    cat_label = {"movies": "Рулетка · Фильмы", "cartoons": "Рулетка · Мульты", "series": "Рулетка · Сериалы"}
+    breadcrumb = f"<i>{cat_label.get(category, 'Рулетка')}</i>\n"
+    rating_line = f"⭐ Рейтинг: {stars(info.get('rating'))}\n"
+
     def _render(desc_limit: int) -> str:
         desc = _trim(info.get("overview", ""), desc_limit)
         if category == "series":
             return (
+                f"{breadcrumb}"
                 f"📺 <b><code>{esc(display_title)}</code></b>\n\n"
+                f"{rating_line}"
                 f"🗓 Дата выхода: {esc(str(info.get('release_date', '—')))}\n"
-                f"⭐️ Рейтинг: {esc(str(info.get('rating', '—')))}\n"
                 f"🎭 Жанры: {esc(info.get('genres', '—'))}\n"
-                f"👥 Актёры: {esc(info.get('actors', '—'))}\n"
-                f"📚 Сезонов: {esc(str(info.get('seasons', '—')))}\n"
+                f"👥 Актёры: {esc(info.get('actors', '—'))}\n\n"
+                f"📚 Сезонов: {esc(str(info.get('seasons', '—')))}   "
                 f"🎥 Эпизодов: {esc(str(info.get('episodes', '—')))}\n\n"
-                f"📖 {esc(desc)}{link_line}"
+                f"───────────\n"
+                f"📖 <i>{esc(desc)}</i>{link_line}"
             )
         emoji = "🎬" if category == "movies" else "🎥"
         return (
+            f"{breadcrumb}"
             f"{emoji} <b><code>{esc(display_title)}</code></b>\n\n"
+            f"{rating_line}"
             f"🗓 Дата выхода: {esc(str(info.get('release_date', '—')))}\n"
-            f"⭐️ Рейтинг: {esc(str(info.get('rating', '—')))}\n"
-            f"⏳ Длительность: {esc(str(info.get('runtime', '—')))} мин.\n"
+            f"⏳ Длительность: {esc(str(info.get('runtime', '—')))} мин.\n\n"
             f"🎭 Жанры: {esc(info.get('genres', '—'))}\n"
             f"👥 Актёры: {esc(info.get('actors', '—'))}\n\n"
-            f"📖 {esc(desc)}{link_line}"
+            f"───────────\n"
+            f"📖 <i>{esc(desc)}</i>{link_line}"
         )
 
     caption = _render(desc_limit=900)
@@ -250,22 +253,9 @@ async def confirm_cb(call: CallbackQuery, callback_data: ConfirmCB) -> None:
     reply_kb = sequel_kb(cat, item)
     text_to_send = f"🎬 Добавить продолжение для <b>{esc(item)}</b>?"
 
-    try:
-        if call.message.photo or call.message.document or call.message.video or call.message.animation:
-            await safe_edit_caption(call.message, caption=text_to_send, reply_markup=reply_kb)
-        else:
-            await safe_edit_text(call.message, text=text_to_send, reply_markup=reply_kb)
-    except TelegramBadRequest as e:
-        logger.warning("confirm_cb: edit failed for %r, falling back to delete+answer: %s", item, e)
+    new_msg = await smart_replace(call.message, text=text_to_send, caption=text_to_send, reply_markup=reply_kb)
+    if new_msg.message_id != call.message.message_id:
         _full_title_cache.pop((chat_id, call.message.message_id), None)
-        try:
-            await call.message.delete()
-        except TelegramBadRequest as e2:
-            logger.warning("confirm_cb: failed to delete message: %s", e2)
-        new_msg = await call.message.answer(
-            text=text_to_send,
-            reply_markup=reply_kb,
-        )
         _full_title_cache[(chat_id, new_msg.message_id)] = item
 
 
@@ -286,10 +276,7 @@ async def sequel_yes(call: CallbackQuery, callback_data: SequelYesCB) -> None:
 
     text_to_send = f"🔄 <b>{esc(item)}</b> → <b>{esc(new_item)}</b>\n\nВыберите действие в меню."
 
-    if call.message.photo or call.message.document or call.message.video or call.message.animation:
-        await safe_edit_caption(call.message, caption=text_to_send, reply_markup=None)
-    else:
-        await safe_edit_text(call.message, text=text_to_send, reply_markup=None)
+    await smart_replace(call.message, text=text_to_send, caption=text_to_send, reply_markup=None)
     _full_title_cache.pop((chat_id, call.message.message_id), None)
 
 
@@ -306,10 +293,7 @@ async def sequel_no(call: CallbackQuery, callback_data: SequelNoCB) -> None:
     await delete_item(cat, item)
     text_to_send = f"❌ <b>{esc(item)}</b> удалён из «{ru}»."
 
-    if call.message.photo or call.message.document or call.message.video or call.message.animation:
-        await safe_edit_caption(call.message, caption=text_to_send, reply_markup=None)
-    else:
-        await safe_edit_text(call.message, text=text_to_send, reply_markup=None)
+    await smart_replace(call.message, text=text_to_send, caption=text_to_send, reply_markup=None)
     _full_title_cache.pop((chat_id, call.message.message_id), None)
 
 
@@ -321,11 +305,14 @@ async def edit_menu_cb(call: CallbackQuery, callback_data: EditMenuCB) -> None:
     cat = CODE_TO_CAT[callback_data.code]
     ru = CAT_RU.get(cat, cat)
     items = await get_items(cat)
-    text = "\n".join(f"{i + 1}. {esc(x)}" for i, x in enumerate(items)) if items else "(список пуст)"
+    if items:
+        text = f"✏️ <b>{ru}</b> — нажмите на тайтл, чтобы удалить его:"
+    else:
+        text = f"✏️ <b>{ru}</b> — список пуст."
     await safe_edit_text(
         call.message,
-        f"✏️ <b>{ru}</b> — управление списком:\n\n{text}",
-        reply_markup=edit_menu_kb(cat),
+        text,
+        reply_markup=edit_menu_kb(cat, items=items),
     )
 
 
@@ -340,51 +327,40 @@ async def add_item_start(call: CallbackQuery, callback_data: AddItemCB, state: F
     await state.update_data(category=cat)
     await safe_edit_text(
         call.message,
-        f"✏️ Введите название для добавления в <b>{ru}</b>:\n\n<i>Для отмены — /start</i>",
-        reply_markup=None,
+        f"✏️ Введите название для добавления в <b>{ru}</b>:",
+        reply_markup=cancel_input_kb("main"),
     )
-
-
-@router.callback_query(DeleteMenuCB.filter())
-async def delete_menu(call: CallbackQuery, callback_data: DeleteMenuCB) -> None:
-    if not isinstance(call.message, Message):
-        return
-    await call.answer()
-    cat = CODE_TO_CAT[callback_data.code]
-    ru = CAT_RU.get(cat, cat)
-    items = await get_items(cat)
-    if not items:
-        await safe_edit_text(call.message, f"❌ Список «<b>{ru}</b>» пуст.", reply_markup=edit_menu_kb(cat))
-        return
-    await safe_edit_text(call.message, f"🗑 Удалить из «<b>{ru}</b>»:", reply_markup=delete_list_kb(cat, items))
 
 
 @router.callback_query(DeleteItemCB.filter())
 async def delete_item_cb(call: CallbackQuery, callback_data: DeleteItemCB) -> None:
+    """Удаление тайтла прямо с экрана редактирования списка (1 тап,
+    без отдельного промежуточного экрана "Удалить")."""
     if not isinstance(call.message, Message):
         return
-    await call.answer()
     cat = CODE_TO_CAT[callback_data.code]
     ru = CAT_RU.get(cat, cat)
     items = await get_items(cat)
-    if 0 <= callback_data.idx < len(items):
-        title = items[callback_data.idx]
-        await delete_item(cat, title)
-        items = await get_items(cat)
-        if items:
-            await safe_edit_text(
-                call.message,
-                f"🗑 Удалить из «<b>{ru}</b>»:\n<i>({esc(title)} удалён)</i>",
-                reply_markup=delete_list_kb(cat, items),
-            )
-        else:
-            await safe_edit_text(
-                call.message,
-                f"✅ <b>{esc(title)}</b> удалён. Список «{ru}» теперь пуст.",
-                reply_markup=edit_menu_kb(cat),
-            )
-    else:
+    if not (0 <= callback_data.idx < len(items)):
         await call.answer("⚠ Ошибка удаления.", show_alert=True)
+        return
+
+    title = items[callback_data.idx]
+    await delete_item(cat, title)
+    await call.answer(f"🗑 Удалено: {title[:40]}")
+    items = await get_items(cat)
+    if items:
+        await safe_edit_text(
+            call.message,
+            f"✏️ <b>{ru}</b> — нажмите на тайтл, чтобы удалить его:",
+            reply_markup=edit_menu_kb(cat, items=items),
+        )
+    else:
+        await safe_edit_text(
+            call.message,
+            f"✅ <b>{esc(title)}</b> удалён. Список «{ru}» теперь пуст.",
+            reply_markup=edit_menu_kb(cat),
+        )
 
 
 @router.callback_query(BackMainCB.filter(F.target.in_({"main", "sp__m", "sp__c", "sp__s", "sp__dc", "sp__mv"})))
@@ -398,24 +374,38 @@ async def back_main(call: CallbackQuery, callback_data: BackMainCB) -> None:
             await call.message.delete()
         except TelegramBadRequest as e:
             logger.warning("back_main: failed to delete message: %s", e)
-            if call.message.photo or call.message.document or call.message.video or call.message.animation:
-                await safe_edit_caption(call.message, caption="Возврат в меню...", reply_markup=None)
-            else:
-                await safe_edit_text(call.message, "Возврат в меню...", reply_markup=None)
+            await smart_replace(call.message, text="Возврат в меню...", caption="Возврат в меню...", reply_markup=None)
         await call.message.answer("🎉 Выберите действие:", reply_markup=main_kb())
     elif target.startswith("sp__"):
         code = target[4:]
         cat = CODE_TO_CAT.get(code, "movies")
         ru = CAT_RU.get(cat, cat)
-        if call.message.photo or call.message.document or call.message.video or call.message.animation:
+        text = f"🎲 Категория: <b>{ru}</b>"
+        # переход из карточки (возможно, с фото) обратно в текстовое меню
+        # категории — это смена типа контента, поэтому delete+answer, а не edit
+        has_media = bool(call.message.photo or call.message.document or call.message.video or call.message.animation)
+        if has_media:
             try:
                 await call.message.delete()
-                await call.message.answer(f"🎲 Категория: <b>{ru}</b>", reply_markup=spin_kb(cat))
+                await call.message.answer(text, reply_markup=spin_kb(cat))
             except TelegramBadRequest as e:
                 logger.warning("back_main: failed to delete photo message: %s", e)
-                await safe_edit_caption(call.message, caption=f"🎲 Категория: <b>{ru}</b>", reply_markup=spin_kb(cat))
+                await safe_edit_caption(call.message, caption=text, reply_markup=spin_kb(cat))
         else:
-            await safe_edit_text(call.message, f"🎲 Категория: <b>{ru}</b>", reply_markup=spin_kb(cat))
+            await safe_edit_text(call.message, text, reply_markup=spin_kb(cat))
+
+
+@router.callback_query(CancelInputCB.filter(F.target == "main"))
+async def cancel_add_item(call: CallbackQuery, state: FSMContext) -> None:
+    if not isinstance(call.message, Message):
+        return
+    await state.clear()
+    await call.answer("Отменено")
+    try:
+        await call.message.delete()
+    except TelegramBadRequest as e:
+        logger.warning("cancel_add_item: failed to delete message: %s", e)
+    await call.message.answer("🎉 Выберите действие:", reply_markup=main_kb())
 
 
 @router.message(AddItemStates.waiting_title, F.text & ~F.text.startswith("/"))

@@ -17,8 +17,8 @@ from app.db.database import (
 )
 from app.states import UpcomingStates
 from app.keyboards import (
-    upcoming_menu_kb, upcoming_list_kb, upcoming_targets_kb,
-    upcoming_delete_kb, BackMainCB, pagination_row, PageCB,
+    upcoming_menu_kb, upcoming_list_kb, upcoming_targets_kb, cancel_input_kb,
+    upcoming_delete_kb, BackMainCB, pagination_row, PageCB, CancelInputCB,
     UpcomingMoveCB, UpcomingSelectCB, UpcomingDeleteOneCB, UpcomingMoveTargetCB,
     UpcomingCheckMoveCB, UpcomingCheckMoveToCB, UpcomingAddCB,
     released_check_kb, released_move_to_kb,
@@ -161,9 +161,9 @@ async def up_add_start(call: CallbackQuery, state: FSMContext) -> None:
         return
     await call.answer()
     await state.set_state(UpcomingStates.waiting_title)
-    await safe_edit_text(call.message, 
-        "✏️ Введите название фильма для добавления в ожидаемые:\n\n<i>Для отмены — /upcoming</i>",
-        reply_markup=None,
+    await safe_edit_text(call.message,
+        "✏️ Введите название фильма для добавления в ожидаемые:",
+        reply_markup=cancel_input_kb("up"),
     )
 
 
@@ -323,6 +323,19 @@ async def up_back_to_titles(call: CallbackQuery) -> None:
         await safe_edit_text(call.message, "📤 Выберите фильм для переноса:", reply_markup=upcoming_list_kb(items))
     else:
         await safe_edit_text(call.message, "❌ Нет ожидаемых фильмов.", reply_markup=upcoming_menu_kb())
+
+
+@router.callback_query(CancelInputCB.filter(F.target == "up"))
+async def cancel_add_upcoming(call: CallbackQuery, state: FSMContext) -> None:
+    if not isinstance(call.message, Message):
+        return
+    await state.clear()
+    await call.answer("Отменено")
+    items = await get_upcoming_movies()
+    _, page, total_pages = paginate(items, 1)
+    text = render_numbered_list(items, page)
+    row = pagination_row("up", page, total_pages)
+    await safe_edit_text(call.message, f"<b>🎬 Ожидаемые фильмы:</b>\n\n{text}", reply_markup=upcoming_menu_kb(row))
 
 
 # ─── Text input handler (waiting for a title) ─────────────────────────────────

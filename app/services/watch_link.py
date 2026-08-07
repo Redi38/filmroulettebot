@@ -17,6 +17,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+import time
 from urllib.parse import quote_plus
 
 import httpx
@@ -25,10 +26,14 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-_TIMEOUT = 5  # seconds — this is best-effort, don't hold up the card render
+_TIMEOUT = 5
 _MAX_RETRIES = 2
 _RETRY_DELAY = 0.7  # seconds
 _client: httpx.AsyncClient | None = None
+
+_cache: dict[str, tuple[str | None, float]] = {}
+_CACHE_TTL_HIT = 24 * 3600
+_CACHE_TTL_MISS = 3600
 
 # .../<category-slug>/<numeric-id>-<title-slug>.html — matches kinogo.my,
 # kinogo.co, kinogo.cc, and similar DLE-engine sites' article URLs.
@@ -75,6 +80,8 @@ def _best_link(urls: list[str], title: str) -> str | None:
         return overlap / len(wanted)
 
     best = max(urls, key=score)
+    # Требуем хотя бы половину слов названия — иначе это, скорее всего,
+    # вообще другой тайтл, и лучше вернуть generic-ссылку на поиск.
     return best if score(best) >= 0.5 else None
 
 
@@ -100,7 +107,24 @@ async def find_watch_page_url(title: str) -> str | None:
     """Search the configured site for `title` and return the URL of the
     best-matching result (by slug word overlap, not site relevance order),
     or None if no template is configured, the site couldn't be reached, or
-    nothing matched well enough."""
+    nothing matched well enough. Results (including misses) are cached in
+    memory for a while — see _CACHE_TTL_HIT / _CACHE_TTL_MISS."""
+    key = title.strip().casefold()
+    cached = _cache.get(key)
+    if cached is not None:
+        result, expires_at = cached
+        if time.monotonic() < expires_at:
+            return result
+        del _cache[key]
+
+    result = await _fetch_watch_page_url(title)
+    ttl = _CACHE_TTL_HIT if result else _CACHE_TTL_MISS
+    _cache[key] = (result, time.monotonic() + ttl)
+    return result
+
+
+async def _fetch_watch_page_url(title: str) -> str | None:
+    """Uncached: always hits the site."""
     template = settings.WATCH_LINK_TEMPLATE
     if not template:
         return None
@@ -125,6 +149,9 @@ async def find_watch_page_url(title: str) -> str | None:
     if resp is None:
         return None
 
+    # Сайт может редиректить на другое зеркало (например kinogo.my -> kinogomy.net) —
+    # берём домен из ФИНАЛЬНОГО URL (resp.url), а не из исходного запроса,
+    # иначе регулярка ищет ссылки не того домена и ничего не находит.
     domain = resp.url.host
     if not domain:
         return None

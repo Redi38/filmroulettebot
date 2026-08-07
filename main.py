@@ -9,14 +9,12 @@ from app.config import settings
 from app.db.database import init_db
 from app.routers import roulette, upcoming, dc_marvel, history
 from app.services.tmdb import close_client
+from app.services.watch_link import close_client as close_watch_link_client
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO),
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    handlers=[
-        logging.FileHandler("bot.log"),
-        logging.StreamHandler(sys.stdout),
-    ],
+    handlers=[logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger(__name__)
 
@@ -34,6 +32,7 @@ async def main() -> None:
         await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
     finally:
         await close_client()
+        await close_watch_link_client()
 
 
 if __name__ == "__main__":

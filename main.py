@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import sys
+import time
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
@@ -18,6 +19,19 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+HEARTBEAT_FILE = "/tmp/bot_heartbeat"
+HEARTBEAT_INTERVAL = 30  # seconds
+
+
+async def _heartbeat_loop() -> None:
+    while True:
+        try:
+            with open(HEARTBEAT_FILE, "w") as f:
+                f.write(str(time.time()))
+        except OSError as e:
+            logger.warning("heartbeat: failed to write %s: %s", HEARTBEAT_FILE, e)
+        await asyncio.sleep(HEARTBEAT_INTERVAL)
+
 
 async def main() -> None:
     await init_db()
@@ -28,9 +42,11 @@ async def main() -> None:
     dp = Dispatcher(storage=MemoryStorage())
     dp.include_routers(roulette.router, upcoming.router, dc_marvel.router, history.router)
     logger.info("🚀 Bot started")
+    heartbeat_task = asyncio.create_task(_heartbeat_loop())
     try:
         await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
     finally:
+        heartbeat_task.cancel()
         await close_client()
         await close_watch_link_client()
 

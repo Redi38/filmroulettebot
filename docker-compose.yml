@@ -7,3 +7,13 @@ services:
       - ./data:/app/data
     environment:
       DB_PATH: /app/data/bot_data.db
+    labels:
+      - "autoheal=true"
+
+  autoheal:
+    image: willfarrell/autoheal
+    restart: unless-stopped
+    environment:
+      AUTOHEAL_CONTAINER_LABEL: autoheal
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

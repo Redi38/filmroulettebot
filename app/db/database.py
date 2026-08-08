@@ -1,12 +1,14 @@
 """Async SQLite layer using aiosqlite."""
 from __future__ import annotations
 
+import asyncio
+import functools
 import json
 import logging
 import random
 import time
 from contextlib import asynccontextmanager
-from typing import Any, AsyncIterator
+from typing import Any, AsyncIterator, Callable, TypeVar
 
 import aiosqlite
 
@@ -22,6 +24,29 @@ _NOCASE_TABLES = ("movies", "cartoons", "series", "dc", "marvel", "upcoming_movi
 # so the table stays bounded without needing a scheduler/cron job.
 _CACHE_PURGE_PROBABILITY = 0.05
 _CACHE_PURGE_MAX_AGE = 30 * 24 * 3600  # 30 days safety net
+
+_DB_MAX_RETRIES = 4
+_DB_RETRY_BASE = 0.15  # seconds
+
+_F = TypeVar("_F", bound=Callable[..., Any])
+
+
+def _retry_on_lock(func: _F) -> _F:
+    @functools.wraps(func)
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        for attempt in range(1, _DB_MAX_RETRIES + 1):
+            try:
+                return await func(*args, **kwargs)
+            except aiosqlite.OperationalError as e:
+                if "locked" not in str(e).lower() or attempt == _DB_MAX_RETRIES:
+                    raise
+                delay = _DB_RETRY_BASE * (2 ** (attempt - 1)) + random.uniform(0, 0.05)
+                logger.warning(
+                    "DB locked in %s (attempt %d/%d), retrying in %.2fs",
+                    func.__name__, attempt, _DB_MAX_RETRIES, delay,
+                )
+                await asyncio.sleep(delay)
+    return wrapper  # type: ignore[return-value]
 
 
 @asynccontextmanager
@@ -155,6 +180,7 @@ async def item_exists(table: str, title: str) -> bool:
             return await cur.fetchone() is not None
 
 
+@_retry_on_lock
 async def add_item(table: str, title: str) -> None:
     _check_table(table)
     title = title.strip()
@@ -165,6 +191,7 @@ async def add_item(table: str, title: str) -> None:
         await db.commit()
 
 
+@_retry_on_lock
 async def delete_item(table: str, title: str) -> None:
     _check_table(table)
     async with _conn() as db:
@@ -193,6 +220,7 @@ async def get_tmdb_cache(key: str, ttl_seconds: int) -> Any | None:
         return None
 
 
+@_retry_on_lock
 async def set_tmdb_cache(key: str, value: Any) -> None:
     payload = json.dumps(value, ensure_ascii=False)
     async with _conn() as db:
@@ -228,6 +256,7 @@ async def load_history(user_id: int, category: str | None = None) -> list[dict[s
             ]
 
 
+@_retry_on_lock
 async def save_history(user_id: int, category: str, title: str) -> None:
     film_cats = ("movies", "cartoons")
     limit = settings.HISTORY_CLEAR_LIMIT
@@ -274,12 +303,14 @@ async def save_history(user_id: int, category: str, title: str) -> None:
         await db.commit()
 
 
+@_retry_on_lock
 async def clear_user_history(user_id: int) -> None:
     async with _conn() as db:
         await db.execute("DELETE FROM history WHERE user_id = ?", (user_id,))
         await db.commit()
 
 
+@_retry_on_lock
 async def clear_all_history() -> None:
     async with _conn() as db:
         await db.execute("DELETE FROM history")

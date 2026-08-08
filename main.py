@@ -21,15 +21,21 @@ logger = logging.getLogger(__name__)
 
 HEARTBEAT_FILE = "/tmp/bot_heartbeat"
 HEARTBEAT_INTERVAL = 30  # seconds
+HEARTBEAT_PROBE_TIMEOUT = 10  # seconds
 
 
-async def _heartbeat_loop() -> None:
+async def _heartbeat_loop(bot: Bot) -> None:
     while True:
         try:
-            with open(HEARTBEAT_FILE, "w") as f:
-                f.write(str(time.time()))
-        except OSError as e:
-            logger.warning("heartbeat: failed to write %s: %s", HEARTBEAT_FILE, e)
+            await asyncio.wait_for(bot.get_me(), timeout=HEARTBEAT_PROBE_TIMEOUT)
+        except Exception as e:
+            logger.warning("heartbeat: Telegram probe failed, skipping update: %s", e)
+        else:
+            try:
+                with open(HEARTBEAT_FILE, "w") as f:
+                    f.write(str(time.time()))
+            except OSError as e:
+                logger.warning("heartbeat: failed to write %s: %s", HEARTBEAT_FILE, e)
         await asyncio.sleep(HEARTBEAT_INTERVAL)
 
 
@@ -42,7 +48,7 @@ async def main() -> None:
     dp = Dispatcher(storage=MemoryStorage())
     dp.include_routers(roulette.router, upcoming.router, dc_marvel.router, history.router)
     logger.info("🚀 Bot started")
-    heartbeat_task = asyncio.create_task(_heartbeat_loop())
+    heartbeat_task = asyncio.create_task(_heartbeat_loop(bot))
     try:
         await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
     finally:

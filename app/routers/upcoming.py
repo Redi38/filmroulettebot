@@ -17,8 +17,8 @@ from app.db.database import (
 )
 from app.states import UpcomingStates
 from app.keyboards import (
-    upcoming_menu_kb, upcoming_list_kb, upcoming_targets_kb, cancel_input_kb,
-    upcoming_delete_kb, BackMainCB, pagination_row, PageCB, CancelInputCB,
+    upcoming_menu_kb, upcoming_list_kb, upcoming_targets_kb,
+    upcoming_delete_kb, BackMainCB, pagination_row, PageCB,
     UpcomingMoveCB, UpcomingSelectCB, UpcomingDeleteOneCB, UpcomingMoveTargetCB,
     UpcomingCheckMoveCB, UpcomingCheckMoveToCB, UpcomingAddCB,
     released_check_kb, released_move_to_kb,
@@ -161,9 +161,9 @@ async def up_add_start(call: CallbackQuery, state: FSMContext) -> None:
         return
     await call.answer()
     await state.set_state(UpcomingStates.waiting_title)
-    await safe_edit_text(call.message,
-        "✏️ Введите название фильма для добавления в ожидаемые:",
-        reply_markup=cancel_input_kb("up"),
+    await safe_edit_text(call.message, 
+        "✏️ Введите название фильма для добавления в ожидаемые:\n\n<i>Для отмены — /upcoming</i>",
+        reply_markup=None,
     )
 
 
@@ -203,10 +203,26 @@ async def up_delete_one(call: CallbackQuery, callback_data: UpcomingDeleteOneCB)
     if items:
         await safe_edit_text(call.message, 
             f"🗑 <b>{esc(title)}</b> удалён.\n\nУдалить ещё:",
-            reply_markup=upcoming_delete_kb(items)
+            reply_markup=upcoming_delete_kb(items, page=callback_data.page)
         )
     else:
         await safe_edit_text(call.message, "Список ожидаемых пуст.", reply_markup=upcoming_menu_kb())
+
+
+@router.callback_query(PageCB.filter(F.scope == "updel"))
+async def up_delete_page(call: CallbackQuery, callback_data: PageCB) -> None:
+    if not isinstance(call.message, Message):
+        return
+    await call.answer()
+    items = await get_upcoming_movies()
+    if not items:
+        await safe_edit_text(call.message, "Список ожидаемых пуст.", reply_markup=upcoming_menu_kb())
+        return
+    await safe_edit_text(
+        call.message,
+        "🗑 Удалить из ожидаемых:",
+        reply_markup=upcoming_delete_kb(items, page=callback_data.page),
+    )
 
 
 @router.callback_query(UpcomingSelectCB.filter())
@@ -240,7 +256,6 @@ async def up_move_to(call: CallbackQuery, callback_data: UpcomingMoveTargetCB) -
 
 
 # ─── Check-release move callbacks ─────────────────────────────────────────────
-
 @router.callback_query(UpcomingCheckMoveCB.filter())
 async def up_check_pick(call: CallbackQuery, callback_data: UpcomingCheckMoveCB) -> None:
     if not isinstance(call.message, Message):
@@ -288,7 +303,6 @@ async def up_check_move_to(call: CallbackQuery, callback_data: UpcomingCheckMove
 
 
 # ─── Navigation ────────────────────────────────────────────────────────────────
-
 @router.callback_query(BackMainCB.filter(F.target == "up"))
 async def up_back_to_menu(call: CallbackQuery) -> None:
     if not isinstance(call.message, Message):
@@ -325,21 +339,7 @@ async def up_back_to_titles(call: CallbackQuery) -> None:
         await safe_edit_text(call.message, "❌ Нет ожидаемых фильмов.", reply_markup=upcoming_menu_kb())
 
 
-@router.callback_query(CancelInputCB.filter(F.target == "up"))
-async def cancel_add_upcoming(call: CallbackQuery, state: FSMContext) -> None:
-    if not isinstance(call.message, Message):
-        return
-    await state.clear()
-    await call.answer("Отменено")
-    items = await get_upcoming_movies()
-    _, page, total_pages = paginate(items, 1)
-    text = render_numbered_list(items, page)
-    row = pagination_row("up", page, total_pages)
-    await safe_edit_text(call.message, f"<b>🎬 Ожидаемые фильмы:</b>\n\n{text}", reply_markup=upcoming_menu_kb(row))
-
-
 # ─── Text input handler (waiting for a title) ─────────────────────────────────
-
 @router.message(UpcomingStates.waiting_title, F.text & ~F.text.startswith("/"))
 async def handle_pending_upcoming_add(msg: Message, state: FSMContext) -> None:
     await state.clear()

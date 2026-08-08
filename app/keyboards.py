@@ -4,6 +4,8 @@ from __future__ import annotations
 from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
 
+from app.utils import paginate, DEFAULT_PAGE_SIZE
+
 # ─── Constants ─────────────────────────────────────────────────────────────────
 CAT_TO_CODE: dict[str, str] = {"movies": "m", "cartoons": "c", "series": "s", "dc": "dc", "marvel": "mv"}
 CODE_TO_CAT = {v: k for k, v in CAT_TO_CODE.items()}
@@ -16,20 +18,19 @@ class ConfirmCB(CallbackData, prefix="cf"): code: str; title: str
 class EditMenuCB(CallbackData, prefix="em"): code: str
 class AddItemCB(CallbackData, prefix="ad"): code: str
 class DeleteMenuCB(CallbackData, prefix="dlm"): code: str
-class DeleteItemCB(CallbackData, prefix="del"): code: str; idx: int
+class DeleteItemCB(CallbackData, prefix="del"): code: str; idx: int; page: int = 1
 class SequelYesCB(CallbackData, prefix="sqy"): code: str; title: str
 class SequelNoCB(CallbackData, prefix="sqn"): code: str; title: str
 class BackMainCB(CallbackData, prefix="bk"): target: str
 class UpcomingMoveCB(CallbackData, prefix="up"): action: str
 class UpcomingSelectCB(CallbackData, prefix="upsel"): idx: int
-class UpcomingDeleteOneCB(CallbackData, prefix="updel"): idx: int
+class UpcomingDeleteOneCB(CallbackData, prefix="updel"): idx: int; page: int = 1
 class UpcomingMoveTargetCB(CallbackData, prefix="upmv"): code: str
 class UpcomingCheckMoveCB(CallbackData, prefix="upck"): title_idx: int
 class UpcomingCheckMoveToCB(CallbackData, prefix="upckmv"): title_idx: int; code: str
 class UpcomingAddCB(CallbackData, prefix="upadd"): pass
 class PageCB(CallbackData, prefix="pg"): scope: str; page: int
 class NoopCB(CallbackData, prefix="noop"): pass
-class CancelInputCB(CallbackData, prefix="cnl"): target: str  # "main" | "up"
 
 # ─── Helpers ───────────────────────────────────────────────────────────────────
 def styled_btn(text: str, callback_data: str, style: str = "primary") -> InlineKeyboardButton:
@@ -45,9 +46,9 @@ def pagination_row(scope: str, page: int, total_pages: int) -> list[InlineKeyboa
     prev_cb = PageCB(scope=scope, page=page - 1).pack() if page > 1 else NoopCB().pack()
     next_cb = PageCB(scope=scope, page=page + 1).pack() if page < total_pages else NoopCB().pack()
     return [
-        styled_btn("◀️", prev_cb, "primary" if page > 1 else "secondary"),
-        styled_btn(f"{page}/{total_pages}", NoopCB().pack(), "secondary"),
-        styled_btn("▶️", next_cb, "primary" if page < total_pages else "secondary"),
+        styled_btn("◀️", prev_cb, "primary"),
+        styled_btn(f"{page}/{total_pages}", NoopCB().pack(), "primary"),
+        styled_btn("▶️", next_cb, "primary"),
     ]
 
 # ─── Reply keyboard ────────────────────────────────────────────────────────────
@@ -92,19 +93,21 @@ def edit_menu_kb(cat: str, page_row: list[InlineKeyboardButton] | None = None) -
         rows.append(_back_row(BackMainCB(target=f"sp__{code}").pack()))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
-def delete_list_kb(cat: str, items: list[str]) -> InlineKeyboardMarkup:
+DELETE_PAGE_SIZE = 30
+
+def delete_list_kb(cat: str, items: list[str], page: int = 1) -> InlineKeyboardMarkup:
     code = CAT_TO_CODE[cat]
-    rows = [[styled_btn(f"🗑 {item[:60]}", DeleteItemCB(code=code, idx=i).pack(), "danger")] for i, item in enumerate(items)]
+    page_items, page, total_pages = paginate(items, page, page_size=DELETE_PAGE_SIZE)
+    start = (page - 1) * DELETE_PAGE_SIZE
+    rows = [
+        [styled_btn(f"🗑 {item[:60]}", DeleteItemCB(code=code, idx=start + i, page=page).pack(), "danger")]
+        for i, item in enumerate(page_items)
+    ]
+    row = pagination_row(f"del_{code}", page, total_pages)
+    if row:
+        rows.append(row)
     rows.append(_back_row(EditMenuCB(code=code).pack()))
     return InlineKeyboardMarkup(inline_keyboard=rows)
-
-def cancel_input_kb(target: str) -> InlineKeyboardMarkup:
-    """Кнопка отмены на экране ожидания текстового ввода (добавление тайтла).
-    `target` определяет, куда вернуться: "main" — в главное reply-меню,
-    "up" — в меню раздела «Ожидаемые»."""
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [styled_btn("❌ Отмена", CancelInputCB(target=target).pack(), "danger")]
-    ])
 
 def sequel_kb(cat: str, title: str) -> InlineKeyboardMarkup:
     code = CAT_TO_CODE[cat]
@@ -130,8 +133,16 @@ def upcoming_list_kb(items: list[str]) -> InlineKeyboardMarkup:
     rows.append(_back_row(BackMainCB(target="up").pack()))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
-def upcoming_delete_kb(items: list[str]) -> InlineKeyboardMarkup:
-    rows = [[styled_btn(f"🗑 {title[:60]}", UpcomingDeleteOneCB(idx=i).pack(), "danger")] for i, title in enumerate(items)]
+def upcoming_delete_kb(items: list[str], page: int = 1) -> InlineKeyboardMarkup:
+    page_items, page, total_pages = paginate(items, page, page_size=DELETE_PAGE_SIZE)
+    start = (page - 1) * DELETE_PAGE_SIZE
+    rows = [
+        [styled_btn(f"🗑 {title[:60]}", UpcomingDeleteOneCB(idx=start + i, page=page).pack(), "danger")]
+        for i, title in enumerate(page_items)
+    ]
+    row = pagination_row("updel", page, total_pages)
+    if row:
+        rows.append(row)
     rows.append(_back_row(BackMainCB(target="up").pack()))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 

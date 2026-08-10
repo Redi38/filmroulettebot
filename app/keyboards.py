@@ -1,6 +1,8 @@
 """Keyboards and CallbackData factories."""
 from __future__ import annotations
 
+from typing import Literal
+
 from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
 
@@ -33,8 +35,11 @@ class PageCB(CallbackData, prefix="pg"): scope: str; page: int
 class NoopCB(CallbackData, prefix="noop"): pass
 
 # ─── Helpers ───────────────────────────────────────────────────────────────────
-def styled_btn(text: str, callback_data: str, style: str = "primary") -> InlineKeyboardButton:
-    return InlineKeyboardButton(text=text, callback_data=callback_data, style=style) # type: ignore[call-arg]
+ButtonStyle = Literal["primary", "success", "danger"]
+
+
+def styled_btn(text: str, callback_data: str, style: ButtonStyle = "primary") -> InlineKeyboardButton:
+    return InlineKeyboardButton(text=text, callback_data=callback_data, style=style)
 
 def _back_row(cb_data: str, text: str = "⬅️ Назад") -> list[InlineKeyboardButton]:
     return [styled_btn(text=text, callback_data=cb_data, style="primary")]

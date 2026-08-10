@@ -25,7 +25,7 @@ from app.keyboards import (
     CODE_TO_CAT, CAT_RU,
 )
 from app.services.tmdb import check_upcoming_released
-from app.utils import esc, render_numbered_list, paginate, safe_edit_text
+from app.utils import esc, render_paginated_list, safe_edit_text
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -109,8 +109,7 @@ async def _check_text_and_kb(chat_id: int) -> tuple[str, InlineKeyboardMarkup]:
 async def upcoming_cmd(msg: Message, state: FSMContext) -> None:
     await state.clear()
     items = await get_upcoming_movies()
-    _, page, total_pages = paginate(items, 1)
-    text = render_numbered_list(items, page)
+    text, page, total_pages = render_paginated_list(items, 1)
     row = pagination_row("up", page, total_pages)
     await msg.answer(f"<b>🎬 Ожидаемые фильмы:</b>\n\n{text}", reply_markup=upcoming_menu_kb(row))
 
@@ -256,6 +255,7 @@ async def up_move_to(call: CallbackQuery, callback_data: UpcomingMoveTargetCB) -
 
 
 # ─── Check-release move callbacks ─────────────────────────────────────────────
+
 @router.callback_query(UpcomingCheckMoveCB.filter())
 async def up_check_pick(call: CallbackQuery, callback_data: UpcomingCheckMoveCB) -> None:
     if not isinstance(call.message, Message):
@@ -303,14 +303,14 @@ async def up_check_move_to(call: CallbackQuery, callback_data: UpcomingCheckMove
 
 
 # ─── Navigation ────────────────────────────────────────────────────────────────
+
 @router.callback_query(BackMainCB.filter(F.target == "up"))
 async def up_back_to_menu(call: CallbackQuery) -> None:
     if not isinstance(call.message, Message):
         return
     await call.answer()
     items = await get_upcoming_movies()
-    _, page, total_pages = paginate(items, 1)
-    text = render_numbered_list(items, page)
+    text, page, total_pages = render_paginated_list(items, 1)
     row = pagination_row("up", page, total_pages)
     await safe_edit_text(call.message, f"<b>🎬 Ожидаемые фильмы:</b>\n\n{text}", reply_markup=upcoming_menu_kb(row))
 
@@ -321,8 +321,7 @@ async def up_page(call: CallbackQuery, callback_data: PageCB) -> None:
         return
     await call.answer()
     items = await get_upcoming_movies()
-    _, page, total_pages = paginate(items, callback_data.page)
-    text = render_numbered_list(items, page)
+    text, page, total_pages = render_paginated_list(items, callback_data.page)
     row = pagination_row("up", page, total_pages)
     await safe_edit_text(call.message, f"<b>🎬 Ожидаемые фильмы:</b>\n\n{text}", reply_markup=upcoming_menu_kb(row))
 
@@ -340,6 +339,7 @@ async def up_back_to_titles(call: CallbackQuery) -> None:
 
 
 # ─── Text input handler (waiting for a title) ─────────────────────────────────
+
 @router.message(UpcomingStates.waiting_title, F.text & ~F.text.startswith("/"))
 async def handle_pending_upcoming_add(msg: Message, state: FSMContext) -> None:
     await state.clear()

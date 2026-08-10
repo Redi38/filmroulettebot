@@ -56,6 +56,14 @@ async def _fetch_tmdb_info(category: str, title: str) -> dict:
         return {}
 
 
+def _star_bar(rating) -> str:
+    """5-star visual bar scaled from a 0-10 TMDB rating, e.g. 8.9 -> ⭐️⭐️⭐️⭐️☆."""
+    if not isinstance(rating, (int, float)):
+        return ""
+    filled = max(0, min(5, round(rating / 2)))
+    return "⭐️" * filled + "☆" * (5 - filled)
+
+
 async def _build_card(category: str, title: str) -> tuple[str, str, str | None]:
     tmdb_task = asyncio.create_task(_fetch_tmdb_info(category, title))
     kinogo_task = asyncio.create_task(find_watch_page_url(title))
@@ -65,36 +73,46 @@ async def _build_card(category: str, title: str) -> tuple[str, str, str | None]:
     if direct_link:
         link = direct_link
     elif display_title != title:
+        # Не нашли по исходному title — пробуем ещё раз уже по TMDB-названию.
         link = await find_watch_page_url(display_title) or build_watch_link(display_title)
     else:
         link = build_watch_link(display_title)
-    link_line = f'\n\n🔗 <a href="{esc(link)}">Смотреть онлайн</a>' if link else ""
+    link_block = f'\n\n▶️ <a href="{esc(link)}">Смотреть онлайн</a>' if link else ""
+
+    rating = info.get("rating", "—")
+    stars = _star_bar(rating)
+    rating_line = f"⭐️ Рейтинг: {stars} {rating}/10\n" if stars else f"⭐️ Рейтинг: {esc(str(rating))}\n"
 
     def _render(desc_limit: int) -> str:
         desc = _trim(info.get("overview", ""), desc_limit)
         if category == "series":
             return (
                 f"📺 <b><code>{esc(display_title)}</code></b>\n\n"
+                f"{rating_line}"
                 f"🗓 Дата выхода: {esc(str(info.get('release_date', '—')))}\n"
-                f"⭐️ Рейтинг: {esc(str(info.get('rating', '—')))}\n"
                 f"🎭 Жанры: {esc(info.get('genres', '—'))}\n"
-                f"👥 Актёры: {esc(info.get('actors', '—'))}\n"
-                f"📚 Сезонов: {esc(str(info.get('seasons', '—')))}\n"
+                f"👥 Актёры: {esc(info.get('actors', '—'))}\n\n"
+                f"📚 Сезонов: {esc(str(info.get('seasons', '—')))} "
                 f"🎥 Эпизодов: {esc(str(info.get('episodes', '—')))}\n\n"
-                f"📖 {esc(desc)}{link_line}"
+                f"───────────\n"
+                f"📖 {esc(desc)}{link_block}"
             )
         emoji = "🎬" if category == "movies" else "🎥"
         return (
             f"{emoji} <b><code>{esc(display_title)}</code></b>\n\n"
+            f"{rating_line}"
             f"🗓 Дата выхода: {esc(str(info.get('release_date', '—')))}\n"
-            f"⭐️ Рейтинг: {esc(str(info.get('rating', '—')))}\n"
             f"⏳ Длительность: {esc(str(info.get('runtime', '—')))} мин.\n"
             f"🎭 Жанры: {esc(info.get('genres', '—'))}\n"
             f"👥 Актёры: {esc(info.get('actors', '—'))}\n\n"
-            f"📖 {esc(desc)}{link_line}"
+            f"───────────\n"
+            f"📖 {esc(desc)}{link_block}"
         )
 
+    # Полная версия (для текстовых сообщений, лимит 4096) — с длинным описанием.
     caption = _render(desc_limit=900)
+    # Короткая версия под лимит подписи к фото (1024 символа) — короче описание,
+    # чтобы точно уложиться целиком и не резать <a>/<code> теги посередине.
     caption_short = _render(desc_limit=250)
     if len(caption_short) > 1024:
         caption_short = _render(desc_limit=80)

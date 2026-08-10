@@ -1,4 +1,6 @@
-"""List management: edit menu, add item, delete item (paginated), back nav."""
+"""List preview/edit menu, add-item flow, and "Назад" navigation.
+(Delete flow lives in delete.py — split out to keep this file focused.)
+"""
 from __future__ import annotations
 
 from aiogram import F
@@ -6,14 +8,14 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from aiogram.exceptions import TelegramBadRequest
 
-from app.db.database import get_items, add_item, delete_item, item_exists
+from app.db.database import get_items, add_item, item_exists
 from app.states import AddItemStates
 from app.keyboards import (
-    main_kb, spin_kb, edit_menu_kb, delete_list_kb, DELETE_PAGE_SIZE,
-    EditMenuCB, AddItemCB, DeleteMenuCB, DeleteItemCB, BackMainCB, PageCB,
+    main_kb, spin_kb, edit_menu_kb, DELETE_PAGE_SIZE,
+    EditMenuCB, AddItemCB, BackMainCB, PageCB,
     pagination_row, CODE_TO_CAT, CAT_RU,
 )
-from app.utils import esc, safe_edit_text, safe_edit_caption, render_numbered_list, paginate
+from app.utils import esc, safe_edit_text, safe_edit_caption, render_paginated_list
 
 from .common import router, logger
 
@@ -21,8 +23,7 @@ from .common import router, logger
 async def _render_edit_menu(cat: str, page: int) -> tuple[str, int]:
     ru = CAT_RU.get(cat, cat)
     items = await get_items(cat)
-    _, page, total_pages = paginate(items, page, page_size=DELETE_PAGE_SIZE)
-    body = render_numbered_list(items, page, page_size=DELETE_PAGE_SIZE)
+    body, page, total_pages = render_paginated_list(items, page, page_size=DELETE_PAGE_SIZE)
     text = f"✏️ <b>{ru}</b> — управление списком:\n\n{body}"
     return text, total_pages
 
@@ -68,69 +69,6 @@ async def add_item_start(call: CallbackQuery, callback_data: AddItemCB, state: F
     )
 
 
-@router.callback_query(DeleteMenuCB.filter())
-async def delete_menu(call: CallbackQuery, callback_data: DeleteMenuCB) -> None:
-    if not isinstance(call.message, Message):
-        return
-    await call.answer()
-    cat = CODE_TO_CAT[callback_data.code]
-    ru = CAT_RU.get(cat, cat)
-    items = await get_items(cat)
-    if not items:
-        await safe_edit_text(call.message, f"❌ Список «<b>{ru}</b>» пуст.", reply_markup=edit_menu_kb(cat))
-        return
-    await safe_edit_text(call.message, f"🗑 Удалить из «<b>{ru}</b>»:", reply_markup=delete_list_kb(cat, items))
-
-
-@router.callback_query(PageCB.filter(F.scope.startswith("del_")))
-async def delete_list_page(call: CallbackQuery, callback_data: PageCB) -> None:
-    if not isinstance(call.message, Message):
-        return
-    await call.answer()
-    code = callback_data.scope.removeprefix("del_")
-    cat = CODE_TO_CAT.get(code)
-    if cat is None:
-        return
-    ru = CAT_RU.get(cat, cat)
-    items = await get_items(cat)
-    if not items:
-        await safe_edit_text(call.message, f"❌ Список «<b>{ru}</b>» пуст.", reply_markup=edit_menu_kb(cat))
-        return
-    await safe_edit_text(
-        call.message,
-        f"🗑 Удалить из «<b>{ru}</b>»:",
-        reply_markup=delete_list_kb(cat, items, page=callback_data.page),
-    )
-
-
-@router.callback_query(DeleteItemCB.filter())
-async def delete_item_cb(call: CallbackQuery, callback_data: DeleteItemCB) -> None:
-    if not isinstance(call.message, Message):
-        return
-    await call.answer()
-    cat = CODE_TO_CAT[callback_data.code]
-    ru = CAT_RU.get(cat, cat)
-    items = await get_items(cat)
-    if 0 <= callback_data.idx < len(items):
-        title = items[callback_data.idx]
-        await delete_item(cat, title)
-        items = await get_items(cat)
-        if items:
-            await safe_edit_text(
-                call.message,
-                f"🗑 Удалить из «<b>{ru}</b>»:\n<i>({esc(title)} удалён)</i>",
-                reply_markup=delete_list_kb(cat, items, page=callback_data.page),
-            )
-        else:
-            await safe_edit_text(
-                call.message,
-                f"✅ <b>{esc(title)}</b> удалён. Список «{ru}» теперь пуст.",
-                reply_markup=edit_menu_kb(cat),
-            )
-    else:
-        await call.answer("⚠ Ошибка удаления.", show_alert=True)
-
-
 @router.callback_query(BackMainCB.filter(F.target.in_({"main", "sp__m", "sp__c", "sp__s", "sp__dc", "sp__mv"})))
 async def back_main(call: CallbackQuery, callback_data: BackMainCB) -> None:
     if not isinstance(call.message, Message):
@@ -152,6 +90,8 @@ async def back_main(call: CallbackQuery, callback_data: BackMainCB) -> None:
         cat = CODE_TO_CAT.get(code, "movies")
         ru = CAT_RU.get(cat, cat)
         if call.message.photo or call.message.document or call.message.video or call.message.animation:
+            # Если вернулись из карточки с постером в меню категории, медиа лучше удалить,
+            # чтобы отобразить чистое текстовое меню выбора
             try:
                 await call.message.delete()
                 await call.message.answer(f"🎲 Категория: <b>{ru}</b>", reply_markup=spin_kb(cat))

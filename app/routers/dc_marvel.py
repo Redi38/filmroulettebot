@@ -7,7 +7,7 @@ from aiogram.types import Message, CallbackQuery
 
 from app.db.database import get_items
 from app.keyboards import edit_menu_kb, pagination_row, PageCB, NoopCB
-from app.utils import render_numbered_list, paginate, safe_edit_text
+from app.utils import render_paginated_list, safe_edit_text
 
 router = Router()
 
@@ -16,8 +16,7 @@ _TITLES = {"dc": "🦇 DC", "marvel": "🕷 Marvel"}
 
 async def _render(cat: str, page: int) -> tuple[str, int]:
     items = await get_items(cat)
-    _, page, total_pages = paginate(items, page)
-    body = render_numbered_list(items, page, code=True)
+    body, page, total_pages = render_paginated_list(items, page, code=True)
     text = f"{_TITLES[cat]}:\n{body}"
     return text, total_pages
 

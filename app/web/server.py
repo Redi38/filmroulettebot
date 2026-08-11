@@ -1,14 +1,16 @@
 """Web version of the roulette: FastAPI backend reusing the exact same
 database layer, TMDb service, and kinogo-link resolver the Telegram bot
-uses. No auth by design (keep the URL private) — see README for the
-docker-compose service that runs this alongside the bot, sharing the SQLite
-file over a volume.
+uses. No auth by design (keep the URL private) — see docker-compose.yml
+for the service that runs this alongside the bot, sharing the SQLite file
+over a volume.
 """
 from __future__ import annotations
 
 import logging
 import random
+import re
 from pathlib import Path
+from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
@@ -18,6 +20,7 @@ from pydantic import BaseModel
 from app.db.database import (
     init_db, get_items, add_item, delete_item, item_exists,
     get_upcoming_movies, add_upcoming_movie, delete_upcoming_movie,
+    save_history, get_recent_history,
 )
 from app.services.tmdb import get_movie_info, get_series_info, check_upcoming_released
 from app.services.watch_link import find_watch_page_url
@@ -28,6 +31,9 @@ CATEGORIES = {
     "movies": "Фильмы", "cartoons": "Мультфильмы", "series": "Сериалы",
     "dc": "DC", "marvel": "Marvel",
 }
+ROULETTE_CATEGORIES = ("movies", "cartoons", "series")
+
+WEB_USER_ID = 0
 
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -44,6 +50,39 @@ def _check_category(cat: str) -> None:
         raise HTTPException(404, f"Unknown category: {cat}")
 
 
+def _next_sequel_title(item: str) -> str:
+    """Same rule the bot uses: "Movie 2" -> "Movie 3", "Movie" -> "Movie 2"."""
+    m = re.search(r"(.+?)\s(\d+)$", item)
+    return f"{m.group(1)} {int(m.group(2)) + 1}" if m else f"{item} 2"
+
+
+async def _card_data(cat: str, title: str) -> dict[str, Any]:
+    info = (await get_series_info(title)) if cat == "series" else (await get_movie_info(title))
+    info = info or {}
+    display_title = info.get("title", title)
+    link = await find_watch_page_url(display_title)
+
+    rating = info.get("rating", "—")
+    if isinstance(rating, (int, float)):
+        rating = round(rating, 1)
+
+    return {
+        "category": cat,
+        "title": display_title,
+        "original_title": title,
+        "overview": info.get("overview", ""),
+        "release_date": info.get("release_date", "—"),
+        "rating": rating,
+        "genres": info.get("genres", "—"),
+        "actors": info.get("actors", "—"),
+        "runtime": info.get("runtime"),
+        "seasons": info.get("seasons"),
+        "episodes": info.get("episodes"),
+        "poster_url": info.get("poster_url"),
+        "watch_link": link,
+    }
+
+
 class TitleBody(BaseModel):
     title: str
 
@@ -51,6 +90,10 @@ class TitleBody(BaseModel):
 class MoveBody(BaseModel):
     title: str
     category: str
+
+
+class SequelBody(BaseModel):
+    title: str
 
 
 @app.get("/")
@@ -67,10 +110,26 @@ async def api_categories() -> dict:
     return out
 
 
-# ─── Upcoming routes — must be registered BEFORE the generic /api/{cat}/*
-# routes below, otherwise Starlette matches "/api/upcoming/add" against the
-# "/api/{cat}/add" pattern first (cat="upcoming"), which then 404s since
-# "upcoming" isn't in CATEGORIES. Route order matters in FastAPI/Starlette.
+# ─── History ────────────────────────────────────────────────────────────────
+@app.get("/api/history")
+async def api_history(limit: int = 50) -> dict:
+    return {"items": await get_recent_history(limit)}
+
+
+# ─── Random spin across movies/cartoons/series ──────────────────────────────
+@app.post("/api/random-spin")
+async def api_random_spin() -> dict:
+    non_empty = [c for c in ROULETTE_CATEGORIES if await get_items(c)]
+    if not non_empty:
+        raise HTTPException(404, "All three roulettes are empty")
+    cat = random.choice(non_empty)
+    items = await get_items(cat)
+    title = random.choice(items)
+    await save_history(WEB_USER_ID, cat, title)
+    return await _card_data(cat, title)
+
+
+# ─── Upcoming routes —───────────────────────────────────────────────────────
 @app.get("/api/upcoming")
 async def api_upcoming() -> dict:
     items = await get_upcoming_movies()
@@ -140,35 +199,26 @@ async def api_delete(cat: str, body: TitleBody) -> dict:
 @app.post("/api/{cat}/spin")
 async def api_spin(cat: str) -> dict:
     _check_category(cat)
+    if cat not in ROULETTE_CATEGORIES:
+        raise HTTPException(400, f"{cat} has no roulette — it's a reference list only")
     items = await get_items(cat)
     if not items:
         raise HTTPException(404, "List is empty")
     title = random.choice(items)
+    await save_history(WEB_USER_ID, cat, title)
+    return await _card_data(cat, title)
 
-    info = (await get_series_info(title)) if cat == "series" else (await get_movie_info(title))
-    info = info or {}
-    display_title = info.get("title", title)
-    link = await find_watch_page_url(display_title)
 
-    rating = info.get("rating", "—")
-    if isinstance(rating, (int, float)):
-        # Подстраховка: если пришло значение из кэша до фикса с округлением.
-        rating = round(rating, 1)
-
-    return {
-        "title": display_title,
-        "original_title": title,
-        "overview": info.get("overview", ""),
-        "release_date": info.get("release_date", "—"),
-        "rating": rating,
-        "genres": info.get("genres", "—"),
-        "actors": info.get("actors", "—"),
-        "runtime": info.get("runtime"),
-        "seasons": info.get("seasons"),
-        "episodes": info.get("episodes"),
-        "poster_url": info.get("poster_url"),
-        "watch_link": link,
-    }
+@app.post("/api/{cat}/sequel")
+async def api_sequel(cat: str, body: SequelBody) -> dict:
+    """Confirm-with-sequel: rename "Title" -> "Title 2" (or bump the number),
+    same rule the bot's "✅ Да, сиквел" button uses."""
+    _check_category(cat)
+    item = body.title
+    new_item = _next_sequel_title(item)
+    await delete_item(cat, item)
+    await add_item(cat, new_item)
+    return {"ok": True, "new_title": new_item}
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")

@@ -5,6 +5,7 @@ from aiogram import F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
+from aiogram.exceptions import TelegramBadRequest
 
 from app.db.database import get_upcoming_movies, add_upcoming_movie, delete_upcoming_movie, item_exists
 from app.states import UpcomingStates
@@ -14,7 +15,7 @@ from app.keyboards import (
 )
 from app.utils import esc, render_paginated_list, safe_edit_text
 
-from .common import router
+from .common import router, logger
 
 
 @router.message(Command("upcoming"))
@@ -64,6 +65,7 @@ async def up_add_start(call: CallbackQuery, state: FSMContext) -> None:
         "✏️ Введите название фильма для добавления в ожидаемые:",
         reply_markup=cancel_add_kb(),
     )
+    await state.update_data(prompt_msg_id=call.message.message_id, prompt_chat_id=call.message.chat.id)
 
 
 @router.callback_query(CancelAddCB.filter(F.code == ""))
@@ -140,7 +142,17 @@ async def up_page(call: CallbackQuery, callback_data: PageCB) -> None:
 
 @router.message(UpcomingStates.waiting_title, F.text & ~F.text.startswith("/"))
 async def handle_pending_upcoming_add(msg: Message, state: FSMContext) -> None:
+    data = await state.get_data()
+    prompt_msg_id = data.get("prompt_msg_id")
+    prompt_chat_id = data.get("prompt_chat_id")
     await state.clear()
+
+    if prompt_msg_id and prompt_chat_id:
+        try:
+            await msg.bot.delete_message(prompt_chat_id, prompt_msg_id)
+        except TelegramBadRequest as e:
+            logger.warning("handle_pending_upcoming_add: failed to delete prompt message: %s", e)
+
     title = (msg.text or "").strip()
     if not title:
         await msg.answer("❌ Название не может быть пустым.")

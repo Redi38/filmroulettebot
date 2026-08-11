@@ -20,8 +20,6 @@ ALLOWED_TABLES = frozenset({"movies", "cartoons", "series", "dc", "marvel", "upc
 # Таблицы, у которых должна быть регистронезависимая уникальность title.
 _NOCASE_TABLES = ("movies", "cartoons", "series", "dc", "marvel", "upcoming_movies")
 
-# Best-effort probability of purging stale tmdb_cache rows on write,
-# so the table stays bounded without needing a scheduler/cron job.
 _CACHE_PURGE_PROBABILITY = 0.05
 _CACHE_PURGE_MAX_AGE = 30 * 24 * 3600  # 30 days safety net
 
@@ -66,13 +64,11 @@ async def _migrate_to_nocase(db: aiosqlite.Connection, table: str) -> None:
         row = await cur.fetchone()
 
     if row is None:
-        # Table doesn't exist yet — the plain CREATE TABLE IF NOT EXISTS below
-        # will create it fresh with the correct (NOCASE) schema.
         return
 
     create_sql = row[0] or ""
     if "COLLATE NOCASE" in create_sql.upper().replace("COLLATE  NOCASE", "COLLATE NOCASE"):
-        return  # already migrated
+        return
 
     logger.info("Migration: rebuilding table %r with COLLATE NOCASE on title…", table)
 
@@ -83,8 +79,6 @@ async def _migrate_to_nocase(db: aiosqlite.Connection, table: str) -> None:
         f"(id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE NOCASE)"
     )
 
-    # Переносим данные по возрастанию id — при коллизии регистронезависимых
-    # дублей выигрывает более ранняя запись, остальные молча отбрасываются.
     async with db.execute(f"SELECT title FROM {table} ORDER BY id ASC") as cur:
         titles = [r[0] async for r in cur]
 
@@ -110,7 +104,6 @@ async def _migrate_to_nocase(db: aiosqlite.Connection, table: str) -> None:
 async def init_db() -> None:
     """Create tables and run migrations."""
     async with _conn() as db:
-        # Migration: add user_id column if missing
         async with db.execute("PRAGMA table_info(history)") as cur:
             cols = {row[1] async for row in cur}
         if cols and "user_id" not in cols:
@@ -120,9 +113,6 @@ async def init_db() -> None:
             )
         await db.commit()
 
-        # Migration: rebuild category tables with COLLATE NOCASE if needed.
-        # Must run BEFORE the CREATE TABLE IF NOT EXISTS below, since that
-        # statement is a no-op for tables that already exist.
         for table in _NOCASE_TABLES:
             await _migrate_to_nocase(db, table)
         await db.commit()
@@ -159,7 +149,6 @@ async def init_db() -> None:
 
 
 # ─── Generic helpers ───────────────────────────────────────────────────────────
-
 def _check_table(name: str) -> None:
     if name not in ALLOWED_TABLES:
         raise ValueError(f"Unknown table: {name!r}")
@@ -200,7 +189,6 @@ async def delete_item(table: str, title: str) -> None:
 
 
 # ─── TMDb response cache ────────────────────────────────────────────────────────
-
 async def get_tmdb_cache(key: str, ttl_seconds: int) -> Any | None:
     """Return a cached value if present and not older than ttl_seconds, else None."""
     async with _conn() as db:
@@ -229,8 +217,6 @@ async def set_tmdb_cache(key: str, value: Any) -> None:
             "ON CONFLICT(cache_key) DO UPDATE SET payload = excluded.payload, cached_at = excluded.cached_at",
             (key, payload, time.time()),
         )
-        # Best-effort cleanup so the table doesn't grow forever — no scheduler
-        # in this project, so we piggyback on writes with a small probability.
         if random.random() < _CACHE_PURGE_PROBABILITY:
             cutoff = time.time() - _CACHE_PURGE_MAX_AGE
             await db.execute("DELETE FROM tmdb_cache WHERE cached_at < ?", (cutoff,))
@@ -238,7 +224,6 @@ async def set_tmdb_cache(key: str, value: Any) -> None:
 
 
 # ─── History ───────────────────────────────────────────────────────────────────
-
 async def load_history(user_id: int, category: str | None = None) -> list[dict[str, Any]]:
     query = (
         "SELECT category, title, timestamp FROM history "
@@ -250,6 +235,21 @@ async def load_history(user_id: int, category: str | None = None) -> list[dict[s
     params: tuple[Any, ...] = (user_id, category) if category else (user_id,)
     async with _conn() as db:
         async with db.execute(query, params) as cur:
+            return [
+                {"category": row[0], "title": row[1], "timestamp": row[2]}
+                async for row in cur
+            ]
+
+
+async def get_recent_history(limit: int = 50) -> list[dict[str, Any]]:
+    """History across ALL users (no user_id filter) — used by the web UI,
+    which has no login/user concept by design (personal-use, no-auth site).
+    Newest first."""
+    async with _conn() as db:
+        async with db.execute(
+            "SELECT category, title, timestamp FROM history ORDER BY timestamp DESC LIMIT ?",
+            (limit,),
+        ) as cur:
             return [
                 {"category": row[0], "title": row[1], "timestamp": row[2]}
                 async for row in cur
@@ -332,7 +332,6 @@ async def get_stats(user_id: int) -> dict[str, int]:
 
 
 # ─── Upcoming movies ───────────────────────────────────────────────────────────
-
 async def get_upcoming_movies() -> list[str]:
     return await get_items("upcoming_movies")
 

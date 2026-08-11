@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎬 Киношная рулетка</title>
+<title>Киношная рулетка</title>
 <style>
   :root {
     --bg: #0f1115; --card: #171a21; --text: #e8e8ea; --muted: #8b8f9a;
@@ -14,17 +14,40 @@
     margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background: var(--bg); color: var(--text); min-height: 100vh;
   }
-  header { padding: 20px; text-align: center; border-bottom: 1px solid var(--border); }
-  header h1 { margin: 0; font-size: 1.4rem; }
-  nav { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; padding: 14px 12px; }
-  nav button {
-    background: var(--card); color: var(--text); border: 1px solid var(--border);
-    padding: 8px 14px; border-radius: 20px; cursor: pointer; font-size: 0.9rem;
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px; border-bottom: 1px solid var(--border);
   }
-  nav button.active { background: var(--primary); border-color: var(--primary); color: white; }
-  main { max-width: 640px; margin: 0 auto; padding: 0 16px 60px; }
+  header h1 { margin: 0; font-size: 1.15rem; }
+  #burger-btn {
+    background: var(--card); border: 1px solid var(--border); color: var(--text);
+    font-size: 1.3rem; border-radius: 8px; padding: 4px 12px; cursor: pointer;
+  }
+
+  /* Burger side menu */
+  #overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 10;
+  }
+  #overlay.open { display: block; }
+  #side-menu {
+    position: fixed; top: 0; left: -280px; width: 260px; height: 100%;
+    background: var(--card); border-right: 1px solid var(--border); z-index: 11;
+    transition: left 0.2s ease; padding: 16px 0; overflow-y: auto;
+  }
+  #side-menu.open { left: 0; }
+  #side-menu .menu-item {
+    display: block; width: 100%; text-align: left; background: none; border: none;
+    color: var(--text); padding: 14px 20px; font-size: 1rem; cursor: pointer;
+  }
+  #side-menu .menu-item.active { background: var(--primary); color: white; }
+  #side-menu .menu-item .count { color: var(--muted); font-size: 0.85rem; }
+  #side-menu .menu-item.active .count { color: rgba(255,255,255,0.8); }
+  #side-menu hr { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
+
+  main { max-width: 640px; margin: 0 auto; padding: 16px 16px 60px; }
   .section { display: none; }
   .section.active { display: block; }
+  .section-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 14px; }
   .actions { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
   button.btn {
     border: none; border-radius: 10px; padding: 10px 18px; font-size: 0.95rem;
@@ -34,6 +57,7 @@
   .btn-success { background: var(--success); }
   .btn-danger { background: var(--danger); }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-sm { padding: 5px 12px; font-size: 0.82rem; border-radius: 8px; }
   .card {
     background: var(--card); border: 1px solid var(--border); border-radius: 14px;
     padding: 16px; margin-bottom: 14px;
@@ -43,13 +67,21 @@
   .meta { color: var(--muted); font-size: 0.9rem; margin-bottom: 4px; }
   .overview { margin-top: 10px; line-height: 1.5; }
   .watch-link { display: inline-block; margin-top: 12px; color: var(--primary); text-decoration: none; font-weight: 600; }
+  .card-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+  .sequel-prompt { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .sequel-prompt p { margin: 0 0 10px; color: var(--muted); }
+
   .list-row {
     display: flex; justify-content: space-between; align-items: center;
     padding: 10px 12px; border-bottom: 1px solid var(--border); gap: 10px;
   }
   .list-row:last-child { border-bottom: none; }
-  .list-row span { flex: 1; word-break: break-word; }
-  .list-row button {
+  .copy-title {
+    flex: 1; word-break: break-word; cursor: pointer; font-family: monospace;
+    background: rgba(255,255,255,0.04); padding: 3px 8px; border-radius: 6px;
+  }
+  .copy-title:active { background: rgba(59,130,246,0.25); }
+  .list-row button.del-btn {
     background: var(--danger); color: white; border: none; border-radius: 6px;
     padding: 4px 10px; cursor: pointer; font-size: 0.85rem; flex-shrink: 0;
   }
@@ -64,24 +96,49 @@
   .check-item { padding: 8px 0; border-bottom: 1px solid var(--border); }
   .check-item .estimated { color: var(--muted); font-size: 0.85rem; }
   .spinner { text-align: center; padding: 30px; color: var(--muted); }
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--success); color: white; padding: 8px 18px; border-radius: 20px;
+    font-size: 0.9rem; opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 20;
+  }
+  .toast.show { opacity: 1; }
+  .hist-item {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px; margin-bottom: 10px;
+  }
+  .hist-item .hist-title { font-weight: 600; margin-bottom: 3px; }
+  .hist-item .hist-meta { color: var(--muted); font-size: 0.82rem; margin-bottom: 8px; }
+  .hist-item .hist-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 </style>
 </head>
 <body>
 
-<header><h1>🎬 Киношная рулетка</h1></header>
+<header>
+  <button id="burger-btn">☰</button>
+  <h1 id="page-title">🎲 Крутить</h1>
+  <span style="width:34px"></span>
+</header>
 
-<nav id="nav"></nav>
+<div id="overlay"></div>
+<nav id="side-menu"></nav>
 
 <main>
+  <div id="random-spin-section" class="section">
+    <div class="actions">
+      <button class="btn btn-success" id="random-spin-btn">🔄 Начать</button>
+    </div>
+    <div id="random-spin-result"></div>
+  </div>
+
   <div id="spin-section" class="section">
     <div class="actions">
-      <button class="btn btn-success" id="spin-btn">🎲 Крутить</button>
+      <button class="btn btn-primary" id="spin-btn">🎲 Крутить: <span id="spin-cat-label"></span></button>
     </div>
     <div id="spin-result"></div>
   </div>
 
   <div id="list-section" class="section">
-    <div class="add-row">
+    <div class="add-row" id="add-row">
       <input type="text" id="add-input" placeholder="Название для добавления…">
       <button class="btn btn-primary" id="add-btn">➕</button>
     </div>
@@ -99,69 +156,92 @@
     <div id="up-check-result"></div>
     <div class="card" id="up-list-container"></div>
   </div>
+
+  <div id="history-section" class="section">
+    <div id="history-container"></div>
+  </div>
 </main>
 
+<div class="toast" id="toast"></div>
+
 <script>
-const CATS = {movies: "🎬 Фильмы", cartoons: "🎥 Мульты", series: "📺 Сериалы", dc: "🦇 DC", marvel: "🕷 Marvel"};
+const CATS = {movies: "🎬 Фильмы", cartoons: "🎥 Мульты", series: "📺 Сериалы"};
+const REF_CATS = {dc: "🦇 DC", marvel: "🕷 Marvel"};  // список без рулетки
+const ALL_CATS = {...CATS, ...REF_CATS};
+
 let currentCat = "movies";
-let currentView = "spin"; // spin | list | upcoming
+let currentView = "spin"; // spin | list | upcoming | history
+let currentCardData = null;
 
-const nav = document.getElementById("nav");
+const sideMenu = document.getElementById("side-menu");
+const overlay = document.getElementById("overlay");
 
-function renderNav() {
-  nav.innerHTML = "";
-  for (const [code, label] of Object.entries(CATS)) {
+function renderMenu() {
+  sideMenu.innerHTML = "";
+  const addItem = (label, onClick, active) => {
     const b = document.createElement("button");
+    b.className = "menu-item" + (active ? " active" : "");
     b.textContent = label;
-    b.className = code === currentCat && currentView !== "upcoming" ? "active" : "";
-    b.onclick = () => switchCat(code);
-    nav.appendChild(b);
-  }
-  const upBtn = document.createElement("button");
-  upBtn.textContent = "🕐 Ожидаемые";
-  upBtn.className = currentView === "upcoming" ? "active" : "";
-  upBtn.onclick = () => switchView("upcoming");
-  nav.appendChild(upBtn);
+    b.onclick = () => { onClick(); closeMenu(); };
+    sideMenu.appendChild(b);
+  };
 
-  const modeWrap = document.createElement("div");
-  modeWrap.style.width = "100%";
-  modeWrap.style.display = currentView === "upcoming" ? "none" : "flex";
-  modeWrap.style.justifyContent = "center";
-  modeWrap.style.gap = "8px";
-  modeWrap.style.marginTop = "6px";
-  const spinToggle = document.createElement("button");
-  spinToggle.textContent = "🎲 Крутить";
-  spinToggle.className = currentView === "spin" ? "active" : "";
-  spinToggle.onclick = () => switchView("spin");
-  const listToggle = document.createElement("button");
-  listToggle.textContent = "✏️ Список";
-  listToggle.className = currentView === "list" ? "active" : "";
-  listToggle.onclick = () => switchView("list");
-  modeWrap.appendChild(spinToggle);
-  modeWrap.appendChild(listToggle);
-  nav.appendChild(modeWrap);
+  addItem("🔄 Начать", () => switchView("random"), currentView === "random");
+  const hr0 = document.createElement("hr"); sideMenu.appendChild(hr0);
+
+  for (const [code, label] of Object.entries(CATS)) {
+    addItem(`${label}`, () => switchCat(code, "spin"), currentView !== "upcoming" && currentView !== "history" && currentView !== "random" && currentCat === code);
+  }
+  const hr1 = document.createElement("hr"); sideMenu.appendChild(hr1);
+  for (const [code, label] of Object.entries(REF_CATS)) {
+    addItem(`${label} (список)`, () => switchCat(code, "list"), currentView === "list" && currentCat === code);
+  }
+  const hr2 = document.createElement("hr"); sideMenu.appendChild(hr2);
+  addItem("🕐 Ожидаемые", () => switchView("upcoming"), currentView === "upcoming");
+  addItem("📜 История", () => switchView("history"), currentView === "history");
 }
 
-function switchCat(code) {
+function openMenu() { sideMenu.classList.add("open"); overlay.classList.add("open"); }
+function closeMenu() { sideMenu.classList.remove("open"); overlay.classList.remove("open"); }
+document.getElementById("burger-btn").onclick = openMenu;
+overlay.onclick = closeMenu;
+
+function switchCat(code, view) {
   currentCat = code;
-  if (currentView === "upcoming") currentView = "spin";
-  renderNav();
+  currentView = view;
+  renderMenu();
   showSection();
 }
 
 function switchView(view) {
   currentView = view;
-  renderNav();
+  renderMenu();
   showSection();
 }
 
 function showSection() {
+  document.getElementById("random-spin-section").classList.toggle("active", currentView === "random");
   document.getElementById("spin-section").classList.toggle("active", currentView === "spin");
   document.getElementById("list-section").classList.toggle("active", currentView === "list");
   document.getElementById("upcoming-section").classList.toggle("active", currentView === "upcoming");
+  document.getElementById("history-section").classList.toggle("active", currentView === "history");
+
+  const titles = {random: "🔄 Начать", spin: `🎲 ${ALL_CATS[currentCat] || ""}`, list: `✏️ ${ALL_CATS[currentCat] || ""}`,
+                   upcoming: "🕐 Ожидаемые", history: "📜 История"};
+  document.getElementById("page-title").textContent = titles[currentView] || "";
+
+  if (currentView === "random") {
+    document.getElementById("random-spin-result").innerHTML = "";
+    currentCardData = null;
+  }
+  if (currentView === "spin") {
+    document.getElementById("spin-cat-label").textContent = CATS[currentCat] || "";
+    document.getElementById("spin-result").innerHTML = "";
+    currentCardData = null;
+  }
   if (currentView === "list") loadList();
   if (currentView === "upcoming") loadUpcoming();
-  if (currentView === "spin") document.getElementById("spin-result").innerHTML = "";
+  if (currentView === "history") loadHistory();
 }
 
 async function api(path, opts) {
@@ -173,35 +253,128 @@ async function api(path, opts) {
   return resp.json();
 }
 
-document.getElementById("spin-btn").onclick = async () => {
-  const result = document.getElementById("spin-result");
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 1400);
+}
+
+function copyToClipboard(text) {
+  navigator.clipboard?.writeText(text).then(() => showToast("Скопировано: " + text))
+    .catch(() => showToast("Не удалось скопировать"));
+}
+
+function escapeHtml(s) {
+  const d = document.createElement("div");
+  d.textContent = s ?? "";
+  return d.innerHTML;
+}
+
+// ─── Spin (single category + "Начать" across all 3) ─────────────────────────
+function renderCard(data) {
+  const poster = data.poster_url ? `<img class="poster" src="${data.poster_url}">` : "";
+  const rating = data.rating !== "—" ? `⭐️ ${data.rating}/10` : "⭐️ —";
+  let extra = "";
+  if (data.runtime) extra += `<div class="meta">⏳ ${data.runtime} мин.</div>`;
+  if (data.seasons) extra += `<div class="meta">📚 Сезонов: ${data.seasons} · 🎥 Эпизодов: ${data.episodes ?? "—"}</div>`;
+  const link = data.watch_link ? `<a class="watch-link" href="${data.watch_link}" target="_blank">▶️ Смотреть онлайн</a>` : "";
+  const catLabel = CATS[data.category] || data.category;
+  return `
+    <div class="card">
+      ${poster}
+      <div class="meta">${catLabel}</div>
+      <div class="title">${escapeHtml(data.title)}</div>
+      <div class="meta">${rating}</div>
+      <div class="meta">🗓 ${escapeHtml(String(data.release_date))}</div>
+      ${extra}
+      <div class="meta">🎭 ${escapeHtml(data.genres)}</div>
+      <div class="meta">👥 ${escapeHtml(data.actors)}</div>
+      <div class="overview">${escapeHtml(data.overview)}</div>
+      ${link}
+      <div class="card-actions">
+        <button class="btn btn-success btn-sm" onclick="confirmPick()">✅ Подтвердить</button>
+        <button class="btn btn-primary btn-sm" onclick="rerollPick('${data.category}')">🔄 Перекрутить</button>
+      </div>
+      <div class="sequel-prompt" id="sequel-prompt" style="display:none"></div>
+    </div>`;
+}
+
+function resultEl() {
+  return document.getElementById(currentView === "random" ? "random-spin-result" : "spin-result");
+}
+
+async function doSpin(cat) {
+  const result = resultEl();
   result.innerHTML = '<div class="spinner">🌀 Крутим…</div>';
   try {
-    const data = await api(`/api/${currentCat}/spin`, {method: "POST"});
-    const poster = data.poster_url ? `<img class="poster" src="${data.poster_url}">` : "";
-    const rating = data.rating !== "—" ? `⭐️ ${data.rating}/10` : "⭐️ —";
-    let extra = "";
-    if (data.runtime) extra += `<div class="meta">⏳ ${data.runtime} мин.</div>`;
-    if (data.seasons) extra += `<div class="meta">📚 Сезонов: ${data.seasons} · 🎥 Эпизодов: ${data.episodes ?? "—"}</div>`;
-    const link = data.watch_link ? `<a class="watch-link" href="${data.watch_link}" target="_blank">▶️ Смотреть онлайн</a>` : "";
-    result.innerHTML = `
-      <div class="card">
-        ${poster}
-        <div class="title">${escapeHtml(data.title)}</div>
-        <div class="meta">${rating}</div>
-        <div class="meta">🗓 ${escapeHtml(String(data.release_date))}</div>
-        ${extra}
-        <div class="meta">🎭 ${escapeHtml(data.genres)}</div>
-        <div class="meta">👥 ${escapeHtml(data.actors)}</div>
-        <div class="overview">${escapeHtml(data.overview)}</div>
-        ${link}
-      </div>`;
+    const data = await api(`/api/${cat}/spin`, {method: "POST"});
+    currentCardData = data;
+    result.innerHTML = renderCard(data);
   } catch (e) {
     result.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
   }
-};
+}
+
+async function doRandomSpin() {
+  const result = document.getElementById("random-spin-result");
+  result.innerHTML = '<div class="spinner">🌀 Крутим…</div>';
+  try {
+    const data = await api("/api/random-spin", {method: "POST"});
+    currentCardData = data;
+    result.innerHTML = renderCard(data);
+  } catch (e) {
+    result.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+document.getElementById("spin-btn").onclick = () => doSpin(currentCat);
+document.getElementById("random-spin-btn").onclick = doRandomSpin;
+
+function confirmPick() {
+  const prompt = document.getElementById("sequel-prompt");
+  prompt.style.display = "block";
+  prompt.innerHTML = `
+    <p>Добавить продолжение (сиквел)?</p>
+    <div class="card-actions">
+      <button class="btn btn-success btn-sm" onclick="sequelYes()">✅ Да, сиквел</button>
+      <button class="btn btn-danger btn-sm" onclick="sequelNo()">❌ Нет, удалить</button>
+    </div>`;
+}
+
+async function sequelYes() {
+  if (!currentCardData) return;
+  try {
+    const r = await api(`/api/${currentCardData.category}/sequel`, {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({title: currentCardData.original_title}),
+    });
+    resultEl().innerHTML =
+      `<div class="card"><div class="title">🔄 ${escapeHtml(currentCardData.original_title)} → ${escapeHtml(r.new_title)}</div></div>`;
+    currentCardData = null;
+  } catch (e) { showToast(e.message); }
+}
+
+async function sequelNo() {
+  if (!currentCardData) return;
+  try {
+    await api(`/api/${currentCardData.category}/delete`, {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({title: currentCardData.original_title}),
+    });
+    resultEl().innerHTML =
+      `<div class="card"><div class="title">❌ ${escapeHtml(currentCardData.original_title)} удалён</div></div>`;
+    currentCardData = null;
+  } catch (e) { showToast(e.message); }
+}
+
+function rerollPick(cat) { doSpin(cat); }
+
+// ─── List (add/delete, click-to-copy) ────────────────────────────────────────
+function isReferenceCat(cat) { return cat === "dc" || cat === "marvel"; }
 
 async function loadList() {
+  document.getElementById("add-row").style.display = "flex";
   const container = document.getElementById("list-container");
   container.innerHTML = '<div class="spinner">Загрузка…</div>';
   const data = await api(`/api/${currentCat}/items`);
@@ -213,10 +386,17 @@ async function loadList() {
   for (const title of data.items) {
     const row = document.createElement("div");
     row.className = "list-row";
-    row.innerHTML = `<span>${escapeHtml(title)}</span>`;
+    const span = document.createElement("span");
+    span.className = "copy-title";
+    span.textContent = title;
+    span.title = "Нажмите, чтобы скопировать";
+    span.onclick = () => copyToClipboard(title);
+    row.appendChild(span);
     const del = document.createElement("button");
+    del.className = "del-btn";
     del.textContent = "🗑";
-    del.onclick = async () => {
+    del.onclick = async (ev) => {
+      ev.stopPropagation();
       await api(`/api/${currentCat}/delete`, {
         method: "POST", headers: {"Content-Type": "application/json"},
         body: JSON.stringify({title}),
@@ -239,11 +419,10 @@ document.getElementById("add-btn").onclick = async () => {
     });
     input.value = "";
     loadList();
-  } catch (e) {
-    alert(e.message);
-  }
+  } catch (e) { showToast(e.message); }
 };
 
+// ─── Upcoming ─────────────────────────────────────────────────────────────
 async function loadUpcoming() {
   const container = document.getElementById("up-list-container");
   container.innerHTML = '<div class="spinner">Загрузка…</div>';
@@ -256,10 +435,16 @@ async function loadUpcoming() {
   for (const title of data.items) {
     const row = document.createElement("div");
     row.className = "list-row";
-    row.innerHTML = `<span>${escapeHtml(title)}</span>`;
+    const span = document.createElement("span");
+    span.className = "copy-title";
+    span.textContent = title;
+    span.onclick = () => copyToClipboard(title);
+    row.appendChild(span);
     const del = document.createElement("button");
+    del.className = "del-btn";
     del.textContent = "🗑";
-    del.onclick = async () => {
+    del.onclick = async (ev) => {
+      ev.stopPropagation();
       await api("/api/upcoming/delete", {
         method: "POST", headers: {"Content-Type": "application/json"},
         body: JSON.stringify({title}),
@@ -282,9 +467,7 @@ document.getElementById("up-add-btn").onclick = async () => {
     });
     input.value = "";
     loadUpcoming();
-  } catch (e) {
-    alert(e.message);
-  }
+  } catch (e) { showToast(e.message); }
 };
 
 document.getElementById("up-check-btn").onclick = async () => {
@@ -293,7 +476,6 @@ document.getElementById("up-check-btn").onclick = async () => {
   try {
     const data = await api("/api/upcoming/check", {method: "POST"});
     let html = "";
-
     html += '<div class="check-group"><h3>✅ Доступны в цифре</h3>';
     if (!data.released.length) {
       html += '<div class="muted">Пока нет</div>';
@@ -301,12 +483,10 @@ document.getElementById("up-check-btn").onclick = async () => {
       for (const e of data.released) {
         const est = e.estimated ? '<div class="estimated">(оценочно, точной даты нет)</div>' : "";
         html += `<div class="check-item">🎬 ${escapeHtml(e.tmdb_title)} — ${escapeHtml(e.release_date)}
-          <button class="btn btn-primary" style="margin-left:8px;padding:2px 10px;font-size:0.8rem"
-            onclick="moveUpcoming('${escapeAttr(e.title)}')">Перенести</button>${est}</div>`;
+          <button class="btn btn-primary btn-sm" onclick="moveUpcoming('${escapeAttr(e.title)}')">Перенести</button>${est}</div>`;
       }
     }
     html += "</div>";
-
     html += '<div class="check-group"><h3>⏳ Ещё не вышли</h3>';
     if (!data.not_yet.length) {
       html += '<div class="muted">—</div>';
@@ -316,13 +496,11 @@ document.getElementById("up-check-btn").onclick = async () => {
       }
     }
     html += "</div>";
-
     if (data.no_info.length) {
       html += '<div class="check-group"><h3>❓ Нет данных</h3>';
       for (const t of data.no_info) html += `<div class="check-item">${escapeHtml(t)}</div>`;
       html += "</div>";
     }
-
     result.innerHTML = html;
   } catch (e) {
     result.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
@@ -340,16 +518,69 @@ async function moveUpcoming(title) {
   loadUpcoming();
 }
 
-function escapeHtml(s) {
-  const d = document.createElement("div");
-  d.textContent = s ?? "";
-  return d.innerHTML;
-}
-function escapeAttr(s) {
-  return String(s).replace(/'/g, "\\'");
+// ─── History ──────────────────────────────────────────────────────────────
+async function loadHistory() {
+  const container = document.getElementById("history-container");
+  container.innerHTML = '<div class="spinner">Загрузка…</div>';
+  const data = await api("/api/history?limit=50");
+  if (!data.items.length) {
+    container.innerHTML = '<div class="muted">История пуста</div>';
+    return;
+  }
+  container.innerHTML = "";
+  data.items.forEach((e, idx) => {
+    if (isReferenceCat(e.category)) return; // DC/Marvel в историю не попадают (там нет ролла), но на всякий случай фильтруем
+    const div = document.createElement("div");
+    div.className = "hist-item";
+    const date = new Date(e.timestamp * 1000).toLocaleString("ru-RU");
+    div.innerHTML = `
+      <div class="hist-title">${CATS[e.category] || e.category}: ${escapeHtml(e.title)}</div>
+      <div class="hist-meta">${date}</div>
+      <div class="hist-actions" id="hist-actions-${idx}">
+        <button class="btn btn-success btn-sm" onclick="histConfirm(${idx})">✅ Подтвердить</button>
+      </div>`;
+    container.appendChild(div);
+    div.dataset.category = e.category;
+    div.dataset.title = e.title;
+  });
 }
 
-renderNav();
+function histConfirm(idx) {
+  const actionsEl = document.getElementById(`hist-actions-${idx}`);
+  actionsEl.innerHTML = `
+    <button class="btn btn-success btn-sm" onclick="histSequel(${idx})">🔄 Сиквел</button>
+    <button class="btn btn-danger btn-sm" onclick="histDelete(${idx})">🗑 Удалить</button>`;
+}
+
+async function histSequel(idx) {
+  const div = document.getElementById(`hist-actions-${idx}`).closest(".hist-item");
+  const {category, title} = div.dataset;
+  try {
+    const r = await api(`/api/${category}/sequel`, {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({title}),
+    });
+    showToast(`${title} → ${r.new_title}`);
+    document.getElementById(`hist-actions-${idx}`).innerHTML = `<span class="muted">Готово ✅</span>`;
+  } catch (e) { showToast(e.message); }
+}
+
+async function histDelete(idx) {
+  const div = document.getElementById(`hist-actions-${idx}`).closest(".hist-item");
+  const {category, title} = div.dataset;
+  try {
+    await api(`/api/${category}/delete`, {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({title}),
+    });
+    showToast(`${title} удалён`);
+    document.getElementById(`hist-actions-${idx}`).innerHTML = `<span class="muted">Удалено 🗑</span>`;
+  } catch (e) { showToast(e.message); }
+}
+
+function escapeAttr(s) { return String(s).replace(/'/g, "\\'"); }
+
+renderMenu();
 showSection();
 </script>
 </body>

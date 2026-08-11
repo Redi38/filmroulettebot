@@ -67,6 +67,7 @@ async def add_item_start(call: CallbackQuery, callback_data: AddItemCB, state: F
         f"✏️ Введите название для добавления в <b>{ru}</b>:",
         reply_markup=cancel_add_kb(callback_data.code),
     )
+    await state.update_data(prompt_msg_id=call.message.message_id, prompt_chat_id=call.message.chat.id)
 
 
 @router.callback_query(CancelAddCB.filter(F.code != ""))
@@ -118,9 +119,17 @@ async def back_main(call: CallbackQuery, callback_data: BackMainCB) -> None:
 async def handle_pending_add(msg: Message, state: FSMContext) -> None:
     data = await state.get_data()
     cat = data.get("category")
+    prompt_msg_id = data.get("prompt_msg_id")
+    prompt_chat_id = data.get("prompt_chat_id")
     await state.clear()
     if not cat:
         return
+
+    if prompt_msg_id and prompt_chat_id:
+        try:
+            await msg.bot.delete_message(prompt_chat_id, prompt_msg_id)
+        except TelegramBadRequest as e:
+            logger.warning("handle_pending_add: failed to delete prompt message: %s", e)
 
     title = (msg.text or "").strip()
     if not title:

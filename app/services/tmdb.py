@@ -20,8 +20,6 @@ _MAX_RETRIES = 3
 _BACKOFF_BASE = 1.0  # seconds
 _RETRYABLE_STATUSES = {429, 500, 502, 503, 504}
 
-# Единый клиент на весь процесс — переиспользует TCP/TLS-соединения (keep-alive)
-# вместо накладных расходов на новое соединение при каждом запросе к TMDb.
 _client: httpx.AsyncClient | None = None
 
 
@@ -39,9 +37,7 @@ async def close_client() -> None:
         await _client.aclose()
         _client = None
 
-# Готовая карточка (title/overview/rating/...) меняется редко — кэшируем на сутки.
 INFO_CACHE_TTL = 24 * 3600
-# Сырые результаты поиска для /upcoming — TTL короче, т.к. даты выхода важно сверять свежими.
 SEARCH_CACHE_TTL = 3 * 3600
 
 
@@ -58,7 +54,7 @@ async def _get(path: str, **params: Any) -> dict[str, Any] | None:
             if resp.status_code in _RETRYABLE_STATUSES and attempt < _MAX_RETRIES:
                 retry_after = resp.headers.get("Retry-After")
                 delay = float(retry_after) if retry_after else _BACKOFF_BASE * (2 ** (attempt - 1))
-                delay += random.uniform(0, 0.5)  # джиттер против одновременных ретраев
+                delay += random.uniform(0, 0.5)
                 logger.warning(
                     "TMDb %s returned %s (attempt %s/%s), retrying in %.1fs",
                     path, resp.status_code, attempt, _MAX_RETRIES, delay,
@@ -147,7 +143,7 @@ async def get_movie_info(title: str) -> dict[str, Any] | None:
         "title": movie.get("title"),
         "overview": movie.get("overview") or "Описание недоступно.",
         "release_date": movie.get("release_date") or "—",
-        "rating": movie.get("vote_average") or "—",
+        "rating": round(movie["vote_average"], 1) if movie.get("vote_average") else "—",
         "poster_url": _poster(movie),
         "runtime": details.get("runtime") or "—",
         "genres": _genres(details),
@@ -176,7 +172,7 @@ async def get_series_info(title: str) -> dict[str, Any] | None:
         "title": series.get("name"),
         "overview": series.get("overview") or "Описание недоступно.",
         "release_date": series.get("first_air_date") or "—",
-        "rating": series.get("vote_average") or "—",
+        "rating": round(series["vote_average"], 1) if series.get("vote_average") else "—",
         "poster_url": _poster(series),
         "genres": _genres(details),
         "actors": _actors(credits),
@@ -187,8 +183,43 @@ async def get_series_info(title: str) -> dict[str, Any] | None:
     return result
 
 
+async def _get_digital_release_date(movie_id: int) -> str | None:
+    """Real digital/streaming release date from TMDb's release_dates endpoint
+    (type 4 = Digital), preferring the US region since it's the most
+    consistently populated. Returns None if TMDb has no digital date on file
+    yet — callers then fall back to the "45 days after theatrical" heuristic."""
+    cache_key = f"release_dates:{movie_id}"
+    cached = await get_tmdb_cache(cache_key, SEARCH_CACHE_TTL)
+    if cached is not None:
+        data = cached
+    else:
+        data = await _get(f"/movie/{movie_id}/release_dates")
+        if data is not None:
+            await set_tmdb_cache(cache_key, data)
+    if not data:
+        return None
+
+    by_country = {r["iso_3166_1"]: r for r in data.get("results", [])}
+    regions = [by_country["US"]] if "US" in by_country else list(by_country.values())
+    for region in regions:
+        for rd in region.get("release_dates", []):
+            if rd.get("type") == 4:  # 4 = Digital (см. TMDb release_dates docs)
+                date_str = (rd.get("release_date") or "")[:10]
+                if date_str:
+                    return date_str
+    return None
+
+
 async def check_upcoming_released(titles: list[str]) -> dict[str, list]:
-    """Check which upcoming movies have been released (≥45 days ago, current year)."""
+    """Check which upcoming movies are out.
+
+    Prefers the REAL digital/streaming release date from TMDb (type 4).
+    Falls back to a "45 days after theatrical release" heuristic only when
+    TMDb doesn't have a digital date on file yet — common right after a
+    theatrical release, before distributors announce the digital date.
+    Each entry carries "estimated": True when the heuristic was used, so
+    callers can flag it as approximate rather than confirmed.
+    """
     now = datetime.now(timezone.utc)
     current_year = now.year
     released, not_yet, no_info = [], [], []
@@ -208,15 +239,27 @@ async def check_upcoming_released(titles: list[str]) -> dict[str, list]:
         if not matched or len(matched.get("release_date", "")) < 10:
             no_info.append(title)
             continue
+
+        digital_date_str = await _get_digital_release_date(matched["id"])
+        estimated = digital_date_str is None
+        date_to_use = digital_date_str or matched["release_date"][:10]
+
         try:
-            release_date = datetime.strptime(matched["release_date"][:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            check_date = datetime.strptime(date_to_use, "%Y-%m-%d").replace(tzinfo=timezone.utc)
         except ValueError:
             no_info.append(title)
             continue
-        days_ago = (now - release_date).days
-        entry = {"title": title, "tmdb_title": matched.get("title", title),
-                 "release_date": matched["release_date"][:10], "days_ago": days_ago}
-        (released if days_ago >= 45 else not_yet).append(entry)
+
+        days_ago = (now - check_date).days
+        is_out = days_ago >= 0 if not estimated else days_ago >= 45
+        entry = {
+            "title": title,
+            "tmdb_title": matched.get("title", title),
+            "release_date": date_to_use,
+            "days_ago": days_ago,
+            "estimated": estimated,
+        }
+        (released if is_out else not_yet).append(entry)
     return {"released": released, "not_yet": not_yet, "no_info": no_info}
 
 

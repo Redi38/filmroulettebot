@@ -36,16 +36,17 @@ async def _check_text_and_kb(chat_id: int) -> tuple[str, InlineKeyboardMarkup]:
 
     lines: list[str] = []
     if released:
-        lines.append("✅ <b>Уже вышли (&gt;45 дней назад):</b>")
+        lines.append("✅ <b>Доступны в цифре:</b>")
         for e in released:
             tmdb = str(e["tmdb_title"])
             orig = str(e["title"])
             label = f"«{esc(orig)}»" if tmdb.lower() != orig.lower() else ""
             date_fmt = _fmt_date(str(e["release_date"]))
             days_lbl = _days_label(int(e["days_ago"]))
-            lines.append(f"🎬 {esc(tmdb)} {label} — {date_fmt} ({days_lbl})")
+            marker = " <i>(оценочно, точной даты нет)</i>" if e.get("estimated") else ""
+            lines.append(f"🎬 {esc(tmdb)} {label} — {date_fmt} ({days_lbl}){marker}")
     else:
-        lines.append("✅ <b>Уже вышедших (&gt;45 дней назад) нет.</b>")
+        lines.append("✅ <b>Доступных в цифре пока нет.</b>")
 
     lines.append("")
     lines.append("⏳ <b>Ещё не вышли / вышли недавно:</b>")
@@ -56,10 +57,11 @@ async def _check_text_and_kb(chat_id: int) -> tuple[str, InlineKeyboardMarkup]:
         label = f"(«{esc(orig)}»)" if tmdb.lower() != orig.lower() else ""
         date_fmt = _fmt_date(str(e["release_date"]))
         days = int(e["days_ago"])
+        kind = "цифровой релиз" if not e.get("estimated") else "кинопремьера"
         if days <= 0:
-            days_lbl = f"премьера {date_fmt} (через {-days} дн.)"
+            days_lbl = f"{kind} {date_fmt} (через {-days} дн.)"
         else:
-            days_lbl = f"вышел {date_fmt} ({days} дн. назад)"
+            days_lbl = f"{kind} {date_fmt} ({days} дн. назад)"
         lines.append(f"🕐 {esc(tmdb)} {label} — {days_lbl}")
 
     for t in no_info:

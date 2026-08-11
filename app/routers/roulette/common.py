@@ -24,7 +24,7 @@ _full_title_cache: dict[tuple[int, int], str] = {}
 TMDB_TIMEOUT = 6  # seconds
 
 _last_roll_at: dict[int, float] = {}
-ROLL_COOLDOWN = 4  # seconds
+ROLL_COOLDOWN = 1.5  # seconds
 
 
 def _roll_on_cooldown(user_id: int) -> float:

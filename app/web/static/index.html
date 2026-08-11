@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎬 Киношная рулетка</title>
+<style>
+  :root {
+    --bg: #0f1115; --card: #171a21; --text: #e8e8ea; --muted: #8b8f9a;
+    --primary: #3b82f6; --success: #22c55e; --danger: #ef4444; --border: #262a33;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text); min-height: 100vh;
+  }
+  header { padding: 20px; text-align: center; border-bottom: 1px solid var(--border); }
+  header h1 { margin: 0; font-size: 1.4rem; }
+  nav { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; padding: 14px 12px; }
+  nav button {
+    background: var(--card); color: var(--text); border: 1px solid var(--border);
+    padding: 8px 14px; border-radius: 20px; cursor: pointer; font-size: 0.9rem;
+  }
+  nav button.active { background: var(--primary); border-color: var(--primary); color: white; }
+  main { max-width: 640px; margin: 0 auto; padding: 0 16px 60px; }
+  .section { display: none; }
+  .section.active { display: block; }
+  .actions { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  button.btn {
+    border: none; border-radius: 10px; padding: 10px 18px; font-size: 0.95rem;
+    cursor: pointer; color: white; font-weight: 600;
+  }
+  .btn-primary { background: var(--primary); }
+  .btn-success { background: var(--success); }
+  .btn-danger { background: var(--danger); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 16px; margin-bottom: 14px;
+  }
+  .poster { width: 100%; max-width: 280px; border-radius: 10px; display: block; margin: 0 auto 14px; }
+  .title { font-size: 1.2rem; font-weight: 700; margin-bottom: 8px; }
+  .meta { color: var(--muted); font-size: 0.9rem; margin-bottom: 4px; }
+  .overview { margin-top: 10px; line-height: 1.5; }
+  .watch-link { display: inline-block; margin-top: 12px; color: var(--primary); text-decoration: none; font-weight: 600; }
+  .list-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 12px; border-bottom: 1px solid var(--border); gap: 10px;
+  }
+  .list-row:last-child { border-bottom: none; }
+  .list-row span { flex: 1; word-break: break-word; }
+  .list-row button {
+    background: var(--danger); color: white; border: none; border-radius: 6px;
+    padding: 4px 10px; cursor: pointer; font-size: 0.85rem; flex-shrink: 0;
+  }
+  .add-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  .add-row input {
+    flex: 1; background: var(--card); border: 1px solid var(--border); color: var(--text);
+    padding: 10px 12px; border-radius: 8px; font-size: 0.95rem;
+  }
+  .muted { color: var(--muted); text-align: center; padding: 20px 0; }
+  .check-group { margin-bottom: 18px; }
+  .check-group h3 { font-size: 1rem; margin-bottom: 8px; }
+  .check-item { padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .check-item .estimated { color: var(--muted); font-size: 0.85rem; }
+  .spinner { text-align: center; padding: 30px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header><h1>🎬 Киношная рулетка</h1></header>
+
+<nav id="nav"></nav>
+
+<main>
+  <div id="spin-section" class="section">
+    <div class="actions">
+      <button class="btn btn-success" id="spin-btn">🎲 Крутить</button>
+    </div>
+    <div id="spin-result"></div>
+  </div>
+
+  <div id="list-section" class="section">
+    <div class="add-row">
+      <input type="text" id="add-input" placeholder="Название для добавления…">
+      <button class="btn btn-primary" id="add-btn">➕</button>
+    </div>
+    <div class="card" id="list-container"></div>
+  </div>
+
+  <div id="upcoming-section" class="section">
+    <div class="add-row">
+      <input type="text" id="up-add-input" placeholder="Название для добавления…">
+      <button class="btn btn-primary" id="up-add-btn">➕</button>
+    </div>
+    <div class="actions">
+      <button class="btn btn-success" id="up-check-btn">🔍 Проверить вышедшие</button>
+    </div>
+    <div id="up-check-result"></div>
+    <div class="card" id="up-list-container"></div>
+  </div>
+</main>
+
+<script>
+const CATS = {movies: "🎬 Фильмы", cartoons: "🎥 Мульты", series: "📺 Сериалы", dc: "🦇 DC", marvel: "🕷 Marvel"};
+let currentCat = "movies";
+let currentView = "spin"; // spin | list | upcoming
+
+const nav = document.getElementById("nav");
+
+function renderNav() {
+  nav.innerHTML = "";
+  for (const [code, label] of Object.entries(CATS)) {
+    const b = document.createElement("button");
+    b.textContent = label;
+    b.className = code === currentCat && currentView !== "upcoming" ? "active" : "";
+    b.onclick = () => switchCat(code);
+    nav.appendChild(b);
+  }
+  const upBtn = document.createElement("button");
+  upBtn.textContent = "🕐 Ожидаемые";
+  upBtn.className = currentView === "upcoming" ? "active" : "";
+  upBtn.onclick = () => switchView("upcoming");
+  nav.appendChild(upBtn);
+
+  const modeWrap = document.createElement("div");
+  modeWrap.style.width = "100%";
+  modeWrap.style.display = currentView === "upcoming" ? "none" : "flex";
+  modeWrap.style.justifyContent = "center";
+  modeWrap.style.gap = "8px";
+  modeWrap.style.marginTop = "6px";
+  const spinToggle = document.createElement("button");
+  spinToggle.textContent = "🎲 Крутить";
+  spinToggle.className = currentView === "spin" ? "active" : "";
+  spinToggle.onclick = () => switchView("spin");
+  const listToggle = document.createElement("button");
+  listToggle.textContent = "✏️ Список";
+  listToggle.className = currentView === "list" ? "active" : "";
+  listToggle.onclick = () => switchView("list");
+  modeWrap.appendChild(spinToggle);
+  modeWrap.appendChild(listToggle);
+  nav.appendChild(modeWrap);
+}
+
+function switchCat(code) {
+  currentCat = code;
+  if (currentView === "upcoming") currentView = "spin";
+  renderNav();
+  showSection();
+}
+
+function switchView(view) {
+  currentView = view;
+  renderNav();
+  showSection();
+}
+
+function showSection() {
+  document.getElementById("spin-section").classList.toggle("active", currentView === "spin");
+  document.getElementById("list-section").classList.toggle("active", currentView === "list");
+  document.getElementById("upcoming-section").classList.toggle("active", currentView === "upcoming");
+  if (currentView === "list") loadList();
+  if (currentView === "upcoming") loadUpcoming();
+  if (currentView === "spin") document.getElementById("spin-result").innerHTML = "";
+}
+
+async function api(path, opts) {
+  const resp = await fetch(path, opts);
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({detail: resp.statusText}));
+    throw new Error(err.detail || "Ошибка запроса");
+  }
+  return resp.json();
+}
+
+document.getElementById("spin-btn").onclick = async () => {
+  const result = document.getElementById("spin-result");
+  result.innerHTML = '<div class="spinner">🌀 Крутим…</div>';
+  try {
+    const data = await api(`/api/${currentCat}/spin`, {method: "POST"});
+    const poster = data.poster_url ? `<img class="poster" src="${data.poster_url}">` : "";
+    const rating = data.rating !== "—" ? `⭐️ ${data.rating}/10` : "⭐️ —";
+    let extra = "";
+    if (data.runtime) extra += `<div class="meta">⏳ ${data.runtime} мин.</div>`;
+    if (data.seasons) extra += `<div class="meta">📚 Сезонов: ${data.seasons} · 🎥 Эпизодов: ${data.episodes ?? "—"}</div>`;
+    const link = data.watch_link ? `<a class="watch-link" href="${data.watch_link}" target="_blank">▶️ Смотреть онлайн</a>` : "";
+    result.innerHTML = `
+      <div class="card">
+        ${poster}
+        <div class="title">${escapeHtml(data.title)}</div>
+        <div class="meta">${rating}</div>
+        <div class="meta">🗓 ${escapeHtml(String(data.release_date))}</div>
+        ${extra}
+        <div class="meta">🎭 ${escapeHtml(data.genres)}</div>
+        <div class="meta">👥 ${escapeHtml(data.actors)}</div>
+        <div class="overview">${escapeHtml(data.overview)}</div>
+        ${link}
+      </div>`;
+  } catch (e) {
+    result.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
+  }
+};
+
+async function loadList() {
+  const container = document.getElementById("list-container");
+  container.innerHTML = '<div class="spinner">Загрузка…</div>';
+  const data = await api(`/api/${currentCat}/items`);
+  if (!data.items.length) {
+    container.innerHTML = '<div class="muted">Список пуст</div>';
+    return;
+  }
+  container.innerHTML = "";
+  for (const title of data.items) {
+    const row = document.createElement("div");
+    row.className = "list-row";
+    row.innerHTML = `<span>${escapeHtml(title)}</span>`;
+    const del = document.createElement("button");
+    del.textContent = "🗑";
+    del.onclick = async () => {
+      await api(`/api/${currentCat}/delete`, {
+        method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({title}),
+      });
+      loadList();
+    };
+    row.appendChild(del);
+    container.appendChild(row);
+  }
+}
+
+document.getElementById("add-btn").onclick = async () => {
+  const input = document.getElementById("add-input");
+  const title = input.value.trim();
+  if (!title) return;
+  try {
+    await api(`/api/${currentCat}/add`, {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({title}),
+    });
+    input.value = "";
+    loadList();
+  } catch (e) {
+    alert(e.message);
+  }
+};
+
+async function loadUpcoming() {
+  const container = document.getElementById("up-list-container");
+  container.innerHTML = '<div class="spinner">Загрузка…</div>';
+  const data = await api("/api/upcoming");
+  if (!data.items.length) {
+    container.innerHTML = '<div class="muted">Список пуст</div>';
+    return;
+  }
+  container.innerHTML = "";
+  for (const title of data.items) {
+    const row = document.createElement("div");
+    row.className = "list-row";
+    row.innerHTML = `<span>${escapeHtml(title)}</span>`;
+    const del = document.createElement("button");
+    del.textContent = "🗑";
+    del.onclick = async () => {
+      await api("/api/upcoming/delete", {
+        method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({title}),
+      });
+      loadUpcoming();
+    };
+    row.appendChild(del);
+    container.appendChild(row);
+  }
+}
+
+document.getElementById("up-add-btn").onclick = async () => {
+  const input = document.getElementById("up-add-input");
+  const title = input.value.trim();
+  if (!title) return;
+  try {
+    await api("/api/upcoming/add", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({title}),
+    });
+    input.value = "";
+    loadUpcoming();
+  } catch (e) {
+    alert(e.message);
+  }
+};
+
+document.getElementById("up-check-btn").onclick = async () => {
+  const result = document.getElementById("up-check-result");
+  result.innerHTML = '<div class="spinner">⏳ Проверяем по базе TMDb…</div>';
+  try {
+    const data = await api("/api/upcoming/check", {method: "POST"});
+    let html = "";
+
+    html += '<div class="check-group"><h3>✅ Доступны в цифре</h3>';
+    if (!data.released.length) {
+      html += '<div class="muted">Пока нет</div>';
+    } else {
+      for (const e of data.released) {
+        const est = e.estimated ? '<div class="estimated">(оценочно, точной даты нет)</div>' : "";
+        html += `<div class="check-item">🎬 ${escapeHtml(e.tmdb_title)} — ${escapeHtml(e.release_date)}
+          <button class="btn btn-primary" style="margin-left:8px;padding:2px 10px;font-size:0.8rem"
+            onclick="moveUpcoming('${escapeAttr(e.title)}')">Перенести</button>${est}</div>`;
+      }
+    }
+    html += "</div>";
+
+    html += '<div class="check-group"><h3>⏳ Ещё не вышли</h3>';
+    if (!data.not_yet.length) {
+      html += '<div class="muted">—</div>';
+    } else {
+      for (const e of data.not_yet) {
+        html += `<div class="check-item">🕐 ${escapeHtml(e.tmdb_title)} — ${escapeHtml(e.release_date)} (${e.days_ago > 0 ? e.days_ago + " дн. назад" : "через " + (-e.days_ago) + " дн."})</div>`;
+      }
+    }
+    html += "</div>";
+
+    if (data.no_info.length) {
+      html += '<div class="check-group"><h3>❓ Нет данных</h3>';
+      for (const t of data.no_info) html += `<div class="check-item">${escapeHtml(t)}</div>`;
+      html += "</div>";
+    }
+
+    result.innerHTML = html;
+  } catch (e) {
+    result.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
+  }
+};
+
+async function moveUpcoming(title) {
+  const category = prompt("Куда перенести? (movies / cartoons / series)", "movies");
+  if (!category || !CATS[category]) { if (category) alert("Неверная категория"); return; }
+  await api("/api/upcoming/move", {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({title, category}),
+  });
+  document.getElementById("up-check-btn").click();
+  loadUpcoming();
+}
+
+function escapeHtml(s) {
+  const d = document.createElement("div");
+  d.textContent = s ?? "";
+  return d.innerHTML;
+}
+function escapeAttr(s) {
+  return String(s).replace(/'/g, "\\'");
+}
+
+renderNav();
+showSection();
+</script>
+</body>
+</html>

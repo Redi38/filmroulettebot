@@ -2,3 +2,5 @@ aiogram>=3.30.0
 aiosqlite>=0.22.1
 httpx>=0.28.1
 pydantic-settings>=2.15.0
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0

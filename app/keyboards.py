@@ -31,6 +31,7 @@ class UpcomingMoveTargetCB(CallbackData, prefix="upmv"): code: str
 class UpcomingCheckMoveCB(CallbackData, prefix="upck"): title_idx: int
 class UpcomingCheckMoveToCB(CallbackData, prefix="upckmv"): title_idx: int; code: str
 class UpcomingAddCB(CallbackData, prefix="upadd"): pass
+class CancelAddCB(CallbackData, prefix="cnadd"): code: str
 class PageCB(CallbackData, prefix="pg"): scope: str; page: int
 class NoopCB(CallbackData, prefix="noop"): pass
 
@@ -43,6 +44,13 @@ def styled_btn(text: str, callback_data: str, style: ButtonStyle = "primary") ->
 
 def _back_row(cb_data: str, text: str = "⬅️ Назад") -> list[InlineKeyboardButton]:
     return [styled_btn(text=text, callback_data=cb_data, style="primary")]
+
+def cancel_add_kb(code: str = "") -> InlineKeyboardMarkup:
+    """Single "❌ Отмена" button shown while waiting for a title to add.
+    code="" is used for the /upcoming add flow (no category to return to)."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [styled_btn("❌ Отмена", CancelAddCB(code=code).pack(), "danger")]
+    ])
 
 def pagination_row(scope: str, page: int, total_pages: int) -> list[InlineKeyboardButton] | None:
     """Prev/page-indicator/next row. Returns None if there's nothing to paginate."""

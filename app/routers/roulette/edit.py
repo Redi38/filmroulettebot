@@ -11,8 +11,8 @@ from aiogram.exceptions import TelegramBadRequest
 from app.db.database import get_items, add_item, item_exists
 from app.states import AddItemStates
 from app.keyboards import (
-    main_kb, spin_kb, edit_menu_kb, DELETE_PAGE_SIZE,
-    EditMenuCB, AddItemCB, BackMainCB, PageCB,
+    main_kb, spin_kb, edit_menu_kb, cancel_add_kb, DELETE_PAGE_SIZE,
+    EditMenuCB, AddItemCB, CancelAddCB, BackMainCB, PageCB,
     pagination_row, CODE_TO_CAT, CAT_RU,
 )
 from app.utils import esc, safe_edit_text, safe_edit_caption, render_paginated_list
@@ -64,9 +64,23 @@ async def add_item_start(call: CallbackQuery, callback_data: AddItemCB, state: F
     await state.update_data(category=cat)
     await safe_edit_text(
         call.message,
-        f"✏️ Введите название для добавления в <b>{ru}</b>:\n\n<i>Для отмены — /start</i>",
-        reply_markup=None,
+        f"✏️ Введите название для добавления в <b>{ru}</b>:",
+        reply_markup=cancel_add_kb(callback_data.code),
     )
+
+
+@router.callback_query(CancelAddCB.filter(F.code != ""))
+async def cancel_add(call: CallbackQuery, callback_data: CancelAddCB, state: FSMContext) -> None:
+    if not isinstance(call.message, Message):
+        return
+    await call.answer()
+    await state.clear()
+    cat = CODE_TO_CAT.get(callback_data.code)
+    if cat is None:
+        return
+    text, total_pages = await _render_edit_menu(cat, 1)
+    row = pagination_row(f"editlist_{callback_data.code}", 1, total_pages)
+    await safe_edit_text(call.message, text, reply_markup=edit_menu_kb(cat, row))
 
 
 @router.callback_query(BackMainCB.filter(F.target.in_({"main", "sp__m", "sp__c", "sp__s", "sp__dc", "sp__mv"})))
@@ -90,8 +104,6 @@ async def back_main(call: CallbackQuery, callback_data: BackMainCB) -> None:
         cat = CODE_TO_CAT.get(code, "movies")
         ru = CAT_RU.get(cat, cat)
         if call.message.photo or call.message.document or call.message.video or call.message.animation:
-            # Если вернулись из карточки с постером в меню категории, медиа лучше удалить,
-            # чтобы отобразить чистое текстовое меню выбора
             try:
                 await call.message.delete()
                 await call.message.answer(f"🎲 Категория: <b>{ru}</b>", reply_markup=spin_kb(cat))

@@ -9,8 +9,8 @@ from aiogram.types import Message, CallbackQuery
 from app.db.database import get_upcoming_movies, add_upcoming_movie, delete_upcoming_movie, item_exists
 from app.states import UpcomingStates
 from app.keyboards import (
-    upcoming_menu_kb, upcoming_delete_kb, BackMainCB, pagination_row, PageCB,
-    UpcomingMoveCB, UpcomingDeleteOneCB, UpcomingAddCB,
+    upcoming_menu_kb, upcoming_delete_kb, cancel_add_kb, BackMainCB, pagination_row, PageCB,
+    UpcomingMoveCB, UpcomingDeleteOneCB, UpcomingAddCB, CancelAddCB,
 )
 from app.utils import esc, render_paginated_list, safe_edit_text
 
@@ -61,9 +61,21 @@ async def up_add_start(call: CallbackQuery, state: FSMContext) -> None:
     await call.answer()
     await state.set_state(UpcomingStates.waiting_title)
     await safe_edit_text(call.message,
-        "✏️ Введите название фильма для добавления в ожидаемые:\n\n<i>Для отмены — /upcoming</i>",
-        reply_markup=None,
+        "✏️ Введите название фильма для добавления в ожидаемые:",
+        reply_markup=cancel_add_kb(),
     )
+
+
+@router.callback_query(CancelAddCB.filter(F.code == ""))
+async def cancel_upcoming_add(call: CallbackQuery, state: FSMContext) -> None:
+    if not isinstance(call.message, Message):
+        return
+    await call.answer()
+    await state.clear()
+    items = await get_upcoming_movies()
+    text, page, total_pages = render_paginated_list(items, 1)
+    row = pagination_row("up", page, total_pages)
+    await safe_edit_text(call.message, f"<b>🎬 Ожидаемые фильмы:</b>\n\n{text}", reply_markup=upcoming_menu_kb(row))
 
 
 @router.callback_query(UpcomingDeleteOneCB.filter())

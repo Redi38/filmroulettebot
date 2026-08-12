@@ -4,92 +4,122 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Киношная рулетка</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0f1115; --card: #171a21; --text: #e8e8ea; --muted: #8b8f9a;
-    --primary: #3b82f6; --success: #22c55e; --danger: #ef4444; --border: #262a33;
+    --bg-a: #1a1433; --bg-b: #0f1c33; --bg-c: #090c16;
+    --card: #1e1938; --text: #f2effc; --muted: #a79fcf;
+    --primary: #8b7cf6; --primary-2: #5b8def; --success: #34d399; --danger: #f2596b;
+    --border: #342a5c; --glow: rgba(139, 124, 246, 0.28);
   }
   * { box-sizing: border-box; }
   body {
-    margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: var(--bg); color: var(--text); min-height: 100vh;
+    margin: 0; font-family: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: radial-gradient(circle at 20% -10%, var(--bg-a) 0%, var(--bg-b) 55%, var(--bg-c) 100%);
+    background-attachment: fixed;
+    color: var(--text); min-height: 100vh;
   }
   header {
     display: flex; align-items: center; justify-content: space-between;
     padding: 14px 16px; border-bottom: 1px solid var(--border);
+    background: linear-gradient(90deg, rgba(139,124,246,0.14), rgba(91,141,239,0.08));
   }
-  header h1 { margin: 0; font-size: 1.15rem; }
+  header h1 { margin: 0; font-size: 1.15rem; font-weight: 800; }
   #burger-btn {
     background: var(--card); border: 1px solid var(--border); color: var(--text);
     font-size: 1.3rem; border-radius: 8px; padding: 4px 12px; cursor: pointer;
   }
 
-  /* Burger side menu */
-  #overlay {
-    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 10;
-  }
+  #overlay { display: none; position: fixed; inset: 0; background: rgba(5,4,15,0.6); z-index: 10; }
   #overlay.open { display: block; }
   #side-menu {
     position: fixed; top: 0; left: -280px; width: 260px; height: 100%;
-    background: var(--card); border-right: 1px solid var(--border); z-index: 11;
+    background: #17132c; border-right: 1px solid var(--border); z-index: 11;
     transition: left 0.2s ease; padding: 16px 0; overflow-y: auto;
   }
   #side-menu.open { left: 0; }
   #side-menu .menu-item {
     display: block; width: 100%; text-align: left; background: none; border: none;
-    color: var(--text); padding: 14px 20px; font-size: 1rem; cursor: pointer;
+    color: var(--text); padding: 13px 20px; font-size: 0.98rem; cursor: pointer;
   }
-  #side-menu .menu-item.active { background: var(--primary); color: white; }
-  #side-menu .menu-item .count { color: var(--muted); font-size: 0.85rem; }
-  #side-menu .menu-item.active .count { color: rgba(255,255,255,0.8); }
+  #side-menu .menu-item:hover { background: rgba(139,124,246,0.1); }
+  #side-menu .menu-item.active {
+    background: linear-gradient(90deg, var(--primary), var(--primary-2)); color: white; font-weight: 700;
+  }
+  #side-menu .menu-item.sub { padding-left: 34px; font-size: 0.9rem; color: var(--muted); }
+  #side-menu .menu-item.sub.active { color: white; }
   #side-menu hr { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
 
-  main { max-width: 640px; margin: 0 auto; padding: 16px 16px 60px; }
+  main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
   .section { display: none; }
   .section.active { display: block; }
-  .section-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 14px; }
-  .actions { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .actions { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; justify-content: center; }
   button.btn {
-    border: none; border-radius: 10px; padding: 10px 18px; font-size: 0.95rem;
-    cursor: pointer; color: white; font-weight: 600;
+    border: none; border-radius: 12px; padding: 12px 22px; font-size: 0.98rem;
+    cursor: pointer; color: white; font-weight: 700; box-shadow: 0 4px 14px rgba(0,0,0,0.25);
   }
-  .btn-primary { background: var(--primary); }
-  .btn-success { background: var(--success); }
-  .btn-danger { background: var(--danger); }
+  .btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-2)); }
+  .btn-success { background: linear-gradient(135deg, #34d399, #16a97a); }
+  .btn-danger { background: linear-gradient(135deg, #f2596b, #d13a4c); }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-  .btn-sm { padding: 5px 12px; font-size: 0.82rem; border-radius: 8px; }
+  .btn-sm { padding: 6px 14px; font-size: 0.82rem; border-radius: 9px; box-shadow: none; }
   .card {
-    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
-    padding: 16px; margin-bottom: 14px;
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    padding: 18px; margin-bottom: 14px; box-shadow: 0 8px 30px rgba(0,0,0,0.25);
   }
-  .poster { width: 100%; max-width: 280px; border-radius: 10px; display: block; margin: 0 auto 14px; }
-  .title { font-size: 1.2rem; font-weight: 700; margin-bottom: 8px; }
+  .poster { width: 100%; max-width: 280px; border-radius: 12px; display: block; margin: 0 auto 14px;
+    box-shadow: 0 6px 24px var(--glow); }
+  .cat-badge {
+    display: inline-block; font-size: 0.78rem; font-weight: 700; padding: 3px 10px;
+    border-radius: 20px; margin-bottom: 10px; background: rgba(139,124,246,0.18); color: #c9bffc;
+  }
+  .title { font-size: 1.25rem; font-weight: 800; margin-bottom: 8px; }
+  .title.copy-title {
+    font-family: "Manrope", sans-serif; background: none; padding: 0; cursor: pointer;
+    display: inline-block; border-bottom: 1px dashed var(--muted);
+  }
+  .title.copy-title:active, .title.copy-title.copied { background: rgba(139,124,246,0.2); border-radius: 6px; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .fade-in { animation: fadeIn 0.35s ease; }
   .meta { color: var(--muted); font-size: 0.9rem; margin-bottom: 4px; }
-  .overview { margin-top: 10px; line-height: 1.5; }
-  .watch-link { display: inline-block; margin-top: 12px; color: var(--primary); text-decoration: none; font-weight: 600; }
-  .card-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
-  .sequel-prompt { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .overview { margin-top: 10px; line-height: 1.55; }
+  .watch-link {
+    display: inline-block; margin-top: 14px; color: white; text-decoration: none; font-weight: 700;
+    background: linear-gradient(135deg, var(--primary), var(--primary-2)); padding: 8px 16px; border-radius: 10px;
+  }
+  .card-actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; justify-content: center; }
+  .sequel-prompt { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); text-align: center; }
   .sequel-prompt p { margin: 0 0 10px; color: var(--muted); }
+
+  .placeholder {
+    text-align: center; padding: 50px 20px; color: var(--muted); border: 1px dashed var(--border);
+    border-radius: 16px; font-size: 0.98rem; line-height: 1.6;
+  }
+  .placeholder .big { font-size: 2.4rem; display: block; margin-bottom: 10px; }
 
   .list-row {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 10px 12px; border-bottom: 1px solid var(--border); gap: 10px;
+    padding: 11px 12px; border-bottom: 1px solid var(--border); gap: 10px;
   }
   .list-row:last-child { border-bottom: none; }
   .copy-title {
-    flex: 1; word-break: break-word; cursor: pointer; font-family: monospace;
-    background: rgba(255,255,255,0.04); padding: 3px 8px; border-radius: 6px;
+    flex: 1; word-break: break-word; cursor: pointer; font-family: "Manrope", monospace;
+    background: rgba(139,124,246,0.08); padding: 4px 10px; border-radius: 8px; transition: background 0.15s;
   }
-  .copy-title:active { background: rgba(59,130,246,0.25); }
+  .copy-title:active, .copy-title.copied { background: rgba(139,124,246,0.35); }
   .list-row button.del-btn {
-    background: var(--danger); color: white; border: none; border-radius: 6px;
-    padding: 4px 10px; cursor: pointer; font-size: 0.85rem; flex-shrink: 0;
+    background: var(--danger); color: white; border: none; border-radius: 8px;
+    padding: 5px 11px; cursor: pointer; font-size: 0.85rem; flex-shrink: 0;
   }
   .add-row { display: flex; gap: 8px; margin-bottom: 14px; }
   .add-row input {
     flex: 1; background: var(--card); border: 1px solid var(--border); color: var(--text);
-    padding: 10px 12px; border-radius: 8px; font-size: 0.95rem;
+    padding: 11px 13px; border-radius: 10px; font-size: 0.95rem; font-family: inherit;
   }
+  .add-row input::placeholder { color: var(--muted); }
   .muted { color: var(--muted); text-align: center; padding: 20px 0; }
   .check-group { margin-bottom: 18px; }
   .check-group h3 { font-size: 1rem; margin-bottom: 8px; }
@@ -98,24 +128,52 @@
   .spinner { text-align: center; padding: 30px; color: var(--muted); }
   .toast {
     position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-    background: var(--success); color: white; padding: 8px 18px; border-radius: 20px;
-    font-size: 0.9rem; opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 20;
+    background: linear-gradient(135deg, var(--success), #16a97a); color: white; padding: 9px 20px; border-radius: 24px;
+    font-size: 0.9rem; font-weight: 600; opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 20;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
   }
   .toast.show { opacity: 1; }
   .hist-item {
-    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
-    padding: 12px; margin-bottom: 10px;
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 13px; margin-bottom: 10px;
   }
-  .hist-item .hist-title { font-weight: 600; margin-bottom: 3px; }
+  .hist-item.resolved { opacity: 0.55; }
+  .hist-item .hist-title { font-weight: 700; margin-bottom: 3px; }
   .hist-item .hist-meta { color: var(--muted); font-size: 0.82rem; margin-bottom: 8px; }
   .hist-item .hist-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  #list-featured .card { border-color: var(--primary); }
+  #list-featured .featured-label {
+    font-size: 0.78rem; font-weight: 700; color: var(--muted); margin-bottom: 6px;
+    text-transform: uppercase; letter-spacing: 0.03em;
+  }
+
+  /* Modal (replaces the native prompt() for "move to category") */
+  #modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(5,4,15,0.7); z-index: 30;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  #modal-overlay.open { display: flex; }
+  #modal-box {
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    padding: 22px; max-width: 340px; width: 100%; box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  }
+  #modal-box h3 { margin: 0 0 16px; font-size: 1.05rem; }
+  #modal-box .modal-options { display: flex; flex-direction: column; gap: 10px; }
+  #modal-box .modal-options button {
+    width: 100%; text-align: left; padding: 12px 16px;
+  }
+  #modal-box .modal-cancel {
+    margin-top: 14px; width: 100%; background: none; border: 1px solid var(--border);
+    color: var(--muted); border-radius: 10px; padding: 10px; cursor: pointer; font-family: inherit; font-size: 0.9rem;
+  }
 </style>
 </head>
 <body>
 
 <header>
   <button id="burger-btn">☰</button>
-  <h1 id="page-title">🎲 Крутить</h1>
+  <h1 id="page-title">🔄 Начать</h1>
   <span style="width:34px"></span>
 </header>
 
@@ -138,6 +196,7 @@
   </div>
 
   <div id="list-section" class="section">
+    <div id="list-featured"></div>
     <div class="add-row" id="add-row">
       <input type="text" id="add-input" placeholder="Название для добавления…">
       <button class="btn btn-primary" id="add-btn">➕</button>
@@ -164,13 +223,37 @@
 
 <div class="toast" id="toast"></div>
 
+<div id="modal-overlay">
+  <div id="modal-box">
+    <h3 id="modal-title">Куда перенести?</h3>
+    <div class="modal-options" id="modal-options"></div>
+    <button class="modal-cancel" id="modal-cancel">Отмена</button>
+  </div>
+</div>
+
 <script>
 const CATS = {movies: "🎬 Фильмы", cartoons: "🎥 Мульты", series: "📺 Сериалы"};
-const REF_CATS = {dc: "🦇 DC", marvel: "🕷 Marvel"};  // список без рулетки
+const REF_CATS = {dc: "🦇 DC", marvel: "🕷 Marvel"};
 const ALL_CATS = {...CATS, ...REF_CATS};
 
-let currentCat = "movies";
-let currentView = "spin"; // spin | list | upcoming | history
+const STATE_KEY = "filmroulette_state";
+const RESOLVED_HIST_KEY = "filmroulette_resolved_history";
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STATE_KEY);
+    if (!raw) return {cat: "movies", view: "random"};
+    const s = JSON.parse(raw);
+    return {cat: s.cat || "movies", view: s.view || "random"};
+  } catch { return {cat: "movies", view: "random"}; }
+}
+function saveState() {
+  try { localStorage.setItem(STATE_KEY, JSON.stringify({cat: currentCat, view: currentView})); } catch {}
+}
+
+const initial = loadState();
+let currentCat = initial.cat;
+let currentView = initial.view;
 let currentCardData = null;
 
 const sideMenu = document.getElementById("side-menu");
@@ -178,25 +261,26 @@ const overlay = document.getElementById("overlay");
 
 function renderMenu() {
   sideMenu.innerHTML = "";
-  const addItem = (label, onClick, active) => {
+  const addItem = (label, onClick, active, sub) => {
     const b = document.createElement("button");
-    b.className = "menu-item" + (active ? " active" : "");
+    b.className = "menu-item" + (sub ? " sub" : "") + (active ? " active" : "");
     b.textContent = label;
     b.onclick = () => { onClick(); closeMenu(); };
     sideMenu.appendChild(b);
   };
 
   addItem("🔄 Начать", () => switchView("random"), currentView === "random");
-  const hr0 = document.createElement("hr"); sideMenu.appendChild(hr0);
+  sideMenu.appendChild(document.createElement("hr"));
 
   for (const [code, label] of Object.entries(CATS)) {
-    addItem(`${label}`, () => switchCat(code, "spin"), currentView !== "upcoming" && currentView !== "history" && currentView !== "random" && currentCat === code);
+    addItem(label, () => switchCat(code, "spin"), currentView === "spin" && currentCat === code);
+    addItem("✏️ Список", () => switchCat(code, "list"), currentView === "list" && currentCat === code, true);
   }
-  const hr1 = document.createElement("hr"); sideMenu.appendChild(hr1);
+  sideMenu.appendChild(document.createElement("hr"));
   for (const [code, label] of Object.entries(REF_CATS)) {
-    addItem(`${label} (список)`, () => switchCat(code, "list"), currentView === "list" && currentCat === code);
+    addItem(`${label} — список`, () => switchCat(code, "list"), currentView === "list" && currentCat === code);
   }
-  const hr2 = document.createElement("hr"); sideMenu.appendChild(hr2);
+  sideMenu.appendChild(document.createElement("hr"));
   addItem("🕐 Ожидаемые", () => switchView("upcoming"), currentView === "upcoming");
   addItem("📜 История", () => switchView("history"), currentView === "history");
 }
@@ -207,16 +291,12 @@ document.getElementById("burger-btn").onclick = openMenu;
 overlay.onclick = closeMenu;
 
 function switchCat(code, view) {
-  currentCat = code;
-  currentView = view;
-  renderMenu();
-  showSection();
+  currentCat = code; currentView = view;
+  saveState(); renderMenu(); showSection();
 }
-
 function switchView(view) {
   currentView = view;
-  renderMenu();
-  showSection();
+  saveState(); renderMenu(); showSection();
 }
 
 function showSection() {
@@ -231,17 +311,21 @@ function showSection() {
   document.getElementById("page-title").textContent = titles[currentView] || "";
 
   if (currentView === "random") {
-    document.getElementById("random-spin-result").innerHTML = "";
+    document.getElementById("random-spin-result").innerHTML = placeholderHtml("Нажми «Начать», и рулетка выберет фильм, сериал или мультфильм 🍿");
     currentCardData = null;
   }
   if (currentView === "spin") {
     document.getElementById("spin-cat-label").textContent = CATS[currentCat] || "";
-    document.getElementById("spin-result").innerHTML = "";
+    document.getElementById("spin-result").innerHTML = placeholderHtml("Нажми «Крутить», чтобы узнать, что посмотреть 🎬");
     currentCardData = null;
   }
   if (currentView === "list") loadList();
   if (currentView === "upcoming") loadUpcoming();
   if (currentView === "history") loadHistory();
+}
+
+function placeholderHtml(text) {
+  return `<div class="placeholder"><span class="big">🎲</span>${text}</div>`;
 }
 
 async function api(path, opts) {
@@ -260,9 +344,29 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove("show"), 1400);
 }
 
-function copyToClipboard(text) {
-  navigator.clipboard?.writeText(text).then(() => showToast("Скопировано: " + text))
-    .catch(() => showToast("Не удалось скопировать"));
+function copyToClipboard(text, el) {
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.style.position = "fixed";
+  ta.style.opacity = "0";
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand("copy"); } catch {}
+  document.body.removeChild(ta);
+  if (ok) {
+    showToast("Скопировано: " + text);
+  } else if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(() => showToast("Скопировано: " + text))
+      .catch(() => showToast("Не удалось скопировать"));
+  } else {
+    showToast("Не удалось скопировать");
+  }
+  if (el) {
+    el.classList.add("copied");
+    setTimeout(() => el.classList.remove("copied"), 300);
+  }
 }
 
 function escapeHtml(s) {
@@ -271,20 +375,27 @@ function escapeHtml(s) {
   return d.innerHTML;
 }
 
-// ─── Spin (single category + "Начать" across all 3) ─────────────────────────
-function renderCard(data) {
-  const poster = data.poster_url ? `<img class="poster" src="${data.poster_url}">` : "";
+function renderCard(data, opts) {
+  opts = opts || {};
+  const showActions = opts.actions !== false;
+  const poster = data.poster_url ? `<img class="poster fade-in" src="${data.poster_url}">` : "";
   const rating = data.rating !== "—" ? `⭐️ ${data.rating}/10` : "⭐️ —";
   let extra = "";
   if (data.runtime) extra += `<div class="meta">⏳ ${data.runtime} мин.</div>`;
   if (data.seasons) extra += `<div class="meta">📚 Сезонов: ${data.seasons} · 🎥 Эпизодов: ${data.episodes ?? "—"}</div>`;
   const link = data.watch_link ? `<a class="watch-link" href="${data.watch_link}" target="_blank">▶️ Смотреть онлайн</a>` : "";
-  const catLabel = CATS[data.category] || data.category;
+  const catLabel = ALL_CATS[data.category] || data.category;
+  const actionsHtml = showActions ? `
+      <div class="card-actions">
+        <button class="btn btn-success btn-sm" onclick="confirmPick()">✅ Подтвердить</button>
+        <button class="btn btn-primary btn-sm" onclick="rerollPick('${data.category}')">🔄 Перекрутить</button>
+      </div>
+      <div class="sequel-prompt" id="sequel-prompt" style="display:none"></div>` : "";
   return `
-    <div class="card">
+    <div class="card fade-in">
       ${poster}
-      <div class="meta">${catLabel}</div>
-      <div class="title">${escapeHtml(data.title)}</div>
+      <span class="cat-badge">${catLabel}</span>
+      <div class="title copy-title" onclick="copyToClipboard('${escapeAttr(data.title)}', this)" title="Нажмите, чтобы скопировать">${escapeHtml(data.title)}</div>
       <div class="meta">${rating}</div>
       <div class="meta">🗓 ${escapeHtml(String(data.release_date))}</div>
       ${extra}
@@ -292,11 +403,7 @@ function renderCard(data) {
       <div class="meta">👥 ${escapeHtml(data.actors)}</div>
       <div class="overview">${escapeHtml(data.overview)}</div>
       ${link}
-      <div class="card-actions">
-        <button class="btn btn-success btn-sm" onclick="confirmPick()">✅ Подтвердить</button>
-        <button class="btn btn-primary btn-sm" onclick="rerollPick('${data.category}')">🔄 Перекрутить</button>
-      </div>
-      <div class="sequel-prompt" id="sequel-prompt" style="display:none"></div>
+      ${actionsHtml}
     </div>`;
 }
 
@@ -370,15 +477,34 @@ async function sequelNo() {
 
 function rerollPick(cat) { doSpin(cat); }
 
-// ─── List (add/delete, click-to-copy) ────────────────────────────────────────
-function isReferenceCat(cat) { return cat === "dc" || cat === "marvel"; }
+let currentListPage = 1;
 
-async function loadList() {
+async function loadList(page) {
+  if (page) currentListPage = page;
+  else currentListPage = 1;
+
   document.getElementById("add-row").style.display = "flex";
+  const featured = document.getElementById("list-featured");
   const container = document.getElementById("list-container");
   container.innerHTML = '<div class="spinner">Загрузка…</div>';
-  const data = await api(`/api/${currentCat}/items`);
-  if (!data.items.length) {
+  featured.innerHTML = "";
+
+  // DC/Marvel сознательно без настоящей рулетки (список-справочник) — вместо
+  // ролла показываем полноценную карточку первого тайтла списка (постер,
+  // описание, рейтинг, ссылка на kinogo — как при обычном ролле), только без
+  // Подтвердить/Перекрутить, т.к. это не случайный пик, а витрина.
+  if (currentCat === "dc" || currentCat === "marvel") {
+    featured.innerHTML = '<div class="spinner">Загрузка витрины…</div>';
+    try {
+      const card = await api(`/api/${currentCat}/featured`);
+      featured.innerHTML = `<div class="featured-label">🎲 Первый в списке</div>` + renderCard(card, {actions: false});
+    } catch {
+      featured.innerHTML = "";
+    }
+  }
+
+  const data = await api(`/api/${currentCat}/items?page=${currentListPage}`);
+  if (!data.total_count) {
     container.innerHTML = '<div class="muted">Список пуст</div>';
     return;
   }
@@ -390,7 +516,7 @@ async function loadList() {
     span.className = "copy-title";
     span.textContent = title;
     span.title = "Нажмите, чтобы скопировать";
-    span.onclick = () => copyToClipboard(title);
+    span.onclick = () => copyToClipboard(title, span);
     row.appendChild(span);
     const del = document.createElement("button");
     del.className = "del-btn";
@@ -401,11 +527,37 @@ async function loadList() {
         method: "POST", headers: {"Content-Type": "application/json"},
         body: JSON.stringify({title}),
       });
-      loadList();
+      loadList(currentListPage);  // остаёмся на той же странице после удаления
     };
     row.appendChild(del);
     container.appendChild(row);
   }
+  if (data.total_pages > 1) container.appendChild(paginationRow(data.page, data.total_pages, (p) => loadList(p)));
+}
+
+function paginationRow(page, totalPages, onNav) {
+  const row = document.createElement("div");
+  row.style.display = "flex";
+  row.style.justifyContent = "center";
+  row.style.alignItems = "center";
+  row.style.gap = "14px";
+  row.style.padding = "14px 0 4px";
+  const prev = document.createElement("button");
+  prev.className = "btn btn-primary btn-sm";
+  prev.textContent = "◀️";
+  prev.disabled = page <= 1;
+  prev.onclick = () => onNav(page - 1);
+  const label = document.createElement("span");
+  label.className = "muted";
+  label.style.padding = "0";
+  label.textContent = `${page} / ${totalPages}`;
+  const next = document.createElement("button");
+  next.className = "btn btn-primary btn-sm";
+  next.textContent = "▶️";
+  next.disabled = page >= totalPages;
+  next.onclick = () => onNav(page + 1);
+  row.appendChild(prev); row.appendChild(label); row.appendChild(next);
+  return row;
 }
 
 document.getElementById("add-btn").onclick = async () => {
@@ -422,7 +574,6 @@ document.getElementById("add-btn").onclick = async () => {
   } catch (e) { showToast(e.message); }
 };
 
-// ─── Upcoming ─────────────────────────────────────────────────────────────
 async function loadUpcoming() {
   const container = document.getElementById("up-list-container");
   container.innerHTML = '<div class="spinner">Загрузка…</div>';
@@ -438,7 +589,7 @@ async function loadUpcoming() {
     const span = document.createElement("span");
     span.className = "copy-title";
     span.textContent = title;
-    span.onclick = () => copyToClipboard(title);
+    span.onclick = () => copyToClipboard(title, span);
     row.appendChild(span);
     const del = document.createElement("button");
     del.className = "del-btn";
@@ -507,18 +658,44 @@ document.getElementById("up-check-btn").onclick = async () => {
   }
 };
 
+function openCategoryModal(titleText, onPick) {
+  const overlay = document.getElementById("modal-overlay");
+  const optionsEl = document.getElementById("modal-options");
+  document.getElementById("modal-title").textContent = titleText;
+  optionsEl.innerHTML = "";
+  for (const [code, label] of Object.entries(CATS)) {
+    const b = document.createElement("button");
+    b.className = "btn btn-primary";
+    b.textContent = label;
+    b.onclick = () => { closeModal(); onPick(code); };
+    optionsEl.appendChild(b);
+  }
+  overlay.classList.add("open");
+}
+function closeModal() { document.getElementById("modal-overlay").classList.remove("open"); }
+document.getElementById("modal-cancel").onclick = closeModal;
+document.getElementById("modal-overlay").onclick = (ev) => { if (ev.target.id === "modal-overlay") closeModal(); };
+
 async function moveUpcoming(title) {
-  const category = prompt("Куда перенести? (movies / cartoons / series)", "movies");
-  if (!category || !CATS[category]) { if (category) alert("Неверная категория"); return; }
-  await api("/api/upcoming/move", {
-    method: "POST", headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({title, category}),
+  openCategoryModal(`Куда перенести «${title}»?`, async (category) => {
+    await api("/api/upcoming/move", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({title, category}),
+    });
+    document.getElementById("up-check-btn").click();
+    loadUpcoming();
   });
-  document.getElementById("up-check-btn").click();
-  loadUpcoming();
 }
 
-// ─── History ──────────────────────────────────────────────────────────────
+function loadResolvedSet() {
+  try { return new Set(JSON.parse(localStorage.getItem(RESOLVED_HIST_KEY) || "[]")); }
+  catch { return new Set(); }
+}
+function saveResolvedSet(set) {
+  try { localStorage.setItem(RESOLVED_HIST_KEY, JSON.stringify([...set])); } catch {}
+}
+function histKey(e) { return `${e.category}|${e.title}|${e.timestamp}`; }
+
 async function loadHistory() {
   const container = document.getElementById("history-container");
   container.innerHTML = '<div class="spinner">Загрузка…</div>';
@@ -527,21 +704,26 @@ async function loadHistory() {
     container.innerHTML = '<div class="muted">История пуста</div>';
     return;
   }
+  const resolved = loadResolvedSet();
   container.innerHTML = "";
   data.items.forEach((e, idx) => {
-    if (isReferenceCat(e.category)) return; // DC/Marvel в историю не попадают (там нет ролла), но на всякий случай фильтруем
+    if (e.category === "dc" || e.category === "marvel") return;
     const div = document.createElement("div");
-    div.className = "hist-item";
+    const key = histKey(e);
+    const isResolved = resolved.has(key);
+    div.className = "hist-item" + (isResolved ? " resolved" : "");
+    div.dataset.category = e.category;
+    div.dataset.title = e.title;
+    div.dataset.key = key;
     const date = new Date(e.timestamp * 1000).toLocaleString("ru-RU");
+    const actionsHtml = isResolved
+      ? `<span class="muted">Обработано ✅</span>`
+      : `<button class="btn btn-success btn-sm" onclick="histConfirm(${idx})">✅ Подтвердить</button>`;
     div.innerHTML = `
       <div class="hist-title">${CATS[e.category] || e.category}: ${escapeHtml(e.title)}</div>
       <div class="hist-meta">${date}</div>
-      <div class="hist-actions" id="hist-actions-${idx}">
-        <button class="btn btn-success btn-sm" onclick="histConfirm(${idx})">✅ Подтвердить</button>
-      </div>`;
+      <div class="hist-actions" id="hist-actions-${idx}">${actionsHtml}</div>`;
     container.appendChild(div);
-    div.dataset.category = e.category;
-    div.dataset.title = e.title;
   });
 }
 
@@ -552,29 +734,41 @@ function histConfirm(idx) {
     <button class="btn btn-danger btn-sm" onclick="histDelete(${idx})">🗑 Удалить</button>`;
 }
 
+function markResolved(key) {
+  const set = loadResolvedSet();
+  set.add(key);
+  saveResolvedSet(set);
+}
+
 async function histSequel(idx) {
-  const div = document.getElementById(`hist-actions-${idx}`).closest(".hist-item");
-  const {category, title} = div.dataset;
+  const actionsEl = document.getElementById(`hist-actions-${idx}`);
+  const div = actionsEl.closest(".hist-item");
+  const {category, title, key} = div.dataset;
   try {
     const r = await api(`/api/${category}/sequel`, {
       method: "POST", headers: {"Content-Type": "application/json"},
       body: JSON.stringify({title}),
     });
     showToast(`${title} → ${r.new_title}`);
-    document.getElementById(`hist-actions-${idx}`).innerHTML = `<span class="muted">Готово ✅</span>`;
+    markResolved(key);
+    div.classList.add("resolved");
+    actionsEl.innerHTML = `<span class="muted">Обработано ✅</span>`;
   } catch (e) { showToast(e.message); }
 }
 
 async function histDelete(idx) {
-  const div = document.getElementById(`hist-actions-${idx}`).closest(".hist-item");
-  const {category, title} = div.dataset;
+  const actionsEl = document.getElementById(`hist-actions-${idx}`);
+  const div = actionsEl.closest(".hist-item");
+  const {category, title, key} = div.dataset;
   try {
     await api(`/api/${category}/delete`, {
       method: "POST", headers: {"Content-Type": "application/json"},
       body: JSON.stringify({title}),
     });
     showToast(`${title} удалён`);
-    document.getElementById(`hist-actions-${idx}`).innerHTML = `<span class="muted">Удалено 🗑</span>`;
+    markResolved(key);
+    div.classList.add("resolved");
+    actionsEl.innerHTML = `<span class="muted">Обработано ✅</span>`;
   } catch (e) { showToast(e.message); }
 }
 

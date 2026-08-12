@@ -24,8 +24,11 @@ from app.db.database import (
 )
 from app.services.tmdb import get_movie_info, get_series_info, check_upcoming_released
 from app.services.watch_link import find_watch_page_url
+from app.utils import paginate
 
 logger = logging.getLogger(__name__)
+
+LIST_PAGE_SIZE = 30
 
 CATEGORIES = {
     "movies": "Фильмы", "cartoons": "Мультфильмы", "series": "Сериалы",
@@ -171,10 +174,11 @@ async def api_upcoming_check() -> dict:
 
 # ─── Generic per-category routes ────────────────────────────────────────────
 @app.get("/api/{cat}/items")
-async def api_items(cat: str) -> dict:
+async def api_items(cat: str, page: int = 1) -> dict:
     _check_category(cat)
     items = await get_items(cat)
-    return {"items": items}
+    page_items, page, total_pages = paginate(items, page, page_size=LIST_PAGE_SIZE)
+    return {"items": page_items, "page": page, "total_pages": total_pages, "total_count": len(items)}
 
 
 @app.post("/api/{cat}/add")
@@ -207,6 +211,21 @@ async def api_spin(cat: str) -> dict:
     title = random.choice(items)
     await save_history(WEB_USER_ID, cat, title)
     return await _card_data(cat, title)
+
+
+@app.get("/api/{cat}/featured")
+async def api_featured(cat: str) -> dict:
+    """Full card (poster, description, rating, kinogo link — same as a spin
+    result) for the FIRST title in the list. Used for DC/Marvel, which have
+    no real roulette by design (reference lists only) — this is a
+    deterministic "showcase" stand-in, not a random pick, so unlike /spin
+    it does NOT write to history."""
+    _check_category(cat)
+    items = await get_items(cat)
+    if not items:
+        raise HTTPException(404, "List is empty")
+    return await _card_data(cat, items[0])
+
 
 
 @app.post("/api/{cat}/sequel")

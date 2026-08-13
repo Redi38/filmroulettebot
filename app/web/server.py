@@ -9,10 +9,11 @@ from __future__ import annotations
 import logging
 import random
 import re
+import time
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -29,6 +30,12 @@ from app.utils import paginate
 logger = logging.getLogger(__name__)
 
 LIST_PAGE_SIZE = 30
+
+_last_spin_at: dict[str, float] = {}
+SPIN_COOLDOWN = 1.5  # seconds
+
+_featured_cache: dict[str, tuple[dict, float]] = {}
+FEATURED_CACHE_TTL = 600  # 10 min
 
 CATEGORIES = {
     "movies": "Фильмы", "cartoons": "Мультфильмы", "series": "Сериалы",
@@ -51,6 +58,19 @@ async def _startup() -> None:
 def _check_category(cat: str) -> None:
     if cat not in CATEGORIES:
         raise HTTPException(404, f"Unknown category: {cat}")
+
+
+def _check_spin_cooldown(client_ip: str) -> None:
+    now = time.monotonic()
+    elapsed = now - _last_spin_at.get(client_ip, 0.0)
+    if elapsed < SPIN_COOLDOWN:
+        wait = SPIN_COOLDOWN - elapsed
+        raise HTTPException(429, f"Подожди {wait:.1f} сек. перед следующим роллом.")
+    _last_spin_at[client_ip] = now
+
+
+def _client_ip(request: Request) -> str:
+    return request.client.host if request.client else "unknown"
 
 
 def _next_sequel_title(item: str) -> str:
@@ -121,7 +141,8 @@ async def api_history(limit: int = 50) -> dict:
 
 # ─── Random spin across movies/cartoons/series ──────────────────────────────
 @app.post("/api/random-spin")
-async def api_random_spin() -> dict:
+async def api_random_spin(request: Request) -> dict:
+    _check_spin_cooldown(_client_ip(request))
     non_empty = [c for c in ROULETTE_CATEGORIES if await get_items(c)]
     if not non_empty:
         raise HTTPException(404, "All three roulettes are empty")
@@ -201,10 +222,11 @@ async def api_delete(cat: str, body: TitleBody) -> dict:
 
 
 @app.post("/api/{cat}/spin")
-async def api_spin(cat: str) -> dict:
+async def api_spin(cat: str, request: Request) -> dict:
     _check_category(cat)
     if cat not in ROULETTE_CATEGORIES:
         raise HTTPException(400, f"{cat} has no roulette — it's a reference list only")
+    _check_spin_cooldown(_client_ip(request))
     items = await get_items(cat)
     if not items:
         raise HTTPException(404, "List is empty")
@@ -219,12 +241,25 @@ async def api_featured(cat: str) -> dict:
     result) for the FIRST title in the list. Used for DC/Marvel, which have
     no real roulette by design (reference lists only) — this is a
     deterministic "showcase" stand-in, not a random pick, so unlike /spin
-    it does NOT write to history."""
+    it does NOT write to history, and unlike /spin it IS cached (same input
+    -> same output every time, so no point re-hitting TMDB+kinogo often)."""
     _check_category(cat)
     items = await get_items(cat)
     if not items:
         raise HTTPException(404, "List is empty")
-    return await _card_data(cat, items[0])
+    first = items[0]
+
+    cache_key = f"{cat}:{first}"
+    cached = _featured_cache.get(cache_key)
+    if cached is not None:
+        data, expires_at = cached
+        if time.monotonic() < expires_at:
+            return data
+        del _featured_cache[cache_key]
+
+    data = await _card_data(cat, first)
+    _featured_cache[cache_key] = (data, time.monotonic() + FEATURED_CACHE_TTL)
+    return data
 
 
 

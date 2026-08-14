@@ -31,7 +31,9 @@
   #burger-btn {
     background: var(--card); border: 1px solid var(--border); color: var(--text);
     font-size: 1.3rem; border-radius: 8px; padding: 4px 12px; cursor: pointer;
+    font-family: inherit; display: inline-flex; align-items: center; justify-content: center;
   }
+  #burger-btn svg { width: 20px; height: 20px; display: block; }
 
   #overlay { display: none; position: fixed; inset: 0; background: rgba(5,4,15,0.6); z-index: 10; }
   #overlay.open { display: block; }
@@ -42,14 +44,15 @@
   }
   #side-menu.open { left: 0; }
   #side-menu .menu-item {
-    display: block; width: 100%; text-align: left; background: none; border: none;
-    color: var(--text); padding: 13px 20px; font-size: 0.98rem; cursor: pointer;
+    display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: none; border: none;
+    color: var(--text); padding: 13px 20px; font-size: 0.98rem; cursor: pointer; font-family: inherit;
   }
+  #side-menu .menu-item svg { width: 18px; height: 18px; flex-shrink: 0; stroke: currentColor; }
   #side-menu .menu-item:hover { background: rgba(139,124,246,0.1); }
   #side-menu .menu-item.active {
     background: linear-gradient(90deg, var(--primary), var(--primary-2)); color: white; font-weight: 700;
   }
-  #side-menu .menu-item.sub { padding-left: 34px; font-size: 0.9rem; color: var(--muted); }
+  #side-menu .menu-item.sub { padding-left: 46px; font-size: 0.9rem; color: var(--muted); }
   #side-menu .menu-item.sub.active { color: white; }
   #side-menu hr { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
 
@@ -66,6 +69,11 @@
   .btn-danger { background: linear-gradient(135deg, #f2596b, #d13a4c); }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
   .btn-sm { padding: 6px 14px; font-size: 0.82rem; border-radius: 9px; box-shadow: none; }
+  .page-nav-btn {
+    width: 38px; height: 38px; padding: 0; border-radius: 10px; display: inline-flex;
+    align-items: center; justify-content: center; box-shadow: none; color: white;
+  }
+  .page-nav-btn svg { display: block; }
   .card {
     background: var(--card); border: 1px solid var(--border); border-radius: 16px;
     padding: 18px; margin-bottom: 14px; box-shadow: 0 8px 30px rgba(0,0,0,0.25);
@@ -141,6 +149,9 @@
   .hist-item .hist-title { font-weight: 700; margin-bottom: 3px; }
   .hist-item .hist-meta { color: var(--muted); font-size: 0.82rem; margin-bottom: 8px; }
   .hist-item .hist-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .hist-tabs { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 16px; }
+  .hist-tabs .btn-sm { opacity: 0.55; }
+  .hist-tabs .btn-sm.active { opacity: 1; }
 
   #list-featured .card { border-color: var(--primary); }
   #list-featured .featured-label {
@@ -172,8 +183,8 @@
 <body>
 
 <header>
-  <button id="burger-btn">☰</button>
-  <h1 id="page-title">🔄 Начать</h1>
+  <button id="burger-btn" aria-label="Меню"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="17" x2="20" y2="17"></line></svg></button>
+  <h1 id="page-title">🔄 Наугад</h1>
   <span style="width:34px"></span>
 </header>
 
@@ -183,7 +194,7 @@
 <main>
   <div id="random-spin-section" class="section">
     <div class="actions">
-      <button class="btn btn-success" id="random-spin-btn">🔄 Начать</button>
+      <button class="btn btn-success" id="random-spin-btn">🎲 Крутить</button>
     </div>
     <div id="random-spin-result"></div>
   </div>
@@ -233,7 +244,7 @@
 
 <script>
 const CATS = {movies: "🎬 Фильмы", cartoons: "🎥 Мульты", series: "📺 Сериалы"};
-const REF_CATS = {dc: "🦇 DC", marvel: "🕷 Marvel"};
+const REF_CATS = {marvel: "🕷 Marvel", dc: "🦇 DC"};
 const ALL_CATS = {...CATS, ...REF_CATS};
 
 const STATE_KEY = "filmroulette_state";
@@ -259,30 +270,45 @@ let currentCardData = null;
 const sideMenu = document.getElementById("side-menu");
 const overlay = document.getElementById("overlay");
 
+const MENU_LABELS = {movies: "Фильмы", cartoons: "Мульты", series: "Сериалы"};
+const REF_MENU_LABELS = {marvel: "Marvel", dc: "DC"};
+
+const ICONS = {
+  shuffle: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>`,
+  movies: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="2"></rect><line x1="7" y1="3" x2="7" y2="21"></line><line x1="17" y1="3" x2="17" y2="21"></line><line x1="2" y1="8" x2="7" y2="8"></line><line x1="2" y1="16" x2="7" y2="16"></line><line x1="17" y1="8" x2="22" y2="8"></line><line x1="17" y1="16" x2="22" y2="16"></line></svg>`,
+  cartoons: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>`,
+  series: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>`,
+  list: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>`,
+  marvel: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`,
+  dc: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"></path></svg>`,
+  upcoming: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`,
+  history: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 8 3 21 21 21 21 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>`,
+};
+
 function renderMenu() {
   sideMenu.innerHTML = "";
-  const addItem = (label, onClick, active, sub) => {
+  const addItem = (icon, label, onClick, active, sub) => {
     const b = document.createElement("button");
     b.className = "menu-item" + (sub ? " sub" : "") + (active ? " active" : "");
-    b.textContent = label;
+    b.innerHTML = `${icon ? ICONS[icon] : ""}<span>${label}</span>`;
     b.onclick = () => { onClick(); closeMenu(); };
     sideMenu.appendChild(b);
   };
 
-  addItem("🔄 Начать", () => switchView("random"), currentView === "random");
+  addItem("shuffle", "Наугад", () => switchView("random"), currentView === "random");
   sideMenu.appendChild(document.createElement("hr"));
 
-  for (const [code, label] of Object.entries(CATS)) {
-    addItem(label, () => switchCat(code, "spin"), currentView === "spin" && currentCat === code);
-    addItem("✏️ Список", () => switchCat(code, "list"), currentView === "list" && currentCat === code, true);
+  for (const [code, label] of Object.entries(MENU_LABELS)) {
+    addItem(code, label, () => switchCat(code, "spin"), currentView === "spin" && currentCat === code);
+    addItem("list", "Список", () => switchCat(code, "list"), currentView === "list" && currentCat === code, true);
   }
   sideMenu.appendChild(document.createElement("hr"));
-  for (const [code, label] of Object.entries(REF_CATS)) {
-    addItem(`${label} — список`, () => switchCat(code, "list"), currentView === "list" && currentCat === code);
+  for (const [code, label] of Object.entries(REF_MENU_LABELS)) {
+    addItem(code, `${label} – список`, () => switchCat(code, "list"), currentView === "list" && currentCat === code);
   }
   sideMenu.appendChild(document.createElement("hr"));
-  addItem("🕐 Ожидаемые", () => switchView("upcoming"), currentView === "upcoming");
-  addItem("📜 История", () => switchView("history"), currentView === "history");
+  addItem("upcoming", "Ожидаемые", () => switchView("upcoming"), currentView === "upcoming");
+  addItem("history", "История", () => switchView("history"), currentView === "history");
 }
 
 function openMenu() { sideMenu.classList.add("open"); overlay.classList.add("open"); }
@@ -306,12 +332,12 @@ function showSection() {
   document.getElementById("upcoming-section").classList.toggle("active", currentView === "upcoming");
   document.getElementById("history-section").classList.toggle("active", currentView === "history");
 
-  const titles = {random: "🔄 Начать", spin: `🎲 ${ALL_CATS[currentCat] || ""}`, list: `✏️ ${ALL_CATS[currentCat] || ""}`,
+  const titles = {random: "🔄 Наугад", spin: `🎲 ${ALL_CATS[currentCat] || ""}`, list: `✏️ ${ALL_CATS[currentCat] || ""}`,
                    upcoming: "🕐 Ожидаемые", history: "📜 История"};
   document.getElementById("page-title").textContent = titles[currentView] || "";
 
   if (currentView === "random") {
-    document.getElementById("random-spin-result").innerHTML = placeholderHtml("Нажми «Начать», и рулетка выберет фильм, сериал или мультфильм 🍿");
+    document.getElementById("random-spin-result").innerHTML = placeholderHtml("Нажми «Крутить», и рулетка выберет фильм, сериал или мультфильм 🍿");
     currentCardData = null;
   }
   if (currentView === "spin") {
@@ -383,12 +409,12 @@ function renderCard(data, opts) {
   let extra = "";
   if (data.runtime) extra += `<div class="meta">⏳ ${data.runtime} мин.</div>`;
   if (data.seasons) extra += `<div class="meta">📚 Сезонов: ${data.seasons} · 🎥 Эпизодов: ${data.episodes ?? "—"}</div>`;
-  const link = data.watch_link ? `<a class="watch-link" href="${data.watch_link}" target="_blank">▶️ Смотреть онлайн</a>` : "";
+  const link = data.watch_link ? `<a class="watch-link" href="${data.watch_link}" target="_blank">Смотреть онлайн</a>` : "";
   const catLabel = ALL_CATS[data.category] || data.category;
   const actionsHtml = showActions ? `
       <div class="card-actions">
-        <button class="btn btn-success btn-sm" onclick="confirmPick()">✅ Подтвердить</button>
-        <button class="btn btn-primary btn-sm" onclick="rerollPick('${data.category}')">🔄 Перекрутить</button>
+        <button class="btn btn-success btn-sm" onclick="confirmPick()">Подтвердить</button>
+        <button class="btn btn-primary btn-sm" onclick="rerollPick('${data.category}')">Перекрутить</button>
       </div>
       <div class="sequel-prompt" id="sequel-prompt" style="display:none"></div>` : "";
   return `
@@ -444,8 +470,8 @@ function confirmPick() {
   prompt.innerHTML = `
     <p>Добавить продолжение (сиквел)?</p>
     <div class="card-actions">
-      <button class="btn btn-success btn-sm" onclick="sequelYes()">✅ Да, сиквел</button>
-      <button class="btn btn-danger btn-sm" onclick="sequelNo()">❌ Нет, удалить</button>
+      <button class="btn btn-success btn-sm" onclick="sequelYes()">Да, сиквел</button>
+      <button class="btn btn-danger btn-sm" onclick="sequelNo()">Нет, удалить</button>
     </div>`;
 }
 
@@ -489,11 +515,7 @@ async function loadList(page) {
   container.innerHTML = '<div class="spinner">Загрузка…</div>';
   featured.innerHTML = "";
 
-  // DC/Marvel сознательно без настоящей рулетки (список-справочник) — вместо
-  // ролла показываем полноценную карточку первого тайтла списка (постер,
-  // описание, рейтинг, ссылка на kinogo — как при обычном ролле), только без
-  // Подтвердить/Перекрутить, т.к. это не случайный пик, а витрина.
-  if (currentCat === "dc" || currentCat === "marvel") {
+  if (currentCat === "marvel" || currentCat === "dc") {
     featured.innerHTML = '<div class="spinner">Загрузка витрины…</div>';
     try {
       const card = await api(`/api/${currentCat}/featured`);
@@ -527,12 +549,33 @@ async function loadList(page) {
         method: "POST", headers: {"Content-Type": "application/json"},
         body: JSON.stringify({title}),
       });
-      loadList(currentListPage);  // остаёмся на той же странице после удаления
+      loadList(currentListPage);
     };
     row.appendChild(del);
     container.appendChild(row);
   }
   if (data.total_pages > 1) container.appendChild(paginationRow(data.page, data.total_pages, (p) => loadList(p)));
+}
+
+/* --- FIX: SVG-стрелки создаются через createElementNS вместо innerHTML-строки,
+   цвет через currentColor (наследуется от color: white на .page-nav-btn) --- */
+function chevronSvg(dir) {
+  const NS = "http://www.w3.org/2000/svg";
+  const points = dir === "left" ? "15,6 9,12 15,18" : "9,6 15,12 9,18";
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("width", "18");
+  svg.setAttribute("height", "18");
+  svg.style.display = "block";
+  const poly = document.createElementNS(NS, "polyline");
+  poly.setAttribute("points", points);
+  poly.setAttribute("fill", "none");
+  poly.setAttribute("stroke", "currentColor");
+  poly.setAttribute("stroke-width", "3");
+  poly.setAttribute("stroke-linecap", "round");
+  poly.setAttribute("stroke-linejoin", "round");
+  svg.appendChild(poly);
+  return svg;
 }
 
 function paginationRow(page, totalPages, onNav) {
@@ -542,20 +585,26 @@ function paginationRow(page, totalPages, onNav) {
   row.style.alignItems = "center";
   row.style.gap = "14px";
   row.style.padding = "14px 0 4px";
+
   const prev = document.createElement("button");
-  prev.className = "btn btn-primary btn-sm";
-  prev.textContent = "◀️";
+  prev.className = "btn btn-primary page-nav-btn";
+  prev.appendChild(chevronSvg("left"));
+  prev.setAttribute("aria-label", "Назад");
   prev.disabled = page <= 1;
   prev.onclick = () => onNav(page - 1);
+
   const label = document.createElement("span");
   label.className = "muted";
   label.style.padding = "0";
   label.textContent = `${page} / ${totalPages}`;
+
   const next = document.createElement("button");
-  next.className = "btn btn-primary btn-sm";
-  next.textContent = "▶️";
+  next.className = "btn btn-primary page-nav-btn";
+  next.appendChild(chevronSvg("right"));
+  next.setAttribute("aria-label", "Вперёд");
   next.disabled = page >= totalPages;
   next.onclick = () => onNav(page + 1);
+
   row.appendChild(prev); row.appendChild(label); row.appendChild(next);
   return row;
 }
@@ -696,18 +745,46 @@ function saveResolvedSet(set) {
 }
 function histKey(e) { return `${e.category}|${e.title}|${e.timestamp}`; }
 
+let historyItems = [];
+let historyFilter = initial.cat && CATS[initial.cat] ? initial.cat : "movies";
+
 async function loadHistory() {
   const container = document.getElementById("history-container");
   container.innerHTML = '<div class="spinner">Загрузка…</div>';
   const data = await api("/api/history?limit=50");
-  if (!data.items.length) {
-    container.innerHTML = '<div class="muted">История пуста</div>';
+  historyItems = data.items.filter((e) => e.category !== "marvel" && e.category !== "dc");
+  renderHistory();
+}
+
+function renderHistory() {
+  const container = document.getElementById("history-container");
+  container.innerHTML = "";
+
+  const tabs = document.createElement("div");
+  tabs.className = "hist-tabs";
+  for (const [code, label] of Object.entries(CATS)) {
+    const btn = document.createElement("button");
+    btn.className = "btn btn-primary btn-sm" + (historyFilter === code ? " active" : "");
+    btn.textContent = label;
+    btn.onclick = () => { historyFilter = code; renderHistory(); };
+    tabs.appendChild(btn);
+  }
+  container.appendChild(tabs);
+
+  const filtered = historyItems
+    .map((e, idx) => ({ e, idx }))
+    .filter(({ e }) => e.category === historyFilter);
+
+  if (!filtered.length) {
+    const empty = document.createElement("div");
+    empty.className = "muted";
+    empty.textContent = "История пуста";
+    container.appendChild(empty);
     return;
   }
+
   const resolved = loadResolvedSet();
-  container.innerHTML = "";
-  data.items.forEach((e, idx) => {
-    if (e.category === "dc" || e.category === "marvel") return;
+  filtered.forEach(({ e, idx }) => {
     const div = document.createElement("div");
     const key = histKey(e);
     const isResolved = resolved.has(key);
@@ -718,9 +795,9 @@ async function loadHistory() {
     const date = new Date(e.timestamp * 1000).toLocaleString("ru-RU");
     const actionsHtml = isResolved
       ? `<span class="muted">Обработано ✅</span>`
-      : `<button class="btn btn-success btn-sm" onclick="histConfirm(${idx})">✅ Подтвердить</button>`;
+      : `<button class="btn btn-success btn-sm" onclick="histConfirm(${idx})">Подтвердить</button>`;
     div.innerHTML = `
-      <div class="hist-title">${CATS[e.category] || e.category}: ${escapeHtml(e.title)}</div>
+      <div class="hist-title">${escapeHtml(e.title)}</div>
       <div class="hist-meta">${date}</div>
       <div class="hist-actions" id="hist-actions-${idx}">${actionsHtml}</div>`;
     container.appendChild(div);
@@ -730,8 +807,8 @@ async function loadHistory() {
 function histConfirm(idx) {
   const actionsEl = document.getElementById(`hist-actions-${idx}`);
   actionsEl.innerHTML = `
-    <button class="btn btn-success btn-sm" onclick="histSequel(${idx})">🔄 Сиквел</button>
-    <button class="btn btn-danger btn-sm" onclick="histDelete(${idx})">🗑 Удалить</button>`;
+    <button class="btn btn-success btn-sm" onclick="histSequel(${idx})">Сиквел</button>
+    <button class="btn btn-danger btn-sm" onclick="histDelete(${idx})">Удалить</button>`;
 }
 
 function markResolved(key) {

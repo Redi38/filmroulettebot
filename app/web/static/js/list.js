@@ -23,21 +23,33 @@ async function loadList(page) {
   if (isFreshView) {
     container.style.opacity = "1";
     container.innerHTML = '<div class="spinner">Загрузка…</div>';
+    featured.style.opacity = "1";
     featured.innerHTML = "";
   }
 
-  if (currentCat === "marvel" || currentCat === "dc") {
-    if (isFreshView) featured.innerHTML = '<div class="spinner">Загрузка витрины…</div>';
-    try {
-      const card = await api(`/api/${currentCat}/featured`);
-      featured.innerHTML = `<div class="featured-label">🎲 Первый в списке</div>` + renderCard(card, {actions: false});
-    } catch {
-      featured.innerHTML = "";
-    }
+  const isFeaturedCat = currentCat === "marvel" || currentCat === "dc";
+  const featuredPromise = isFeaturedCat
+    ? api(`/api/${currentCat}/featured`).catch(() => null)
+    : Promise.resolve(null);
+  const itemsPromise = api(`/api/${currentCat}/items?page=${currentListPage}`);
+
+  if (isFeaturedCat && isFreshView) {
+    featured.innerHTML = '<div class="spinner">Загрузка витрины…</div>';
   }
 
   try {
-    const data = await api(`/api/${currentCat}/items?page=${currentListPage}`);
+    const [featuredCard, data] = await Promise.all([featuredPromise, itemsPromise]);
+
+    if (isFeaturedCat) {
+      await fadeOut(featured);
+      featured.innerHTML = featuredCard
+        ? `<div class="featured-label">🎲 Первый в списке</div>` + renderCard(featuredCard, {actions: false})
+        : "";
+      fadeIn(featured);
+    } else if (featured.innerHTML) {
+      featured.innerHTML = "";
+    }
+
     await fadeOut(container);
     if (!data.total_count) {
       container.innerHTML = '<div class="muted">Список пуст</div>';

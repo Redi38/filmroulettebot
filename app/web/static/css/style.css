@@ -6,6 +6,9 @@
   --sidebar-w: 260px; --header-h: 63px;
 }
 * { box-sizing: border-box; }
+button {
+  -webkit-appearance: none; appearance: none; margin: 0; outline: none;
+}
 body {
   margin: 0; font-family: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background: radial-gradient(circle at 20% -10%, var(--bg-a) 0%, var(--bg-b) 55%, var(--bg-c) 100%);
@@ -33,12 +36,18 @@ header .header-spacer { width: 34px; height: 34px; flex-shrink: 0; }
 #side-menu {
   position: fixed; top: 0; left: -280px; width: 260px; height: 100%;
   background: #17132c; border-right: 1px solid var(--border); z-index: 11;
-  transition: left 0.2s ease; padding: 16px 0; overflow-y: auto;
+  transition: left 0.2s ease; padding: 0; overflow: hidden; box-sizing: border-box;
 }
 #side-menu.open { left: 0; }
+#side-menu-scroll {
+  height: 100%; overflow-y: scroll; overflow-x: hidden;
+  padding: 16px 0; box-sizing: border-box;
+  width: calc(100% + 20px);
+}
 #side-menu .menu-item {
   display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: none; border: none;
   color: var(--text); padding: 13px 20px; font-size: 1.05rem; font-weight: 600; cursor: pointer; font-family: inherit;
+  box-sizing: border-box; margin: 0; border-radius: 0;
 }
 #side-menu .menu-item svg { width: 19px; height: 19px; flex-shrink: 0; stroke: currentColor; }
 #side-menu .menu-item:hover { background: rgba(139,124,246,0.1); }
@@ -155,7 +164,7 @@ button.btn {
   text-transform: uppercase; letter-spacing: 0.03em;
 }
 
-#list-container, #list-featured, #up-list-container, #history-container {
+#list-container, #list-featured, #up-list-container, #history-list {
   transition: opacity 0.22s ease;
 }
 
@@ -183,8 +192,8 @@ button.btn {
   #overlay { display: none !important; }
   #side-menu {
     left: 0; transition: none; box-shadow: 2px 0 24px rgba(0,0,0,0.25);
-    padding-top: var(--header-h);
   }
+  #side-menu-scroll { padding-top: var(--header-h); }
   #sidebar-brand {
     display: flex; align-items: center; gap: 10px;
     position: fixed; top: 0; left: 0; width: var(--sidebar-w); height: var(--header-h);

@@ -1,4 +1,5 @@
 const sideMenu = document.getElementById("side-menu");
+const sideMenuScroll = document.getElementById("side-menu-scroll");
 const overlay = document.getElementById("overlay");
 
 const MENU_LABELS = {movies: "Фильмы", cartoons: "Мульты", series: "Сериалы"};
@@ -17,27 +18,27 @@ const ICONS = {
 };
 
 function renderMenu() {
-  sideMenu.innerHTML = "";
+  sideMenuScroll.innerHTML = "";
   const addItem = (icon, label, onClick, active, sub) => {
     const b = document.createElement("button");
     b.className = "menu-item" + (sub ? " sub" : "") + (active ? " active" : "");
     b.innerHTML = `${icon ? ICONS[icon] : ""}<span>${label}</span>`;
     b.onclick = () => { onClick(); closeMenu(); };
-    sideMenu.appendChild(b);
+    sideMenuScroll.appendChild(b);
   };
 
   addItem("shuffle", "Наугад", () => switchView("random"), currentView === "random");
-  sideMenu.appendChild(document.createElement("hr"));
+  sideMenuScroll.appendChild(document.createElement("hr"));
 
   for (const [code, label] of Object.entries(MENU_LABELS)) {
     addItem(code, label, () => switchCat(code, "spin"), currentView === "spin" && currentCat === code);
     addItem("list", "Список", () => switchCat(code, "list"), currentView === "list" && currentCat === code, true);
   }
-  sideMenu.appendChild(document.createElement("hr"));
+  sideMenuScroll.appendChild(document.createElement("hr"));
   for (const [code, label] of Object.entries(REF_MENU_LABELS)) {
     addItem(code, `${label} – список`, () => switchCat(code, "list"), currentView === "list" && currentCat === code);
   }
-  sideMenu.appendChild(document.createElement("hr"));
+  sideMenuScroll.appendChild(document.createElement("hr"));
   addItem("upcoming", "Ожидаемые", () => switchView("upcoming"), currentView === "upcoming");
   addItem("history", "История", () => switchView("history"), currentView === "history");
 }

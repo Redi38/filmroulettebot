@@ -9,29 +9,32 @@ function histKey(e) { return `${e.category}|${e.title}|${e.timestamp}`; }
 
 let historyItems = [];
 let historyFilter = initial.cat && CATS[initial.cat] ? initial.cat : "movies";
+let historyTabsRendered = false;
 
 async function loadHistory() {
   const container = document.getElementById("history-container");
-  const isFreshView = container.dataset.loaded !== "1";
+  ensureHistoryShell();
+  const list = document.getElementById("history-list");
+  const isFreshView = list.dataset.loaded !== "1";
   if (isFreshView) {
-    container.style.opacity = "1";
-    container.innerHTML = '<div class="spinner">Загрузка…</div>';
+    list.innerHTML = '<div class="spinner">Загрузка…</div>';
   }
   try {
     const data = await api("/api/history?limit=50");
     historyItems = data.items.filter((e) => e.category !== "marvel" && e.category !== "dc");
-    container.dataset.loaded = "1";
-    await fadeOut(container);
-    renderHistory();
-    fadeIn(container);
+    list.dataset.loaded = "1";
+    await fadeOut(list);
+    renderHistoryList();
+    fadeIn(list);
   } catch (e) {
-    container.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
-    container.style.opacity = "1";
+    list.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
+    list.style.opacity = "1";
   }
 }
 
-function renderHistory() {
+function ensureHistoryShell() {
   const container = document.getElementById("history-container");
+  if (historyTabsRendered) return;
   container.innerHTML = "";
 
   const tabs = document.createElement("div");
@@ -43,13 +46,26 @@ function renderHistory() {
     btn.onclick = async () => {
       if (historyFilter === code) return;
       historyFilter = code;
-      await fadeOut(container);
-      renderHistory();
-      fadeIn(container);
+      [...tabs.children].forEach((c) => c.classList.toggle("active", c === btn));
+      const list = document.getElementById("history-list");
+      await fadeOut(list);
+      renderHistoryList();
+      fadeIn(list);
     };
     tabs.appendChild(btn);
   }
   container.appendChild(tabs);
+
+  const list = document.createElement("div");
+  list.id = "history-list";
+  container.appendChild(list);
+
+  historyTabsRendered = true;
+}
+
+function renderHistoryList() {
+  const list = document.getElementById("history-list");
+  list.innerHTML = "";
 
   const filtered = historyItems
     .map((e, idx) => ({ e, idx }))
@@ -59,17 +75,16 @@ function renderHistory() {
     const empty = document.createElement("div");
     empty.className = "muted";
     empty.textContent = "История пуста";
-    container.appendChild(empty);
+    list.appendChild(empty);
     return;
   }
 
   const resolved = loadResolvedSet();
-  filtered.forEach(({ e, idx }, pos) => {
+  filtered.forEach(({ e, idx }) => {
     const div = document.createElement("div");
     const key = histKey(e);
     const isResolved = resolved.has(key);
-    div.className = "hist-item fade-in" + (isResolved ? " resolved" : "");
-    div.style.animationDelay = `${Math.min(pos * 35, 350)}ms`;
+    div.className = "hist-item" + (isResolved ? " resolved" : "");
     div.dataset.category = e.category;
     div.dataset.title = e.title;
     div.dataset.key = key;
@@ -81,7 +96,7 @@ function renderHistory() {
       <div class="hist-title">${escapeHtml(e.title)}</div>
       <div class="hist-meta">${date}</div>
       <div class="hist-actions" id="hist-actions-${idx}">${actionsHtml}</div>`;
-    container.appendChild(div);
+    list.appendChild(div);
   });
 }
 

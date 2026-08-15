@@ -12,10 +12,22 @@ let historyFilter = initial.cat && CATS[initial.cat] ? initial.cat : "movies";
 
 async function loadHistory() {
   const container = document.getElementById("history-container");
-  container.innerHTML = '<div class="spinner">Загрузка…</div>';
-  const data = await api("/api/history?limit=50");
-  historyItems = data.items.filter((e) => e.category !== "marvel" && e.category !== "dc");
-  renderHistory();
+  const isFreshView = container.dataset.loaded !== "1";
+  if (isFreshView) {
+    container.style.opacity = "1";
+    container.innerHTML = '<div class="spinner">Загрузка…</div>';
+  }
+  try {
+    const data = await api("/api/history?limit=50");
+    historyItems = data.items.filter((e) => e.category !== "marvel" && e.category !== "dc");
+    container.dataset.loaded = "1";
+    await fadeOut(container);
+    renderHistory();
+    fadeIn(container);
+  } catch (e) {
+    container.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
+    container.style.opacity = "1";
+  }
 }
 
 function renderHistory() {
@@ -28,7 +40,13 @@ function renderHistory() {
     const btn = document.createElement("button");
     btn.className = "btn btn-primary btn-sm" + (historyFilter === code ? " active" : "");
     btn.textContent = label;
-    btn.onclick = () => { historyFilter = code; renderHistory(); };
+    btn.onclick = async () => {
+      if (historyFilter === code) return;
+      historyFilter = code;
+      await fadeOut(container);
+      renderHistory();
+      fadeIn(container);
+    };
     tabs.appendChild(btn);
   }
   container.appendChild(tabs);
@@ -46,11 +64,12 @@ function renderHistory() {
   }
 
   const resolved = loadResolvedSet();
-  filtered.forEach(({ e, idx }) => {
+  filtered.forEach(({ e, idx }, pos) => {
     const div = document.createElement("div");
     const key = histKey(e);
     const isResolved = resolved.has(key);
-    div.className = "hist-item" + (isResolved ? " resolved" : "");
+    div.className = "hist-item fade-in" + (isResolved ? " resolved" : "");
+    div.style.animationDelay = `${Math.min(pos * 35, 350)}ms`;
     div.dataset.category = e.category;
     div.dataset.title = e.title;
     div.dataset.key = key;

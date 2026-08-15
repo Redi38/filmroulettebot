@@ -1,6 +1,15 @@
 let currentListPage = 1;
 let currentListCat = null;
 
+function nextFrame() { return new Promise((r) => requestAnimationFrame(r)); }
+
+async function fadeOut(el) {
+  el.style.opacity = "0";
+  await nextFrame();
+  await new Promise((r) => setTimeout(r, 90));
+}
+function fadeIn(el) { requestAnimationFrame(() => { el.style.opacity = "1"; }); }
+
 async function loadList(page) {
   if (page) currentListPage = page;
   else currentListPage = 1;
@@ -15,8 +24,6 @@ async function loadList(page) {
     container.style.opacity = "1";
     container.innerHTML = '<div class="spinner">Загрузка…</div>';
     featured.innerHTML = "";
-  } else {
-    container.style.opacity = "0";
   }
 
   if (currentCat === "marvel" || currentCat === "dc") {
@@ -29,38 +36,44 @@ async function loadList(page) {
     }
   }
 
-  const data = await api(`/api/${currentCat}/items?page=${currentListPage}`);
-  if (!data.total_count) {
-    container.innerHTML = '<div class="muted">Список пуст</div>';
-    container.style.opacity = "1";
-    return;
+  try {
+    const data = await api(`/api/${currentCat}/items?page=${currentListPage}`);
+    await fadeOut(container);
+    if (!data.total_count) {
+      container.innerHTML = '<div class="muted">Список пуст</div>';
+      fadeIn(container);
+      return;
+    }
+    container.innerHTML = "";
+    for (const title of data.items) {
+      const row = document.createElement("div");
+      row.className = "list-row";
+      const span = document.createElement("span");
+      span.className = "copy-title";
+      span.textContent = title;
+      span.title = "Нажмите, чтобы скопировать";
+      span.onclick = () => copyToClipboard(title, span);
+      row.appendChild(span);
+      const del = document.createElement("button");
+      del.className = "del-btn";
+      del.innerHTML = TRASH_ICON_SVG;
+      del.onclick = async (ev) => {
+        ev.stopPropagation();
+        await api(`/api/${currentCat}/delete`, {
+          method: "POST", headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({title}),
+        });
+        loadList(currentListPage);
+      };
+      row.appendChild(del);
+      container.appendChild(row);
+    }
+    if (data.total_pages > 1) container.appendChild(paginationRow(data.page, data.total_pages, (p) => loadList(p)));
+    fadeIn(container);
+  } catch (e) {
+    container.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
+    fadeIn(container);
   }
-  container.innerHTML = "";
-  for (const title of data.items) {
-    const row = document.createElement("div");
-    row.className = "list-row";
-    const span = document.createElement("span");
-    span.className = "copy-title";
-    span.textContent = title;
-    span.title = "Нажмите, чтобы скопировать";
-    span.onclick = () => copyToClipboard(title, span);
-    row.appendChild(span);
-    const del = document.createElement("button");
-    del.className = "del-btn";
-    del.textContent = "🗑";
-    del.onclick = async (ev) => {
-      ev.stopPropagation();
-      await api(`/api/${currentCat}/delete`, {
-        method: "POST", headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({title}),
-      });
-      loadList(currentListPage);
-    };
-    row.appendChild(del);
-    container.appendChild(row);
-  }
-  if (data.total_pages > 1) container.appendChild(paginationRow(data.page, data.total_pages, (p) => loadList(p)));
-  requestAnimationFrame(() => { container.style.opacity = "1"; });
 }
 
 function chevronSvg(dir) {
@@ -129,34 +142,47 @@ document.getElementById("add-btn").onclick = async () => {
 
 async function loadUpcoming() {
   const container = document.getElementById("up-list-container");
-  container.innerHTML = '<div class="spinner">Загрузка…</div>';
-  const data = await api("/api/upcoming");
-  if (!data.items.length) {
-    container.innerHTML = '<div class="muted">Список пуст</div>';
-    return;
+  const isFreshView = container.dataset.loaded !== "1";
+  if (isFreshView) {
+    container.style.opacity = "1";
+    container.innerHTML = '<div class="spinner">Загрузка…</div>';
   }
-  container.innerHTML = "";
-  for (const title of data.items) {
-    const row = document.createElement("div");
-    row.className = "list-row";
-    const span = document.createElement("span");
-    span.className = "copy-title";
-    span.textContent = title;
-    span.onclick = () => copyToClipboard(title, span);
-    row.appendChild(span);
-    const del = document.createElement("button");
-    del.className = "del-btn";
-    del.textContent = "🗑";
-    del.onclick = async (ev) => {
-      ev.stopPropagation();
-      await api("/api/upcoming/delete", {
-        method: "POST", headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({title}),
-      });
-      loadUpcoming();
-    };
-    row.appendChild(del);
-    container.appendChild(row);
+  try {
+    const data = await api("/api/upcoming");
+    await fadeOut(container);
+    container.dataset.loaded = "1";
+    if (!data.items.length) {
+      container.innerHTML = '<div class="muted">Список пуст</div>';
+      fadeIn(container);
+      return;
+    }
+    container.innerHTML = "";
+    for (const title of data.items) {
+      const row = document.createElement("div");
+      row.className = "list-row";
+      const span = document.createElement("span");
+      span.className = "copy-title";
+      span.textContent = title;
+      span.onclick = () => copyToClipboard(title, span);
+      row.appendChild(span);
+      const del = document.createElement("button");
+      del.className = "del-btn";
+      del.innerHTML = TRASH_ICON_SVG;
+      del.onclick = async (ev) => {
+        ev.stopPropagation();
+        await api("/api/upcoming/delete", {
+          method: "POST", headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({title}),
+        });
+        loadUpcoming();
+      };
+      row.appendChild(del);
+      container.appendChild(row);
+    }
+    fadeIn(container);
+  } catch (e) {
+    container.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
+    fadeIn(container);
   }
 }
 

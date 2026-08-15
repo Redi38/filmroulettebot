@@ -56,15 +56,23 @@ function switchView(view) {
   saveState(); renderMenu(); showSection();
 }
 
-function showSection() {
-  document.getElementById("random-spin-section").classList.toggle("active", currentView === "random");
-  document.getElementById("spin-section").classList.toggle("active", currentView === "spin");
-  document.getElementById("list-section").classList.toggle("active", currentView === "list");
-  document.getElementById("upcoming-section").classList.toggle("active", currentView === "upcoming");
-  document.getElementById("history-section").classList.toggle("active", currentView === "history");
+const SECTION_IDS = {
+  random: "random-spin-section", spin: "spin-section", list: "list-section",
+  upcoming: "upcoming-section", history: "history-section",
+};
 
-  // No dice/pencil emoji here on purpose: the header is what communicates
-  // "this is a spin" vs "this is a list", so the category name alone is enough.
+function showSection() {
+  for (const [view, id] of Object.entries(SECTION_IDS)) {
+    document.getElementById(id).classList.toggle("active", currentView === view);
+  }
+
+  const activeEl = document.getElementById(SECTION_IDS[currentView]);
+  if (activeEl) {
+    activeEl.classList.remove("fade-in");
+    void activeEl.offsetWidth;
+    activeEl.classList.add("fade-in");
+  }
+
   const titles = {random: "🔄 Наугад", spin: `${ALL_CATS[currentCat] || ""}`, list: `${ALL_CATS[currentCat] || ""}`,
                    upcoming: "🕐 Ожидаемые", history: "📜 История"};
   document.getElementById("page-title").textContent = titles[currentView] || "";

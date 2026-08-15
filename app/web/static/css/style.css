@@ -149,6 +149,10 @@ button.btn {
   text-transform: uppercase; letter-spacing: 0.03em;
 }
 
+#list-container, #list-featured {
+  transition: opacity 0.22s ease;
+}
+
 #modal-overlay {
   display: none; position: fixed; inset: 0; background: rgba(5,4,15,0.7); z-index: 30;
   align-items: center; justify-content: center; padding: 20px;

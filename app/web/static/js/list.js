@@ -1,4 +1,5 @@
 let currentListPage = 1;
+let currentListCat = null;
 
 async function loadList(page) {
   if (page) currentListPage = page;
@@ -7,11 +8,19 @@ async function loadList(page) {
   document.getElementById("add-row").style.display = "flex";
   const featured = document.getElementById("list-featured");
   const container = document.getElementById("list-container");
-  container.innerHTML = '<div class="spinner">Загрузка…</div>';
-  featured.innerHTML = "";
+
+  const isFreshView = currentListCat !== currentCat;
+  currentListCat = currentCat;
+  if (isFreshView) {
+    container.style.opacity = "1";
+    container.innerHTML = '<div class="spinner">Загрузка…</div>';
+    featured.innerHTML = "";
+  } else {
+    container.style.opacity = "0";
+  }
 
   if (currentCat === "marvel" || currentCat === "dc") {
-    featured.innerHTML = '<div class="spinner">Загрузка витрины…</div>';
+    if (isFreshView) featured.innerHTML = '<div class="spinner">Загрузка витрины…</div>';
     try {
       const card = await api(`/api/${currentCat}/featured`);
       featured.innerHTML = `<div class="featured-label">🎲 Первый в списке</div>` + renderCard(card, {actions: false});
@@ -23,6 +32,7 @@ async function loadList(page) {
   const data = await api(`/api/${currentCat}/items?page=${currentListPage}`);
   if (!data.total_count) {
     container.innerHTML = '<div class="muted">Список пуст</div>';
+    container.style.opacity = "1";
     return;
   }
   container.innerHTML = "";
@@ -50,6 +60,7 @@ async function loadList(page) {
     container.appendChild(row);
   }
   if (data.total_pages > 1) container.appendChild(paginationRow(data.page, data.total_pages, (p) => loadList(p)));
+  requestAnimationFrame(() => { container.style.opacity = "1"; });
 }
 
 function chevronSvg(dir) {

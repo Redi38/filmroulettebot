@@ -72,10 +72,7 @@ function renderHistoryList() {
     .filter(({ e }) => e.category === historyFilter);
 
   if (!filtered.length) {
-    const empty = document.createElement("div");
-    empty.className = "muted";
-    empty.textContent = "История пуста";
-    list.appendChild(empty);
+    list.innerHTML = placeholderHtml(`В категории «${CATS[historyFilter]}» пока нет истории — она появится после первого ролла 🎲`, "📜");
     return;
   }
 

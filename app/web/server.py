@@ -195,9 +195,12 @@ async def api_upcoming_check() -> dict:
 
 # ─── Generic per-category routes ────────────────────────────────────────────
 @app.get("/api/{cat}/items")
-async def api_items(cat: str, page: int = 1) -> dict:
+async def api_items(cat: str, page: int = 1, q: str = "") -> dict:
     _check_category(cat)
     items = await get_items(cat)
+    q = q.strip().lower()
+    if q:
+        items = [i for i in items if q in i.lower()]
     page_items, page, total_pages = paginate(items, page, page_size=LIST_PAGE_SIZE)
     return {"items": page_items, "page": page, "total_pages": total_pages, "total_count": len(items)}
 

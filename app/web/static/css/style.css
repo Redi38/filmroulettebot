@@ -133,6 +133,16 @@ button.btn {
   padding: 11px 13px; border-radius: 10px; font-size: 0.95rem; font-family: inherit;
 }
 .add-row input::placeholder { color: var(--muted); }
+.search-row {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 9px 13px;
+  color: var(--muted);
+}
+.search-row input {
+  flex: 1; background: none; border: none; outline: none; color: var(--text);
+  font-size: 0.95rem; font-family: inherit;
+}
+.search-row input::placeholder { color: var(--muted); }
 .muted { color: var(--muted); text-align: center; padding: 20px 0; }
 .check-group { margin-bottom: 18px; }
 .check-group h3 { font-size: 1rem; margin-bottom: 8px; }

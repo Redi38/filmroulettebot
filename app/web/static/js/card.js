@@ -1,3 +1,30 @@
+const SPIN_COOLDOWN_SECONDS = 1.5;
+let spinCooldownUntil = 0;
+let spinCooldownTimer = null;
+
+function applySpinCooldown(seconds) {
+  const until = Date.now() + seconds * 1000;
+  if (until <= spinCooldownUntil) return;
+  spinCooldownUntil = until;
+  tickSpinCooldown();
+}
+
+function tickSpinCooldown() {
+  const randomBtn = document.getElementById("random-spin-btn");
+  const spinBtn = document.getElementById("spin-btn");
+  const remaining = spinCooldownUntil - Date.now();
+  clearTimeout(spinCooldownTimer);
+  if (remaining <= 0) {
+    randomBtn.disabled = false; randomBtn.textContent = "🎲 Крутить";
+    spinBtn.disabled = false; spinBtn.textContent = "🎲 Крутить";
+    return;
+  }
+  const secs = Math.ceil(remaining / 1000);
+  randomBtn.disabled = true; randomBtn.textContent = `🎲 Крутить (${secs})`;
+  spinBtn.disabled = true; spinBtn.textContent = `🎲 Крутить (${secs})`;
+  spinCooldownTimer = setTimeout(tickSpinCooldown, 100);
+}
+
 function renderCard(data, opts) {
   opts = opts || {};
   const showActions = opts.actions !== false;
@@ -36,26 +63,46 @@ function resultEl() {
 }
 
 async function doSpin(cat) {
+  if (spinCooldownUntil > Date.now()) return;
   const result = resultEl();
+  const prevHtml = result.innerHTML;
   result.innerHTML = '<div class="spinner">🌀 Крутим…</div>';
+  applySpinCooldown(SPIN_COOLDOWN_SECONDS);
   try {
     const data = await api(`/api/${cat}/spin`, {method: "POST"});
     currentCardData = data;
     result.innerHTML = renderCard(data);
   } catch (e) {
-    result.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
+    if (e.status === 429) {
+      result.innerHTML = prevHtml;
+      const m = e.message.match(/[\d.]+/);
+      applySpinCooldown(m ? parseFloat(m[0]) : SPIN_COOLDOWN_SECONDS);
+      showToast(e.message);
+    } else {
+      result.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
+    }
   }
 }
 
 async function doRandomSpin() {
+  if (spinCooldownUntil > Date.now()) return;
   const result = document.getElementById("random-spin-result");
+  const prevHtml = result.innerHTML;
   result.innerHTML = '<div class="spinner">🌀 Крутим…</div>';
+  applySpinCooldown(SPIN_COOLDOWN_SECONDS);
   try {
     const data = await api("/api/random-spin", {method: "POST"});
     currentCardData = data;
     result.innerHTML = renderCard(data);
   } catch (e) {
-    result.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
+    if (e.status === 429) {
+      result.innerHTML = prevHtml;
+      const m = e.message.match(/[\d.]+/);
+      applySpinCooldown(m ? parseFloat(m[0]) : SPIN_COOLDOWN_SECONDS);
+      showToast(e.message);
+    } else {
+      result.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
+    }
   }
 }
 

@@ -1,5 +1,6 @@
 let currentListPage = 1;
 let currentListCat = null;
+let currentListQuery = "";
 
 function nextFrame() { return new Promise((r) => requestAnimationFrame(r)); }
 
@@ -17,10 +18,13 @@ async function loadList(page) {
   document.getElementById("add-row").style.display = "flex";
   const featured = document.getElementById("list-featured");
   const container = document.getElementById("list-container");
+  const searchInput = document.getElementById("search-input");
 
   const isFreshView = currentListCat !== currentCat;
   currentListCat = currentCat;
   if (isFreshView) {
+    currentListQuery = "";
+    searchInput.value = "";
     container.style.opacity = "1";
     container.innerHTML = '<div class="spinner">Загрузка…</div>';
     featured.style.opacity = "1";
@@ -31,7 +35,8 @@ async function loadList(page) {
   const featuredPromise = isFeaturedCat
     ? api(`/api/${currentCat}/featured`).catch(() => null)
     : Promise.resolve(null);
-  const itemsPromise = api(`/api/${currentCat}/items?page=${currentListPage}`);
+  const q = currentListQuery.trim();
+  const itemsPromise = api(`/api/${currentCat}/items?page=${currentListPage}&q=${encodeURIComponent(q)}`);
 
   if (isFeaturedCat && isFreshView) {
     featured.innerHTML = '<div class="spinner">Загрузка витрины…</div>';
@@ -52,7 +57,9 @@ async function loadList(page) {
 
     await fadeOut(container);
     if (!data.total_count) {
-      container.innerHTML = '<div class="muted">Список пуст</div>';
+      container.innerHTML = q
+        ? placeholderHtml(`Ничего не найдено по «${escapeHtml(q)}»`, "🔍")
+        : placeholderHtml("Пока здесь пусто — добавь первый тайтл выше 🍿", "📭");
       fadeIn(container);
       return;
     }
@@ -69,13 +76,18 @@ async function loadList(page) {
       const del = document.createElement("button");
       del.className = "del-btn";
       del.innerHTML = TRASH_ICON_SVG;
-      del.onclick = async (ev) => {
+      del.onclick = (ev) => {
         ev.stopPropagation();
-        await api(`/api/${currentCat}/delete`, {
+        removeRowOptimistically(row, () => api(`/api/${currentCat}/delete`, {
           method: "POST", headers: {"Content-Type": "application/json"},
           body: JSON.stringify({title}),
+        }), () => {
+          if (container.querySelector(".list-row")) return;
+          const q = currentListQuery.trim();
+          container.innerHTML = q
+            ? placeholderHtml(`Ничего не найдено по «${escapeHtml(q)}»`, "🔍")
+            : placeholderHtml("Пока здесь пусто — добавь первый тайтл выше 🍿", "📭");
         });
-        loadList(currentListPage);
       };
       row.appendChild(del);
       container.appendChild(row);
@@ -87,6 +99,31 @@ async function loadList(page) {
     fadeIn(container);
   }
 }
+
+function removeRowOptimistically(row, deleteRequest, onRemoved) {
+  const parent = row.parentNode;
+  const nextSibling = row.nextSibling;
+  row.style.transition = "opacity .15s ease, transform .15s ease";
+  row.style.opacity = "0";
+  row.style.transform = "translateX(10px)";
+  const removeTimer = setTimeout(() => {
+    row.remove();
+    if (onRemoved) onRemoved();
+  }, 150);
+  deleteRequest().catch((e) => {
+    clearTimeout(removeTimer);
+    row.style.transition = "";
+    row.style.opacity = "1";
+    row.style.transform = "none";
+    if (!parent.contains(row)) parent.insertBefore(row, nextSibling);
+    showToast(e.message || "Не удалось удалить");
+  });
+}
+
+document.getElementById("search-input").addEventListener("input", debounce((ev) => {
+  currentListQuery = ev.target.value;
+  loadList();
+}, 300));
 
 function chevronSvg(dir) {
   const NS = "http://www.w3.org/2000/svg";
@@ -164,7 +201,7 @@ async function loadUpcoming() {
     await fadeOut(container);
     container.dataset.loaded = "1";
     if (!data.items.length) {
-      container.innerHTML = '<div class="muted">Список пуст</div>';
+      container.innerHTML = placeholderHtml("Пока нет ожидаемых тайтлов — добавь то, чего ждёшь, выше 👀", "🕐");
       fadeIn(container);
       return;
     }
@@ -180,13 +217,15 @@ async function loadUpcoming() {
       const del = document.createElement("button");
       del.className = "del-btn";
       del.innerHTML = TRASH_ICON_SVG;
-      del.onclick = async (ev) => {
+      del.onclick = (ev) => {
         ev.stopPropagation();
-        await api("/api/upcoming/delete", {
+        removeRowOptimistically(row, () => api("/api/upcoming/delete", {
           method: "POST", headers: {"Content-Type": "application/json"},
           body: JSON.stringify({title}),
+        }), () => {
+          if (container.querySelector(".list-row")) return;
+          container.innerHTML = placeholderHtml("Пока нет ожидаемых тайтлов — добавь то, чего ждёшь, выше 👀", "🕐");
         });
-        loadUpcoming();
       };
       row.appendChild(del);
       container.appendChild(row);

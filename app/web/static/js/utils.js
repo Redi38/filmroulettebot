@@ -16,6 +16,28 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove("show"), 1400);
 }
 
+let _actionToastTimer = null;
+function showActionToast(msg, actionLabel, onAction, duration) {
+  const t = document.getElementById("action-toast");
+  const text = document.getElementById("action-toast-text");
+  const btn = document.getElementById("action-toast-btn");
+  const ms = duration || 4500;
+  clearTimeout(_actionToastTimer);
+  text.textContent = msg;
+  btn.innerHTML = `<span>${escapeHtml(actionLabel)}</span>`;
+  btn.style.setProperty("--toast-duration", ms + "ms");
+  btn.classList.remove("wipe");
+  void btn.offsetWidth;
+  btn.classList.add("wipe");
+  btn.onclick = () => {
+    t.classList.remove("show");
+    clearTimeout(_actionToastTimer);
+    onAction();
+  };
+  t.classList.add("show");
+  _actionToastTimer = setTimeout(() => t.classList.remove("show"), ms);
+}
+
 function copyToClipboard(text, el) {
   const ta = document.createElement("textarea");
   ta.value = text;

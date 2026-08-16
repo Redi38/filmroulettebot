@@ -34,6 +34,17 @@ LIST_PAGE_SIZE = 30
 _last_spin_at: dict[str, float] = {}
 SPIN_COOLDOWN = 1.5  # seconds
 
+_last_spin_title: dict[tuple[str, str], str] = {}
+
+
+def _pick_title(client_key: str, cat: str, items: list[str]) -> str:
+    last = _last_spin_title.get((client_key, cat))
+    candidates = [i for i in items if i != last] or items
+    title = random.choice(candidates)
+    _last_spin_title[(client_key, cat)] = title
+    return title
+
+
 _featured_cache: dict[str, tuple[dict, float]] = {}
 FEATURED_CACHE_TTL = 600  # 10 min
 
@@ -148,7 +159,7 @@ async def api_random_spin(request: Request) -> dict:
         raise HTTPException(404, "All three roulettes are empty")
     cat = random.choice(non_empty)
     items = await get_items(cat)
-    title = random.choice(items)
+    title = _pick_title(_client_ip(request), cat, items)
     await save_history(WEB_USER_ID, cat, title)
     return await _card_data(cat, title)
 
@@ -233,7 +244,7 @@ async def api_spin(cat: str, request: Request) -> dict:
     items = await get_items(cat)
     if not items:
         raise HTTPException(404, "List is empty")
-    title = random.choice(items)
+    title = _pick_title(_client_ip(request), cat, items)
     await save_history(WEB_USER_ID, cat, title)
     return await _card_data(cat, title)
 

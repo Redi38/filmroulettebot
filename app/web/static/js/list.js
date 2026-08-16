@@ -78,10 +78,23 @@ async function loadList(page) {
       del.innerHTML = TRASH_ICON_SVG;
       del.onclick = (ev) => {
         ev.stopPropagation();
-        removeRowOptimistically(row, () => api(`/api/${currentCat}/delete`, {
+        const cat = currentCat;
+        removeRowOptimistically(row, () => api(`/api/${cat}/delete`, {
           method: "POST", headers: {"Content-Type": "application/json"},
           body: JSON.stringify({title}),
         }), () => {
+          showActionToast(`«${title}» удалён`, "Отменить", async () => {
+            try {
+              await api(`/api/${cat}/add`, {
+                method: "POST", headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({title}),
+              });
+              if (currentCat === cat) loadList(currentListPage);
+            } catch (e) {
+              showToast("Не удалось восстановить");
+            }
+          });
+        }, () => {
           if (container.querySelector(".list-row")) return;
           const q = currentListQuery.trim();
           container.innerHTML = q
@@ -100,7 +113,7 @@ async function loadList(page) {
   }
 }
 
-function removeRowOptimistically(row, deleteRequest, onRemoved) {
+function removeRowOptimistically(row, deleteRequest, onDeleted, onRemoved) {
   const parent = row.parentNode;
   const nextSibling = row.nextSibling;
   row.style.transition = "opacity .15s ease, transform .15s ease";
@@ -110,7 +123,9 @@ function removeRowOptimistically(row, deleteRequest, onRemoved) {
     row.remove();
     if (onRemoved) onRemoved();
   }, 150);
-  deleteRequest().catch((e) => {
+  deleteRequest().then(() => {
+    if (onDeleted) onDeleted();
+  }).catch((e) => {
     clearTimeout(removeTimer);
     row.style.transition = "";
     row.style.opacity = "1";
@@ -223,6 +238,18 @@ async function loadUpcoming() {
           method: "POST", headers: {"Content-Type": "application/json"},
           body: JSON.stringify({title}),
         }), () => {
+          showActionToast(`«${title}» удалён`, "Отменить", async () => {
+            try {
+              await api("/api/upcoming/add", {
+                method: "POST", headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({title}),
+              });
+              loadUpcoming();
+            } catch (e) {
+              showToast("Не удалось восстановить");
+            }
+          });
+        }, () => {
           if (container.querySelector(".list-row")) return;
           container.innerHTML = placeholderHtml("Пока нет ожидаемых тайтлов — добавь то, чего ждёшь, выше 👀", "🕐");
         });

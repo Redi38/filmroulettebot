@@ -79,11 +79,13 @@ async function loadList(page) {
       del.onclick = (ev) => {
         ev.stopPropagation();
         const cat = currentCat;
+        const rowParent = row.parentNode;
+        const rowNext = row.nextSibling;
         removeRowOptimistically(row, () => api(`/api/${cat}/delete`, {
           method: "POST", headers: {"Content-Type": "application/json"},
           body: JSON.stringify({title}),
         }), () => {
-          showActionToast(`«${title}» удалён`, "Отменить", async () => {
+          showInlineUndo(rowParent, rowNext, `«${title}» удалён`, "Отменить", async () => {
             try {
               await api(`/api/${cat}/add`, {
                 method: "POST", headers: {"Content-Type": "application/json"},
@@ -93,13 +95,7 @@ async function loadList(page) {
             } catch (e) {
               showToast("Не удалось восстановить");
             }
-          });
-        }, () => {
-          if (container.querySelector(".list-row")) return;
-          const q = currentListQuery.trim();
-          container.innerHTML = q
-            ? placeholderHtml(`Ничего не найдено по «${escapeHtml(q)}»`, "🔍")
-            : placeholderHtml("Пока здесь пусто — добавь первый тайтл выше 🍿", "📭");
+          }, () => checkListEmpty(container));
         });
       };
       row.appendChild(del);
@@ -111,6 +107,14 @@ async function loadList(page) {
     container.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
     fadeIn(container);
   }
+}
+
+function checkListEmpty(container) {
+  if (container.querySelector(".list-row") || container.querySelector(".inline-undo-row")) return;
+  const q = currentListQuery.trim();
+  container.innerHTML = q
+    ? placeholderHtml(`Ничего не найдено по «${escapeHtml(q)}»`, "🔍")
+    : placeholderHtml("Пока здесь пусто — добавь первый тайтл выше 🍿", "📭");
 }
 
 function removeRowOptimistically(row, deleteRequest, onDeleted, onRemoved) {
@@ -204,6 +208,11 @@ document.getElementById("add-btn").onclick = async () => {
   } catch (e) { showToast(e.message); }
 };
 
+function checkUpcomingEmpty(container) {
+  if (container.querySelector(".list-row") || container.querySelector(".inline-undo-row")) return;
+  container.innerHTML = placeholderHtml("Пока нет ожидаемых тайтлов — добавь то, чего ждёшь, выше 👀", "🕐");
+}
+
 async function loadUpcoming() {
   const container = document.getElementById("up-list-container");
   const isFreshView = container.dataset.loaded !== "1";
@@ -234,11 +243,13 @@ async function loadUpcoming() {
       del.innerHTML = TRASH_ICON_SVG;
       del.onclick = (ev) => {
         ev.stopPropagation();
+        const rowParent = row.parentNode;
+        const rowNext = row.nextSibling;
         removeRowOptimistically(row, () => api("/api/upcoming/delete", {
           method: "POST", headers: {"Content-Type": "application/json"},
           body: JSON.stringify({title}),
         }), () => {
-          showActionToast(`«${title}» удалён`, "Отменить", async () => {
+          showInlineUndo(rowParent, rowNext, `«${title}» удалён`, "Отменить", async () => {
             try {
               await api("/api/upcoming/add", {
                 method: "POST", headers: {"Content-Type": "application/json"},
@@ -248,10 +259,7 @@ async function loadUpcoming() {
             } catch (e) {
               showToast("Не удалось восстановить");
             }
-          });
-        }, () => {
-          if (container.querySelector(".list-row")) return;
-          container.innerHTML = placeholderHtml("Пока нет ожидаемых тайтлов — добавь то, чего ждёшь, выше 👀", "🕐");
+          }, () => checkUpcomingEmpty(container));
         });
       };
       row.appendChild(del);

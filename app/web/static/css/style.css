@@ -156,31 +156,33 @@ button.btn {
   box-shadow: 0 6px 20px rgba(0,0,0,0.3);
 }
 .toast.show { opacity: 1; }
-.action-toast {
-  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-  display: flex; align-items: center; gap: 18px;
-  background: var(--card); border: 1px solid var(--border); color: var(--text);
-  padding: 16px 16px 16px 24px; border-radius: 30px;
-  font-size: 1.05rem; font-weight: 700; opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 20;
-  box-shadow: 0 10px 34px rgba(0,0,0,0.5);
-  max-width: calc(100vw - 32px);
+.inline-undo-row {
+  display: flex; justify-content: center; margin: 10px 0;
+  animation: fadeIn 0.25s ease;
 }
-.action-toast.show { opacity: 1; pointer-events: auto; }
-.action-toast button {
+.inline-undo-pill {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--card); border: 1px solid var(--border); color: var(--text);
+  padding: 10px 10px 10px 20px; border-radius: 26px;
+  font-size: 0.95rem; font-weight: 700;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+  transition: opacity 0.2s ease;
+  max-width: 100%;
+}
+.inline-undo-pill .undo-text {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 55vw;
+}
+.inline-undo-pill button {
   position: relative; overflow: hidden; flex-shrink: 0;
   background: linear-gradient(135deg, var(--primary), var(--primary-2)); color: white; border: none;
-  border-radius: 22px; padding: 11px 22px; font-size: 1rem; font-weight: 800; cursor: pointer; font-family: inherit;
+  border-radius: 20px; padding: 9px 18px; font-size: 0.88rem; font-weight: 800; cursor: pointer; font-family: inherit;
 }
-.action-toast button span { position: relative; z-index: 1; }
-#action-toast-text {
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  max-width: 46vw;
-}
-.action-toast button::after {
+.inline-undo-pill button span { position: relative; z-index: 1; }
+.inline-undo-pill button::after {
   content: ""; position: absolute; inset: 0; background: var(--card);
   transform: scaleX(0); transform-origin: right;
 }
-.action-toast button.wipe::after {
+.inline-undo-pill button.wipe::after {
   animation: wipeout linear forwards; animation-duration: var(--toast-duration, 4.5s);
 }
 @keyframes wipeout { from { transform: scaleX(0); } to { transform: scaleX(1); } }

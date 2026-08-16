@@ -16,26 +16,42 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove("show"), 1400);
 }
 
-let _actionToastTimer = null;
-function showActionToast(msg, actionLabel, onAction, duration) {
-  const t = document.getElementById("action-toast");
-  const text = document.getElementById("action-toast-text");
-  const btn = document.getElementById("action-toast-btn");
+function showInlineUndo(parent, referenceNode, msg, actionLabel, onAction, onDismiss, duration) {
   const ms = duration || 4500;
-  clearTimeout(_actionToastTimer);
+  const wrap = document.createElement("div");
+  wrap.className = "inline-undo-row";
+  const pill = document.createElement("div");
+  pill.className = "inline-undo-pill";
+  const text = document.createElement("span");
+  text.className = "undo-text";
   text.textContent = msg;
+  const btn = document.createElement("button");
   btn.innerHTML = `<span>${escapeHtml(actionLabel)}</span>`;
   btn.style.setProperty("--toast-duration", ms + "ms");
-  btn.classList.remove("wipe");
-  void btn.offsetWidth;
-  btn.classList.add("wipe");
+  pill.appendChild(text);
+  pill.appendChild(btn);
+  wrap.appendChild(pill);
+  parent.insertBefore(wrap, referenceNode && referenceNode.isConnected ? referenceNode : null);
+
+  let dismissed = false;
+  let timer;
+  const dismiss = () => {
+    if (dismissed) return;
+    dismissed = true;
+    clearTimeout(timer);
+    pill.style.opacity = "0";
+    setTimeout(() => {
+      wrap.remove();
+      if (onDismiss) onDismiss();
+    }, 200);
+  };
+  requestAnimationFrame(() => btn.classList.add("wipe"));
   btn.onclick = () => {
-    t.classList.remove("show");
-    clearTimeout(_actionToastTimer);
+    dismiss();
     onAction();
   };
-  t.classList.add("show");
-  _actionToastTimer = setTimeout(() => t.classList.remove("show"), ms);
+  timer = setTimeout(dismiss, ms);
+  return dismiss;
 }
 
 function copyToClipboard(text, el) {

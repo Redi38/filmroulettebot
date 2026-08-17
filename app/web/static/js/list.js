@@ -97,8 +97,7 @@ async function loadList(page) {
             }
           }, () => checkListEmpty(container));
         });
-      };
-      row.appendChild(del);
+      };      row.appendChild(del);
       container.appendChild(row);
     }
     if (data.total_pages > 1) container.appendChild(paginationRow(data.page, data.total_pages, (p) => loadList(p)));
@@ -117,24 +116,15 @@ function checkListEmpty(container) {
     : placeholderHtml("Пока здесь пусто — добавь первый тайтл выше 🍿", "📭");
 }
 
-function removeRowOptimistically(row, deleteRequest, onDeleted, onRemoved) {
-  const parent = row.parentNode;
-  const nextSibling = row.nextSibling;
+function removeRowOptimistically(row, deleteRequest, onRemoved) {
   row.style.transition = "opacity .15s ease, transform .15s ease";
   row.style.opacity = "0";
   row.style.transform = "translateX(10px)";
-  const removeTimer = setTimeout(() => {
+  setTimeout(() => {
     row.remove();
     if (onRemoved) onRemoved();
   }, 150);
-  deleteRequest().then(() => {
-    if (onDeleted) onDeleted();
-  }).catch((e) => {
-    clearTimeout(removeTimer);
-    row.style.transition = "";
-    row.style.opacity = "1";
-    row.style.transform = "none";
-    if (!parent.contains(row)) parent.insertBefore(row, nextSibling);
+  deleteRequest().catch((e) => {
     showToast(e.message || "Не удалось удалить");
   });
 }

@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import httpx
@@ -39,6 +39,8 @@ async def close_client() -> None:
 
 INFO_CACHE_TTL = 24 * 3600
 SEARCH_CACHE_TTL = 3 * 3600
+DISCOVER_CACHE_TTL = 6 * 3600
+COMPANY_ID_CACHE_TTL = 30 * 24 * 3600
 
 
 async def _get(path: str, **params: Any) -> dict[str, Any] | None:
@@ -261,6 +263,76 @@ async def check_upcoming_released(titles: list[str]) -> dict[str, list]:
         }
         (released if is_out else not_yet).append(entry)
     return {"released": released, "not_yet": not_yet, "no_info": no_info}
+
+
+async def _resolve_company_id(name: str) -> int | None:
+    """Resolve a studio name to its TMDb company id via search, caching the
+    result near-permanently since these ids never change."""
+    cache_key = f"company_id:{name.strip().lower()}"
+    cached = await get_tmdb_cache(cache_key, COMPANY_ID_CACHE_TTL)
+    if cached is not None:
+        return cached.get("id")
+    data = await _get("/search/company", query=name)
+    if not data or not data.get("results"):
+        return None
+    company_id = data["results"][0]["id"]
+    await set_tmdb_cache(cache_key, {"id": company_id})
+    return company_id
+
+
+async def discover_by_company(name: str) -> list[dict[str, Any]]:
+    """Movies from a studio (e.g. Marvel Studios, DC Films), spanning roughly
+    the last year through everything TMDb has scheduled — callers split this
+    into "released" / "upcoming" against today's date. Cached as a whole
+    since it doesn't need to be fresher than a few hours."""
+    cache_key = f"discover:{name.strip().lower()}"
+    cached = await get_tmdb_cache(cache_key, DISCOVER_CACHE_TTL)
+    if cached is not None:
+        return cached
+
+    company_id = await _resolve_company_id(name)
+    if company_id is None:
+        return []
+
+    one_year_ago = (datetime.now(timezone.utc) - timedelta(days=365)).strftime("%Y-%m-%d")
+
+    # TMDb returns 20 results/page, sorted ascending from one_year_ago —
+    # a studio with 20+ movies in that window would silently cut off the
+    # newest/announced titles (sorted to the end) if we only fetched page 1.
+    # Walk a few pages to make sure recent announcements aren't dropped.
+    MAX_PAGES = 5
+    results: list[dict[str, Any]] = []
+    page = 1
+    while page <= MAX_PAGES:
+        data = await _get(
+            "/discover/movie",
+            with_companies=company_id,
+            sort_by="primary_release_date.asc",
+            **{"primary_release_date.gte": one_year_ago},
+            region="US",
+            page=page,
+        )
+        if not data:
+            break
+        results.extend(data.get("results", []))
+        total_pages = data.get("total_pages") or 1
+        if page >= total_pages:
+            break
+        page += 1
+
+    out = [
+        {
+            "title": m.get("title"),
+            "release_date": m.get("release_date") or "",
+            "poster_url": _poster(m),
+            "overview": m.get("overview") or "",
+            "rating": round(m["vote_average"], 1) if m.get("vote_average") else "—",
+        }
+        for m in results
+        if m.get("release_date")
+    ]
+    await set_tmdb_cache(cache_key, out)
+    return out
 
 
 def _poster(obj: dict) -> str | None:

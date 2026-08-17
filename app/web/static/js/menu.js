@@ -36,7 +36,8 @@ function renderMenu() {
   }
   sideMenuScroll.appendChild(document.createElement("hr"));
   for (const [code, label] of Object.entries(REF_MENU_LABELS)) {
-    addItem(code, `${label} – список`, () => switchCat(code, "list"), currentView === "list" && currentCat === code);
+    addItem(code, label, () => switchCat(code, "list"), currentView === "list" && currentCat === code);
+    addItem("upcoming", "Скоро", () => switchCat(code, "showcase"), currentView === "showcase" && currentCat === code, true);
   }
   sideMenuScroll.appendChild(document.createElement("hr"));
   addItem("upcoming", "Ожидаемые", () => switchView("upcoming"), currentView === "upcoming");
@@ -59,7 +60,7 @@ function switchView(view) {
 
 const SECTION_IDS = {
   random: "random-spin-section", spin: "spin-section", list: "list-section",
-  upcoming: "upcoming-section", history: "history-section",
+  upcoming: "upcoming-section", history: "history-section", showcase: "showcase-section",
 };
 
 function showSection() {
@@ -75,7 +76,7 @@ function showSection() {
   }
 
   const titles = {random: "🔄 Наугад", spin: `${ALL_CATS[currentCat] || ""}`, list: `${ALL_CATS[currentCat] || ""}`,
-                   upcoming: "🕐 Ожидаемые", history: "📜 История"};
+                   upcoming: "🕐 Ожидаемые", history: "📜 История", showcase: `${ALL_CATS[currentCat] || ""} — скоро`};
   document.getElementById("page-title").textContent = titles[currentView] || "";
 
   if (currentView === "random") {
@@ -89,4 +90,5 @@ function showSection() {
   if (currentView === "list") loadList();
   if (currentView === "upcoming") loadUpcoming();
   if (currentView === "history") loadHistory();
+  if (currentView === "showcase") loadShowcase();
 }

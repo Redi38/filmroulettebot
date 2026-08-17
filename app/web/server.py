@@ -6,10 +6,12 @@ over a volume.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import random
 import re
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -23,7 +25,7 @@ from app.db.database import (
     get_upcoming_movies, add_upcoming_movie, delete_upcoming_movie,
     save_history, get_recent_history,
 )
-from app.services.tmdb import get_movie_info, get_series_info, check_upcoming_released
+from app.services.tmdb import get_movie_info, get_series_info, check_upcoming_released, discover_by_company
 from app.services.watch_link import find_watch_page_url
 from app.utils import paginate
 
@@ -251,12 +253,6 @@ async def api_spin(cat: str, request: Request) -> dict:
 
 @app.get("/api/{cat}/featured")
 async def api_featured(cat: str) -> dict:
-    """Full card (poster, description, rating, kinogo link — same as a spin
-    result) for the FIRST title in the list. Used for DC/Marvel, which have
-    no real roulette by design (reference lists only) — this is a
-    deterministic "showcase" stand-in, not a random pick, so unlike /spin
-    it does NOT write to history, and unlike /spin it IS cached (same input
-    -> same output every time, so no point re-hitting TMDB+kinogo often)."""
     _check_category(cat)
     items = await get_items(cat)
     if not items:
@@ -275,6 +271,47 @@ async def api_featured(cat: str) -> dict:
     _featured_cache[cache_key] = (data, time.monotonic() + FEATURED_CACHE_TTL)
     return data
 
+
+STUDIO_QUERIES = {
+    "marvel": ("Marvel Studios",),
+    "dc": ("DC Studios", "DC Films"),
+}
+
+SHOWCASE_TITLE_BLOCKLIST = (
+    "spidey and",
+)
+
+
+def _is_showcase_junk(title: str) -> bool:
+    t = title.strip().lower()
+    return any(t.startswith(prefix) for prefix in SHOWCASE_TITLE_BLOCKLIST)
+
+
+@app.get("/api/showcase/{studio}")
+async def api_showcase(studio: str) -> dict:
+    if studio not in STUDIO_QUERIES:
+        raise HTTPException(404, f"Unknown studio: {studio}")
+
+    results_lists = await asyncio.gather(*(discover_by_company(n) for n in STUDIO_QUERIES[studio]))
+    seen: set[str] = set()
+    movies: list[dict] = []
+    for lst in results_lists:
+        for m in lst:
+            key = (m.get("title") or "").strip().lower()
+            if not key or key in seen or _is_showcase_junk(key):
+                continue
+            seen.add(key)
+            movies.append(m)
+
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    own_list = {t.lower() for t in await get_items(studio)}
+    for m in movies:
+        m["in_list"] = m["title"].lower() in own_list
+
+    upcoming = sorted((m for m in movies if m["release_date"] >= today), key=lambda m: m["release_date"])
+    released = sorted((m for m in movies if m["release_date"] < today), key=lambda m: m["release_date"], reverse=True)
+    return {"upcoming": upcoming, "released": released}
 
 
 @app.post("/api/{cat}/sequel")

@@ -168,6 +168,28 @@ button.btn {
 }
 .showcase-date { color: var(--muted); font-size: 0.82rem; margin-top: 2px; }
 .showcase-action { flex-shrink: 0; }
+
+#showcase-filters {
+  display: flex; flex-wrap: wrap; gap: 10px 18px;
+  margin-bottom: 16px; padding: 12px 14px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+}
+.showcase-filter-group { display: flex; flex-direction: column; gap: 6px; }
+.showcase-filter-group h4 {
+  margin: 0; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.03em;
+  text-transform: uppercase; color: var(--muted);
+}
+.showcase-filter-options { display: flex; flex-wrap: wrap; gap: 6px; }
+.showcase-filter-btn {
+  border: 1px solid var(--border); background: rgba(255,255,255,0.03); color: var(--text);
+  font-family: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  padding: 6px 12px; border-radius: 999px; white-space: nowrap; transition: background 0.15s, border-color 0.15s;
+}
+.showcase-filter-btn:hover { border-color: var(--primary); }
+.showcase-filter-btn.active {
+  background: linear-gradient(90deg, var(--primary), var(--primary-2));
+  border-color: transparent; color: white;
+}
 .spinner { text-align: center; padding: 30px; color: var(--muted); }
 .toast {
   position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
@@ -268,4 +290,15 @@ button.btn {
   }
   main > .section { max-width: 640px; width: 100%; }
   .toast { left: calc(50% + var(--sidebar-w) / 2); }
+
+  main > #showcase-section.active {
+    max-width: 900px; display: flex; align-items: flex-start; gap: 24px;
+  }
+  #showcase-section #showcase-container { flex: 1 1 auto; min-width: 0; order: 1; }
+  #showcase-section #showcase-filters {
+    order: 2; flex: 0 0 210px; flex-direction: column; align-items: stretch;
+    position: sticky; top: 20px; margin-bottom: 0;
+  }
+  #showcase-section .showcase-filter-options { flex-direction: column; }
+  #showcase-section .showcase-filter-btn { text-align: left; }
 }

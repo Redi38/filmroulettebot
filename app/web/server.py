@@ -25,7 +25,7 @@ from app.db.database import (
     get_upcoming_movies, add_upcoming_movie, delete_upcoming_movie,
     save_history, get_recent_history,
 )
-from app.services.tmdb import get_movie_info, get_series_info, check_upcoming_released, discover_by_company
+from app.services.tmdb import get_movie_info, get_series_info, check_upcoming_released, discover_by_company, get_tv_next_episode
 from app.services.watch_link import find_watch_page_url
 from app.utils import paginate
 
@@ -279,12 +279,18 @@ STUDIO_QUERIES = {
 
 SHOWCASE_TITLE_BLOCKLIST = (
     "spidey and",
+    "krypto saves the day",
+    "lego",
+    "strange tails",
+    "official podcast",
 )
 
 
-def _is_showcase_junk(title: str) -> bool:
-    t = title.strip().lower()
-    return any(t.startswith(prefix) for prefix in SHOWCASE_TITLE_BLOCKLIST)
+def _is_showcase_junk(item: dict) -> bool:
+    haystack = f"{item.get('title', '')} {item.get('original_title', '')}".strip().lower()
+    if not haystack:
+        return True
+    return any(term in haystack for term in SHOWCASE_TITLE_BLOCKLIST)
 
 
 @app.get("/api/showcase/{studio}")
@@ -292,13 +298,19 @@ async def api_showcase(studio: str) -> dict:
     if studio not in STUDIO_QUERIES:
         raise HTTPException(404, f"Unknown studio: {studio}")
 
-    results_lists = await asyncio.gather(*(discover_by_company(n) for n in STUDIO_QUERIES[studio]))
+    names = STUDIO_QUERIES[studio]
+    movie_lists, tv_lists, tv_all_lists = await asyncio.gather(
+        asyncio.gather(*(discover_by_company(n, media_type="movie") for n in names)),
+        asyncio.gather(*(discover_by_company(n, media_type="tv") for n in names)),
+        asyncio.gather(*(discover_by_company(n, media_type="tv", date_filter=False) for n in names)),
+    )
+
     seen: set[str] = set()
     movies: list[dict] = []
-    for lst in results_lists:
+    for lst in (*movie_lists, *tv_lists):
         for m in lst:
             key = (m.get("title") or "").strip().lower()
-            if not key or key in seen or _is_showcase_junk(key):
+            if not key or key in seen or _is_showcase_junk(m):
                 continue
             seen.add(key)
             movies.append(m)
@@ -309,9 +321,28 @@ async def api_showcase(studio: str) -> dict:
     for m in movies:
         m["in_list"] = m["title"].lower() in own_list
 
+    tv_id_by_title: dict[str, dict] = {}
+    for lst in tv_all_lists:
+        for m in lst:
+            key = (m.get("title") or "").strip().lower()
+            if key and key not in tv_id_by_title and not _is_showcase_junk(m):
+                tv_id_by_title[key] = m
+
+    tracked = [tv_id_by_title[t] for t in own_list if t in tv_id_by_title and tv_id_by_title[t].get("id")]
+    next_episodes = await asyncio.gather(*(get_tv_next_episode(m["id"]) for m in tracked))
+    new_seasons = []
+    for m, nxt in zip(tracked, next_episodes):
+        if not nxt:
+            continue
+        entry = dict(m)
+        entry["in_list"] = True
+        entry["next_season"] = nxt
+        new_seasons.append(entry)
+    new_seasons.sort(key=lambda m: m["next_season"]["air_date"])
+
     upcoming = sorted((m for m in movies if m["release_date"] >= today), key=lambda m: m["release_date"])
     released = sorted((m for m in movies if m["release_date"] < today), key=lambda m: m["release_date"], reverse=True)
-    return {"upcoming": upcoming, "released": released}
+    return {"upcoming": upcoming, "released": released, "new_seasons": new_seasons}
 
 
 @app.post("/api/{cat}/sequel")

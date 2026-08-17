@@ -280,12 +280,26 @@ async def _resolve_company_id(name: str) -> int | None:
     return company_id
 
 
-async def discover_by_company(name: str) -> list[dict[str, Any]]:
-    """Movies from a studio (e.g. Marvel Studios, DC Films), spanning roughly
-    the last year through everything TMDb has scheduled — callers split this
-    into "released" / "upcoming" against today's date. Cached as a whole
-    since it doesn't need to be fresher than a few hours."""
-    cache_key = f"discover:{name.strip().lower()}"
+TALK_GENRE_ID = 10767  # official aftershow/companion podcasts get tagged with this
+KIDS_GENRE_ID = 10762  # preschool/toy-line spinoffs (e.g. LEGO shows) get tagged with this
+
+
+async def discover_by_company(
+    name: str, *, media_type: str = "movie", date_filter: bool = True
+) -> list[dict[str, Any]]:
+    """Movies or TV shows from a studio (e.g. Marvel Studios, DC Films),
+    spanning roughly the last year through everything TMDb has scheduled —
+    callers split this into "released" / "upcoming" against today's date.
+    Cached as a whole since it doesn't need to be fresher than a few hours.
+
+    date_filter=False skips the "last year" window entirely and just walks
+    the studio's whole catalog sorted by popularity — used to resolve a
+    show's TMDb id for "new season" lookups, since a series a user already
+    has in their list very likely first aired *more* than a year ago and
+    would otherwise never appear in the windowed results at all.
+    """
+    is_series = media_type == "tv"
+    cache_key = f"discover:{media_type}:{'windowed' if date_filter else 'all'}:{name.strip().lower()}"
     cached = await get_tmdb_cache(cache_key, DISCOVER_CACHE_TTL)
     if cached is not None:
         return cached
@@ -294,24 +308,27 @@ async def discover_by_company(name: str) -> list[dict[str, Any]]:
     if company_id is None:
         return []
 
+    query_date_field = "first_air_date" if is_series else "primary_release_date"
+    response_date_field = "first_air_date" if is_series else "release_date"
     one_year_ago = (datetime.now(timezone.utc) - timedelta(days=365)).strftime("%Y-%m-%d")
 
-    # TMDb returns 20 results/page, sorted ascending from one_year_ago —
-    # a studio with 20+ movies in that window would silently cut off the
-    # newest/announced titles (sorted to the end) if we only fetched page 1.
-    # Walk a few pages to make sure recent announcements aren't dropped.
+    # TMDb returns 20 results/page — a studio with 20+ titles in-window
+    # would silently cut off the newest/announced ones (sorted to the end)
+    # if we only fetched page 1. Walk a few pages so nothing gets dropped.
     MAX_PAGES = 5
     results: list[dict[str, Any]] = []
     page = 1
     while page <= MAX_PAGES:
-        data = await _get(
-            "/discover/movie",
-            with_companies=company_id,
-            sort_by="primary_release_date.asc",
-            **{"primary_release_date.gte": one_year_ago},
-            region="US",
-            page=page,
-        )
+        params: dict[str, Any] = {
+            "with_companies": company_id,
+            "page": page,
+        }
+        if date_filter:
+            params["sort_by"] = f"{query_date_field}.asc"
+            params[f"{query_date_field}.gte"] = one_year_ago
+        else:
+            params["sort_by"] = "popularity.desc"
+        data = await _get(f"/discover/{media_type}", **params)
         if not data:
             break
         results.extend(data.get("results", []))
@@ -320,18 +337,52 @@ async def discover_by_company(name: str) -> list[dict[str, Any]]:
             break
         page += 1
 
+    if not results:
+        logger.warning("TMDb discover/%s returned no results for company %r (id=%s)", media_type, name, company_id)
+
+    if is_series:
+        results = [
+            m for m in results
+            if TALK_GENRE_ID not in (m.get("genre_ids") or [])
+            and KIDS_GENRE_ID not in (m.get("genre_ids") or [])
+        ]
+
+    title_field = "name" if is_series else "title"
+    original_field = "original_name" if is_series else "original_title"
     out = [
         {
-            "title": m.get("title"),
-            "release_date": m.get("release_date") or "",
+            "id": m.get("id"),
+            "title": m.get(title_field),
+            "original_title": m.get(original_field) or "",
+            "release_date": m.get(response_date_field) or "",
             "poster_url": _poster(m),
             "overview": m.get("overview") or "",
             "rating": round(m["vote_average"], 1) if m.get("vote_average") else "—",
+            "is_series": is_series,
         }
         for m in results
-        if m.get("release_date")
+        if m.get(response_date_field)
     ]
     await set_tmdb_cache(cache_key, out)
+    return out
+
+
+async def get_tv_next_episode(tv_id: int) -> dict[str, Any] | None:
+    """Next unaired episode for a TV show, if TMDb has one scheduled — used
+    to flag "new season coming" for shows already in the user's own list,
+    without them having to keep checking manually."""
+    cache_key = f"tv_next_episode:{tv_id}"
+    cached = await get_tmdb_cache(cache_key, DISCOVER_CACHE_TTL)
+    if cached is not None:
+        return cached or None
+    data = await _get(f"/tv/{tv_id}")
+    nxt = (data or {}).get("next_episode_to_air") or {}
+    out = (
+        {"season_number": nxt.get("season_number"), "episode_number": nxt.get("episode_number"), "air_date": nxt.get("air_date")}
+        if nxt.get("air_date")
+        else None
+    )
+    await set_tmdb_cache(cache_key, out or {})
     return out
 
 

@@ -18,6 +18,9 @@ async function loadShowcase() {
       fadeIn(container);
       return;
     }
+    if (data.new_seasons && data.new_seasons.length) {
+      container.appendChild(showcaseGroup("🔔 Новые сезоны твоих сериалов", data.new_seasons, cat, true));
+    }
     container.appendChild(showcaseGroup("⏳ Скоро выйдет", data.upcoming, cat));
     container.appendChild(showcaseGroup("✅ Уже вышло", data.released, cat));
     fadeIn(container);
@@ -27,7 +30,7 @@ async function loadShowcase() {
   }
 }
 
-function showcaseGroup(title, items, cat) {
+function showcaseGroup(title, items, cat, isNewSeasons) {
   const group = document.createElement("div");
   group.className = "check-group";
   const h3 = document.createElement("h3");
@@ -40,21 +43,24 @@ function showcaseGroup(title, items, cat) {
     group.appendChild(empty);
     return group;
   }
-  for (const item of items) group.appendChild(showcaseRow(item, cat));
+  for (const item of items) group.appendChild(showcaseRow(item, cat, isNewSeasons));
   return group;
 }
 
-function showcaseRow(item, cat) {
+function showcaseRow(item, cat, isNewSeasons) {
   const row = document.createElement("div");
   row.className = "showcase-item";
   const poster = item.poster_url
     ? `<img class="showcase-poster" src="${item.poster_url}">`
-    : `<div class="showcase-poster showcase-poster-placeholder">🎬</div>`;
+    : `<div class="showcase-poster showcase-poster-placeholder">${item.is_series ? "📺" : "🎬"}</div>`;
+  const dateLine = isNewSeasons && item.next_season
+    ? `Сезон ${item.next_season.season_number} — ${item.next_season.air_date}`
+    : item.release_date;
   row.innerHTML = `
     ${poster}
     <div class="showcase-info">
       <div class="showcase-title">${escapeHtml(item.title)}</div>
-      <div class="showcase-date">${escapeHtml(item.release_date)}</div>
+      <div class="showcase-date">${escapeHtml(dateLine)}</div>
     </div>`;
   const actionSlot = document.createElement("div");
   actionSlot.className = "showcase-action";

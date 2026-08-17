@@ -224,7 +224,7 @@ button.btn {
   text-transform: uppercase; letter-spacing: 0.03em;
 }
 
-#list-container, #list-featured, #up-list-container, #history-list, #showcase-container {
+#list-container, #list-featured, #up-list-container, #history-list, #showcase-container, #theaters-container {
   transition: opacity 0.22s ease;
 }
 

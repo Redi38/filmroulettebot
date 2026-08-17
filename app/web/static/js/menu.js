@@ -15,6 +15,7 @@ const ICONS = {
   dc: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"></path></svg>`,
   upcoming: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`,
   history: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 8 3 21 21 21 21 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>`,
+  theaters: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2"></rect></svg>`,
 };
 
 function renderMenu() {
@@ -28,6 +29,7 @@ function renderMenu() {
   };
 
   addItem("shuffle", "Наугад", () => switchView("random"), currentView === "random");
+  addItem("theaters", "В прокате", () => switchView("theaters"), currentView === "theaters");
   sideMenuScroll.appendChild(document.createElement("hr"));
 
   for (const [code, label] of Object.entries(MENU_LABELS)) {
@@ -61,6 +63,7 @@ function switchView(view) {
 const SECTION_IDS = {
   random: "random-spin-section", spin: "spin-section", list: "list-section",
   upcoming: "upcoming-section", history: "history-section", showcase: "showcase-section",
+  theaters: "theaters-section",
 };
 
 function showSection() {
@@ -76,7 +79,8 @@ function showSection() {
   }
 
   const titles = {random: "🔄 Наугад", spin: `${ALL_CATS[currentCat] || ""}`, list: `${ALL_CATS[currentCat] || ""}`,
-                   upcoming: "🕐 Ожидаемые", history: "📜 История", showcase: `${ALL_CATS[currentCat] || ""} — скоро`};
+                   upcoming: "🕐 Ожидаемые", history: "📜 История", showcase: `${ALL_CATS[currentCat] || ""} — скоро`,
+                   theaters: "🎟 В прокате"};
   document.getElementById("page-title").textContent = titles[currentView] || "";
 
   if (currentView === "random") {
@@ -91,4 +95,5 @@ function showSection() {
   if (currentView === "upcoming") loadUpcoming();
   if (currentView === "history") loadHistory();
   if (currentView === "showcase") loadShowcase();
+  if (currentView === "theaters") loadTheaters();
 }

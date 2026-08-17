@@ -25,7 +25,10 @@ from app.db.database import (
     get_upcoming_movies, add_upcoming_movie, delete_upcoming_movie,
     save_history, get_recent_history,
 )
-from app.services.tmdb import get_movie_info, get_series_info, check_upcoming_released, discover_by_company, get_tv_next_episode
+from app.services.tmdb import (
+    get_movie_info, get_series_info, check_upcoming_released,
+    discover_by_company, get_tv_next_episode, get_now_playing, get_upcoming_theatrical,
+)
 from app.services.watch_link import find_watch_page_url
 from app.utils import paginate
 
@@ -343,6 +346,19 @@ async def api_showcase(studio: str) -> dict:
     upcoming = sorted((m for m in movies if m["release_date"] >= today), key=lambda m: m["release_date"])
     released = sorted((m for m in movies if m["release_date"] < today), key=lambda m: m["release_date"], reverse=True)
     return {"upcoming": upcoming, "released": released, "new_seasons": new_seasons}
+
+
+@app.get("/api/theaters")
+async def api_theaters() -> dict:
+    """TMDb's own "now playing" / "upcoming" theatrical calendars — global,
+    not tied to any studio, unlike /api/showcase/{studio}."""
+    now_playing, upcoming = await asyncio.gather(get_now_playing(), get_upcoming_theatrical())
+    own_list = {t.lower() for t in await get_items("movies")}
+    for m in now_playing:
+        m["in_list"] = m["title"].lower() in own_list
+    for m in upcoming:
+        m["in_list"] = m["title"].lower() in own_list
+    return {"now_playing": now_playing, "upcoming": upcoming}
 
 
 @app.post("/api/{cat}/sequel")

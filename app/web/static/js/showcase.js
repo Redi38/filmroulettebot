@@ -1,5 +1,5 @@
 let currentShowcaseStudio = null;
-
+ 
 async function loadShowcase() {
   const cat = currentCat;
   const container = document.getElementById("showcase-container");
@@ -29,7 +29,34 @@ async function loadShowcase() {
     fadeIn(container);
   }
 }
-
+ 
+let theatersLoaded = false;
+ 
+async function loadTheaters() {
+  const container = document.getElementById("theaters-container");
+  if (!theatersLoaded) {
+    container.style.opacity = "1";
+    container.innerHTML = '<div class="spinner">Загрузка…</div>';
+  }
+  try {
+    const data = await api("/api/theaters");
+    await fadeOut(container);
+    theatersLoaded = true;
+    container.innerHTML = "";
+    if (!data.now_playing.length && !data.upcoming.length) {
+      container.innerHTML = placeholderHtml("Пока нет данных о прокате — загляни попозже", "🎬");
+      fadeIn(container);
+      return;
+    }
+    container.appendChild(showcaseGroup("🎬 Сейчас в прокате", data.now_playing, "movies"));
+    container.appendChild(showcaseGroup("⏳ Скоро в кино", data.upcoming, "movies"));
+    fadeIn(container);
+  } catch (e) {
+    container.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
+    fadeIn(container);
+  }
+}
+ 
 function showcaseGroup(title, items, cat, isNewSeasons) {
   const group = document.createElement("div");
   group.className = "check-group";
@@ -46,7 +73,7 @@ function showcaseGroup(title, items, cat, isNewSeasons) {
   for (const item of items) group.appendChild(showcaseRow(item, cat, isNewSeasons));
   return group;
 }
-
+ 
 function showcaseRow(item, cat, isNewSeasons) {
   const row = document.createElement("div");
   row.className = "showcase-item";

@@ -386,6 +386,49 @@ async def get_tv_next_episode(tv_id: int) -> dict[str, Any] | None:
     return out
 
 
+def _format_movie_results(results: list[dict]) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": m.get("id"),
+            "title": m.get("title"),
+            "original_title": m.get("original_title") or "",
+            "release_date": m.get("release_date") or "",
+            "poster_url": _poster(m),
+            "overview": m.get("overview") or "",
+            "rating": round(m["vote_average"], 1) if m.get("vote_average") else "—",
+            "is_series": False,
+        }
+        for m in results
+        if m.get("release_date")
+    ]
+
+
+async def get_now_playing(region: str = "UA") -> list[dict[str, Any]]:
+    """Movies currently in theaters, per TMDb's own now_playing endpoint."""
+    cache_key = f"now_playing:{region}"
+    cached = await get_tmdb_cache(cache_key, DISCOVER_CACHE_TTL)
+    if cached is not None:
+        return cached
+    data = await _get("/movie/now_playing", region=region)
+    out = _format_movie_results((data or {}).get("results", []))
+    await set_tmdb_cache(cache_key, out)
+    return out
+
+
+async def get_upcoming_theatrical(region: str = "UA") -> list[dict[str, Any]]:
+    """Movies with an upcoming theatrical release, per TMDb's own upcoming
+    endpoint — distinct from the user's own manually-tracked upcoming list
+    in the database, this is TMDb's global release calendar."""
+    cache_key = f"upcoming_theatrical:{region}"
+    cached = await get_tmdb_cache(cache_key, DISCOVER_CACHE_TTL)
+    if cached is not None:
+        return cached
+    data = await _get("/movie/upcoming", region=region)
+    out = _format_movie_results((data or {}).get("results", []))
+    await set_tmdb_cache(cache_key, out)
+    return out
+
+
 def _poster(obj: dict) -> str | None:
     path = obj.get("poster_path")
     return f"https://image.tmdb.org/t/p/w500{path}" if path else None

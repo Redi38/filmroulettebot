@@ -136,20 +136,24 @@ async function loadTheaters() {
     await fadeOut(container);
     theatersLoaded = true;
     container.innerHTML = "";
-    if (!data.now_playing.length && !data.upcoming.length
+    const newSeasons = data.new_seasons || [];
+    if (!data.now_playing.length && !data.upcoming.length && !newSeasons.length
         && data.now_playing_total_pages <= 1 && data.upcoming_total_pages <= 1) {
       container.innerHTML = placeholderHtml("Пока нет данных о прокате — загляни попозже", "🎬");
       fadeIn(container);
       return;
     }
-    container.appendChild(showcaseGroup("🎬 Сейчас в прокате", data.now_playing, "movies"));
+    if (newSeasons.length) {
+      container.appendChild(showcaseGroup("🔔 Новые сезоны", newSeasons, "series", true));
+    }
+    container.appendChild(showcaseGroup("🎬 Сейчас в прокате", data.now_playing, "movies", false, "now-playing"));
     if (data.now_playing_total_pages > 1) {
       container.appendChild(paginationRow(data.now_playing_page, data.now_playing_total_pages, (p) => {
         theatersNowPlayingPage = p;
         loadTheaters();
       }));
     }
-    container.appendChild(showcaseGroup("⏳ Скоро в кино", data.upcoming, "movies"));
+    container.appendChild(showcaseGroup("⏳ Скоро в кино", data.upcoming, "movies", false, "upcoming"));
     if (data.upcoming_total_pages > 1) {
       container.appendChild(paginationRow(data.upcoming_page, data.upcoming_total_pages, (p) => {
         theatersUpcomingPage = p;
@@ -165,7 +169,7 @@ async function loadTheaters() {
  
 const _mediaDetailsCache = new Map();
 
-function showcaseGroup(title, items, cat, isNewSeasons) {
+function showcaseGroup(title, items, cat, isNewSeasons, addMode) {
   const group = document.createElement("div");
   group.className = "check-group";
   const h3 = document.createElement("h3");
@@ -178,11 +182,11 @@ function showcaseGroup(title, items, cat, isNewSeasons) {
     group.appendChild(empty);
     return group;
   }
-  for (const item of items) group.appendChild(showcaseRow(item, cat, isNewSeasons));
+  for (const item of items) group.appendChild(showcaseRow(item, cat, isNewSeasons, addMode));
   return group;
 }
 
-function showcaseRow(item, cat, isNewSeasons) {
+function showcaseRow(item, cat, isNewSeasons, addMode) {
   const wrap = document.createElement("div");
   wrap.className = "showcase-item-wrap";
 
@@ -211,13 +215,12 @@ function showcaseRow(item, cat, isNewSeasons) {
     actionSlot.innerHTML = `<span class="muted">✓ В списке</span>`;
   } else {
     const btn = document.createElement("button");
-    btn.className = "btn btn-primary btn-sm";
+    btn.className = "btn btn-primary";
     btn.textContent = "Добавить";
-    btn.onclick = async (ev) => {
-      ev.stopPropagation();
+    const addTo = async (endpointCat) => {
       btn.disabled = true;
       try {
-        await api(`/api/${cat}/add`, {
+        await api(`/api/${endpointCat}/add`, {
           method: "POST", headers: {"Content-Type": "application/json"},
           body: JSON.stringify({title: item.title}),
         });
@@ -227,6 +230,35 @@ function showcaseRow(item, cat, isNewSeasons) {
       } catch (e) {
         btn.disabled = false;
         showToast(e.message || "Не удалось добавить");
+      }
+    };
+    const addToUpcoming = async () => {
+      btn.disabled = true;
+      try {
+        await api(`/api/upcoming/add`, {
+          method: "POST", headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({title: item.title}),
+        });
+        item.in_list = true;
+        actionSlot.innerHTML = `<span class="muted">✓ В списке</span>`;
+        showToast(`«${item.title}» добавлен в «Скоро в кино»`);
+      } catch (e) {
+        btn.disabled = false;
+        showToast(e.message || "Не удалось добавить");
+      }
+    };
+    btn.onclick = (ev) => {
+      ev.stopPropagation();
+      if (addMode === "upcoming") {
+        addToUpcoming();
+      } else if (addMode === "now-playing") {
+        if (item.digitally_released) {
+          openCategoryModal(`Куда добавить «${item.title}»?`, (category) => addTo(category));
+        } else {
+          addToUpcoming();
+        }
+      } else {
+        addTo(cat);
       }
     };
     actionSlot.appendChild(btn);

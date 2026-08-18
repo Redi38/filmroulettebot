@@ -145,7 +145,7 @@ async def get_details_by_id(tmdb_id: int, is_series: bool) -> dict[str, Any] | N
         return None
     credits, videos = await asyncio.gather(
         _get(f"/{kind}/{tmdb_id}/credits"),
-        _get(f"/{kind}/{tmdb_id}/videos"),
+        _get(f"/{kind}/{tmdb_id}/videos", include_video_language="ru,en,null"),
     )
     credits = credits or {}
     videos = videos or {}
@@ -367,9 +367,6 @@ async def discover_by_company(
     response_date_field = "first_air_date" if is_series else "release_date"
     one_year_ago = (datetime.now(timezone.utc) - timedelta(days=365)).strftime("%Y-%m-%d")
 
-    # TMDb returns 20 results/page — a studio with 20+ titles in-window
-    # would silently cut off the newest/announced ones (sorted to the end)
-    # if we only fetched page 1. Walk a few pages so nothing gets dropped.
     MAX_PAGES = 5
     results: list[dict[str, Any]] = []
     page = 1
@@ -456,6 +453,70 @@ def _format_movie_results(results: list[dict]) -> list[dict[str, Any]]:
         for m in results
         if m.get("release_date")
     ]
+
+
+async def _search_tv_cached(title: str) -> dict[str, Any] | None:
+    """Cached wrapper around /search/tv, mirroring _search_movie_cached."""
+    cache_key = f"tv_search:{title.strip().lower()}"
+    cached = await get_tmdb_cache(cache_key, SEARCH_CACHE_TTL)
+    if cached is not None:
+        return cached
+    data = await _get("/search/tv", query=title)
+    if data is not None:
+        await set_tmdb_cache(cache_key, data)
+    return data
+
+
+async def _get_new_season_entry(title: str) -> dict[str, Any] | None:
+    """If `title` (one of the user's own tracked series) has an announced
+    upcoming episode/season on TMDb, return a showcase-style row for it —
+    same shape the Marvel/DC studio showcase's new_seasons entries use."""
+    data = await _search_tv_cached(title)
+    if not data or not data.get("results"):
+        return None
+    series = _best_match(data["results"], title, title_field="name")
+    if series is None or not series.get("id"):
+        return None
+    nxt = await get_tv_next_episode(series["id"])
+    if not nxt:
+        return None
+    return {
+        "id": series["id"],
+        "title": series.get("name") or title,
+        "original_title": series.get("original_name") or "",
+        "release_date": nxt.get("air_date") or "",
+        "poster_url": _poster(series),
+        "overview": series.get("overview") or "",
+        "rating": round(series["vote_average"], 1) if series.get("vote_average") else "—",
+        "is_series": True,
+        "next_season": nxt,
+    }
+
+
+async def get_new_seasons_for_titles(titles: list[str]) -> list[dict[str, Any]]:
+    """Announced new seasons/episodes for the user's own tracked series list —
+    the same TMDb next-episode check the Marvel/DC showcase does, but run
+    across the whole series list instead of one studio's titles."""
+    entries = await asyncio.gather(*(_get_new_season_entry(t) for t in titles))
+    out = [e for e in entries if e]
+    out.sort(key=lambda m: m["next_season"]["air_date"])
+    return out
+
+
+async def is_digitally_released(movie_id: int, release_date: str) -> bool:
+    """Best-effort check for whether a theatrical movie is already available
+    digitally — reuses the real digital-release date from TMDb when known,
+    falling back to the same "45 days after theatrical" heuristic used by
+    check_upcoming_released."""
+    now = datetime.now(timezone.utc)
+    digital_date_str = await _get_digital_release_date(movie_id)
+    date_to_use = (digital_date_str or release_date or "")[:10]
+    try:
+        check_date = datetime.strptime(date_to_use, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return False
+    days_ago = (now - check_date).days
+    return days_ago >= 0 if digital_date_str else days_ago >= 45
 
 
 async def get_now_playing(region: str = "UA") -> list[dict[str, Any]]:

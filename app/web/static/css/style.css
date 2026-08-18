@@ -150,7 +150,11 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
 .muted { color: var(--muted); text-align: center; padding: 20px 0; }
 .check-group { margin-bottom: 18px; }
 .check-group h3 { font-size: 1rem; margin-bottom: 8px; }
-.check-item { padding: 8px 0; border-bottom: 1px solid var(--border); }
+.check-item {
+  padding: 8px 0; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+}
+.check-item-action { display: flex; align-items: center; gap: 10px; }
 .check-item .estimated { color: var(--muted); font-size: 0.85rem; }
 .showcase-item {
   display: flex; align-items: center; gap: 12px;
@@ -261,8 +265,8 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
 .hist-item .hist-meta { color: var(--muted); font-size: 0.82rem; margin-bottom: 8px; }
 .hist-item .hist-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .hist-tabs { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 16px; }
-.hist-tabs .btn-sm { opacity: 0.55; }
-.hist-tabs .btn-sm.active { opacity: 1; }
+.hist-tabs .btn { opacity: 0.55; }
+.hist-tabs .btn.active { opacity: 1; }
 .hist-clear-row { display: flex; justify-content: center; margin-bottom: 16px; }
 .hist-clear-row .btn { opacity: 0.75; }
 .hist-clear-row .btn.confirming { opacity: 1; }

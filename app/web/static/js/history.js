@@ -44,7 +44,7 @@ function ensureHistoryShell() {
   tabs.className = "hist-tabs";
   for (const [code, label] of Object.entries(CATS)) {
     const btn = document.createElement("button");
-    btn.className = "btn btn-primary btn-sm" + (historyFilter === code ? " active" : "");
+    btn.className = "btn btn-primary" + (historyFilter === code ? " active" : "");
     btn.textContent = label;
     btn.onclick = async () => {
       if (historyFilter === code) return;
@@ -64,7 +64,7 @@ function ensureHistoryShell() {
   clearRow.className = "hist-clear-row";
   const clearBtn = document.createElement("button");
   clearBtn.id = "hist-clear-btn";
-  clearBtn.className = "btn btn-danger btn-sm";
+  clearBtn.className = "btn btn-danger";
   clearBtn.textContent = "Очистить историю";
   clearBtn.onclick = () => handleClearClick(clearBtn);
   clearRow.appendChild(clearBtn);
@@ -140,7 +140,7 @@ function renderHistoryList() {
     const date = new Date(e.timestamp * 1000).toLocaleString("ru-RU");
     const actionsHtml = isResolved
       ? `<span class="muted">${resolvedOutcomeLabel(e.title, outcome)}</span>`
-      : `<button class="btn btn-success btn-sm" onclick="histConfirm(${idx})">Подтвердить</button>`;
+      : `<button class="btn btn-success" onclick="histConfirm(${idx})">Подтвердить</button>`;
     div.innerHTML = `
       <div class="hist-title">${escapeHtml(e.title)}</div>
       <div class="hist-meta">${date}</div>
@@ -162,8 +162,8 @@ function resolvedOutcomeLabel(title, outcome) {
 function histConfirm(idx) {
   const actionsEl = document.getElementById(`hist-actions-${idx}`);
   actionsEl.innerHTML = `
-    <button class="btn btn-success btn-sm" onclick="histSequel(${idx})">Сиквел</button>
-    <button class="btn btn-danger btn-sm" onclick="histDelete(${idx})">Удалить</button>`;
+    <button class="btn btn-success" onclick="histSequel(${idx})">Сиквел</button>
+    <button class="btn btn-danger" onclick="histDelete(${idx})">Удалить</button>`;
 }
 
 function markResolved(key, outcome) {

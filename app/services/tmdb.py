@@ -126,6 +126,61 @@ async def _search_movie_cached(title: str) -> dict[str, Any] | None:
     return data
 
 
+async def get_details_by_id(tmdb_id: int, is_series: bool) -> dict[str, Any] | None:
+    """Full detail card for an already-known TMDb id (movie or tv) — used for
+    the expandable detail panel on showcase/theaters rows, where we already
+    have the id from discover/now_playing/upcoming and don't need to search
+    by title (and risk matching the wrong title) like get_movie_info/
+    get_series_info do.
+    """
+    kind = "tv" if is_series else "movie"
+    cache_key = f"details_by_id:{kind}:{tmdb_id}"
+    cached = await get_tmdb_cache(cache_key, INFO_CACHE_TTL)
+    if cached is not None:
+        return cached or None
+
+    details = await _get(f"/{kind}/{tmdb_id}")
+    if not details:
+        await set_tmdb_cache(cache_key, {})
+        return None
+    credits, videos = await asyncio.gather(
+        _get(f"/{kind}/{tmdb_id}/credits"),
+        _get(f"/{kind}/{tmdb_id}/videos"),
+    )
+    credits = credits or {}
+    videos = videos or {}
+
+    result: dict[str, Any] = {
+        "title": details.get("title" if not is_series else "name"),
+        "overview": details.get("overview") or "Описание недоступно.",
+        "release_date": (details.get("release_date") if not is_series else details.get("first_air_date")) or "—",
+        "rating": round(details["vote_average"], 1) if details.get("vote_average") else "—",
+        "poster_url": _poster(details),
+        "genres": _genres(details),
+        "actors": _actors(credits),
+        "trailer_url": _best_trailer_url(videos),
+    }
+    if is_series:
+        result["seasons"] = details.get("number_of_seasons") or "—"
+        result["episodes"] = details.get("number_of_episodes") or "—"
+    else:
+        result["runtime"] = details.get("runtime") or "—"
+
+    await set_tmdb_cache(cache_key, result)
+    return result
+
+
+def _best_trailer_url(videos: dict) -> str | None:
+    results = videos.get("results") or []
+    youtube = [v for v in results if v.get("site") == "YouTube"]
+    trailers = [v for v in youtube if v.get("type") == "Trailer"]
+    pick = next((v for v in trailers if v.get("official")), None) or (trailers[0] if trailers else None)
+    if not pick:
+        teasers = [v for v in youtube if v.get("type") == "Teaser"]
+        pick = teasers[0] if teasers else None
+    return f"https://www.youtube.com/watch?v={pick['key']}" if pick else None
+
+
 async def get_movie_info(title: str) -> dict[str, Any] | None:
     cache_key = f"movie_info:{title.strip().lower()}"
     cached = await get_tmdb_cache(cache_key, INFO_CACHE_TTL)

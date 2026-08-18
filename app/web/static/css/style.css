@@ -63,10 +63,11 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
 .section.active { display: block; }
 .actions { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; justify-content: center; }
 .actions .btn { padding-left: 18px; padding-right: 18px; }
-button.btn {
+.btn {
   border: none; border-radius: 12px; padding: 12px 22px; font-size: 0.98rem;
   cursor: pointer; color: white; font-weight: 700; box-shadow: 0 4px 14px rgba(0,0,0,0.25);
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  text-decoration: none; font-family: inherit;
 }
 .btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-2)); }
 .btn-success { background: linear-gradient(135deg, #34d399, #16a97a); }
@@ -155,7 +156,27 @@ button.btn {
   display: flex; align-items: center; gap: 12px;
   padding: 10px 0; border-bottom: 1px solid var(--border);
 }
-.showcase-item:last-child { border-bottom: none; }
+.showcase-item-wrap:last-child .showcase-item { border-bottom: none; }
+.showcase-item-wrap.expanded .showcase-item { border-bottom-color: transparent; }
+.showcase-info-clickable { cursor: pointer; flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; }
+.showcase-info-text { flex: 1; min-width: 0; }
+.showcase-poster { transition: width 0.25s ease, height 0.25s ease; }
+.showcase-item-wrap.expanded .showcase-poster {
+  width: 96px; height: 142px; border-radius: 12px;
+}
+.showcase-detail {
+  max-height: 0; overflow: hidden; opacity: 0;
+  transition: max-height 0.3s ease, opacity 0.25s ease;
+  border-bottom: 1px solid var(--border);
+}
+.showcase-item-wrap.expanded .showcase-detail {
+  max-height: 900px; opacity: 1;
+}
+.showcase-item-wrap:last-child .showcase-detail { border-bottom: none; }
+.showcase-detail-body { padding: 6px 4px 20px; }
+.showcase-detail .meta { margin-bottom: 6px; font-size: 0.95rem; }
+.showcase-detail .overview { color: var(--muted); font-size: 0.94rem; line-height: 1.6; margin: 12px 0; }
+.showcase-detail .btn { margin-top: 6px; text-decoration: none; }
 .showcase-poster {
   width: 46px; height: 68px; border-radius: 8px; object-fit: cover; flex-shrink: 0;
   background: var(--card);
@@ -308,7 +329,6 @@ button.btn {
   #showcase-section .showcase-filter-options { flex-direction: column; }
   #showcase-section .showcase-filter-btn { text-align: left; }
 
-  /* Larger, more readable cards for Marvel/DC showcase and "В прокате" on desktop */
   main > #theaters-section.active { max-width: 760px; }
   .showcase-item {
     gap: 18px; padding: 16px 4px;

@@ -122,7 +122,9 @@ function showcaseFilterGroup(title, options, key) {
 }
  
 let theatersLoaded = false;
- 
+let theatersNowPlayingPage = 1;
+let theatersUpcomingPage = 1;
+
 async function loadTheaters() {
   const container = document.getElementById("theaters-container");
   if (!theatersLoaded) {
@@ -130,17 +132,30 @@ async function loadTheaters() {
     container.innerHTML = '<div class="spinner">Загрузка…</div>';
   }
   try {
-    const data = await api("/api/theaters");
+    const data = await api(`/api/theaters?now_playing_page=${theatersNowPlayingPage}&upcoming_page=${theatersUpcomingPage}`);
     await fadeOut(container);
     theatersLoaded = true;
     container.innerHTML = "";
-    if (!data.now_playing.length && !data.upcoming.length) {
+    if (!data.now_playing.length && !data.upcoming.length
+        && data.now_playing_total_pages <= 1 && data.upcoming_total_pages <= 1) {
       container.innerHTML = placeholderHtml("Пока нет данных о прокате — загляни попозже", "🎬");
       fadeIn(container);
       return;
     }
     container.appendChild(showcaseGroup("🎬 Сейчас в прокате", data.now_playing, "movies"));
+    if (data.now_playing_total_pages > 1) {
+      container.appendChild(paginationRow(data.now_playing_page, data.now_playing_total_pages, (p) => {
+        theatersNowPlayingPage = p;
+        loadTheaters();
+      }));
+    }
     container.appendChild(showcaseGroup("⏳ Скоро в кино", data.upcoming, "movies"));
+    if (data.upcoming_total_pages > 1) {
+      container.appendChild(paginationRow(data.upcoming_page, data.upcoming_total_pages, (p) => {
+        theatersUpcomingPage = p;
+        loadTheaters();
+      }));
+    }
     fadeIn(container);
   } catch (e) {
     container.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
@@ -148,6 +163,8 @@ async function loadTheaters() {
   }
 }
  
+const _mediaDetailsCache = new Map();
+
 function showcaseGroup(title, items, cat, isNewSeasons) {
   const group = document.createElement("div");
   group.className = "check-group";
@@ -164,22 +181,30 @@ function showcaseGroup(title, items, cat, isNewSeasons) {
   for (const item of items) group.appendChild(showcaseRow(item, cat, isNewSeasons));
   return group;
 }
- 
+
 function showcaseRow(item, cat, isNewSeasons) {
+  const wrap = document.createElement("div");
+  wrap.className = "showcase-item-wrap";
+
   const row = document.createElement("div");
   row.className = "showcase-item";
-  const poster = item.poster_url
+  const posterHtml = item.poster_url
     ? `<img class="showcase-poster" src="${item.poster_url}">`
     : `<div class="showcase-poster showcase-poster-placeholder">${item.is_series ? "📺" : "🎬"}</div>`;
   const dateLine = isNewSeasons && item.next_season
     ? `Сезон ${item.next_season.season_number} — ${item.next_season.air_date}`
     : item.release_date;
-  row.innerHTML = `
-    ${poster}
-    <div class="showcase-info">
+
+  const infoBtn = document.createElement("div");
+  infoBtn.className = "showcase-info showcase-info-clickable";
+  infoBtn.innerHTML = `
+    ${posterHtml}
+    <div class="showcase-info-text">
       <div class="showcase-title">${escapeHtml(item.title)}</div>
       <div class="showcase-date">${escapeHtml(dateLine)}</div>
     </div>`;
+  row.appendChild(infoBtn);
+
   const actionSlot = document.createElement("div");
   actionSlot.className = "showcase-action";
   if (item.in_list) {
@@ -188,7 +213,8 @@ function showcaseRow(item, cat, isNewSeasons) {
     const btn = document.createElement("button");
     btn.className = "btn btn-primary btn-sm";
     btn.textContent = "Добавить";
-    btn.onclick = async () => {
+    btn.onclick = async (ev) => {
+      ev.stopPropagation();
       btn.disabled = true;
       try {
         await api(`/api/${cat}/add`, {
@@ -206,5 +232,59 @@ function showcaseRow(item, cat, isNewSeasons) {
     actionSlot.appendChild(btn);
   }
   row.appendChild(actionSlot);
-  return row;
+  wrap.appendChild(row);
+
+  const detail = document.createElement("div");
+  detail.className = "showcase-detail";
+  wrap.appendChild(detail);
+
+  let expanded = false;
+  infoBtn.onclick = async () => {
+    expanded = !expanded;
+    wrap.classList.toggle("expanded", expanded);
+    if (!expanded || !item.id) return;
+    const cacheKey = `${item.is_series ? "tv" : "movie"}:${item.id}`;
+    if (_mediaDetailsCache.has(cacheKey)) {
+      detail.innerHTML = renderShowcaseDetail(_mediaDetailsCache.get(cacheKey), item);
+      return;
+    }
+    detail.innerHTML = `<div class="spinner">Загрузка…</div>`;
+    try {
+      const data = await api(`/api/media/${item.is_series ? "tv" : "movie"}/${item.id}`);
+      _mediaDetailsCache.set(cacheKey, data);
+      if (expanded) detail.innerHTML = renderShowcaseDetail(data, item);
+    } catch (e) {
+      if (expanded) detail.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message || "Не удалось загрузить")}</div>`;
+    }
+  };
+
+  return wrap;
+}
+
+function renderShowcaseDetail(data, item) {
+  const rating = data.rating !== "—" ? `⭐️ ${data.rating}/10` : "⭐️ —";
+  let extra = "";
+  if (data.runtime && data.runtime !== "—") extra += `<div class="meta">⏳ ${escapeHtml(String(data.runtime))} мин.</div>`;
+  if (data.seasons) extra += `<div class="meta">📚 Сезонов: ${escapeHtml(String(data.seasons))} · 🎥 Эпизодов: ${escapeHtml(String(data.episodes ?? "—"))}</div>`;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const notReleasedYet = (item.release_date || "") > today;
+  let actionBtn = "";
+  if (notReleasedYet) {
+    if (data.trailer_url) {
+      actionBtn = `<a class="btn btn-primary btn-sm" href="${data.trailer_url}" target="_blank" rel="noopener">Трейлер</a>`;
+    }
+  } else if (data.watch_link) {
+    actionBtn = `<a class="btn btn-primary btn-sm" href="${data.watch_link}" target="_blank" rel="noopener">Смотреть онлайн</a>`;
+  }
+
+  return `
+    <div class="showcase-detail-body">
+      <div class="meta">${rating}</div>
+      ${extra}
+      <div class="meta">🎭 ${escapeHtml(data.genres || "—")}</div>
+      <div class="meta">👥 ${escapeHtml(data.actors || "—")}</div>
+      <div class="overview">${escapeHtml(data.overview || "")}</div>
+      ${actionBtn}
+    </div>`;
 }

@@ -11,7 +11,7 @@ import logging
 import random
 import re
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +28,7 @@ from app.db.database import (
 from app.services.tmdb import (
     get_movie_info, get_series_info, check_upcoming_released,
     discover_by_company, get_tv_next_episode, get_now_playing, get_upcoming_theatrical,
+    get_details_by_id,
 )
 from app.services.watch_link import find_watch_page_url
 from app.utils import paginate
@@ -356,17 +357,55 @@ async def api_showcase(studio: str) -> dict:
     return {"upcoming": upcoming, "released": released, "new_seasons": new_seasons}
 
 
+THEATERS_PAGE_SIZE = 10
+NOW_PLAYING_MAX_AGE_DAYS = 90
+
+
 @app.get("/api/theaters")
-async def api_theaters() -> dict:
+async def api_theaters(now_playing_page: int = 1, upcoming_page: int = 1) -> dict:
     """TMDb's own "now playing" / "upcoming" theatrical calendars — global,
     not tied to any studio, unlike /api/showcase/{studio}."""
     now_playing, upcoming = await asyncio.gather(get_now_playing(), get_upcoming_theatrical())
+
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=NOW_PLAYING_MAX_AGE_DAYS)).strftime("%Y-%m-%d")
+    now_playing = [m for m in now_playing if m.get("release_date", "") >= cutoff]
+    upcoming = [m for m in upcoming if m.get("release_date", "") >= today]
+
     own_list = {t.lower() for t in await get_items("movies")}
     for m in now_playing:
         m["in_list"] = m["title"].lower() in own_list
     for m in upcoming:
         m["in_list"] = m["title"].lower() in own_list
-    return {"now_playing": now_playing, "upcoming": upcoming}
+
+    now_playing_items, now_playing_page, now_playing_total_pages = paginate(
+        now_playing, now_playing_page, THEATERS_PAGE_SIZE
+    )
+    upcoming_items, upcoming_page, upcoming_total_pages = paginate(
+        upcoming, upcoming_page, THEATERS_PAGE_SIZE
+    )
+    return {
+        "now_playing": now_playing_items,
+        "now_playing_page": now_playing_page,
+        "now_playing_total_pages": now_playing_total_pages,
+        "upcoming": upcoming_items,
+        "upcoming_page": upcoming_page,
+        "upcoming_total_pages": upcoming_total_pages,
+    }
+
+
+@app.get("/api/media/{media_type}/{tmdb_id}")
+async def api_media_details(media_type: str, tmdb_id: int) -> dict:
+    """Full detail card for a showcase/theaters row — click-to-expand target,
+    keyed by TMDb id+type since these rows don't come from the user's own
+    lists (which use get_movie_info/get_series_info, title-search based)."""
+    if media_type not in ("movie", "tv"):
+        raise HTTPException(404, f"Unknown media type: {media_type}")
+    details = await get_details_by_id(tmdb_id, is_series=media_type == "tv")
+    if not details:
+        raise HTTPException(404, "Not found")
+    details["watch_link"] = await find_watch_page_url(details["title"])
+    return details
 
 
 @app.post("/api/{cat}/sequel")

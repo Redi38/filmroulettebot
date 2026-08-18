@@ -55,12 +55,12 @@ async function renderShowcaseContent() {
 
   const upcoming = data.upcoming.filter(m => showcaseTypeMatches(m) && showcaseAddedMatches(m));
   const released = data.released.filter(m => showcaseTypeMatches(m) && showcaseAddedMatches(m));
-  const newSeasons = (data.new_seasons || []).filter(showcaseTypeMatches);
+  const newSeasons = (data.new_seasons || []).filter(m => showcaseTypeMatches(m) && showcaseAddedMatches(m));
 
   await fadeOut(container);
   container.innerHTML = "";
 
-  if (!data.upcoming.length && !data.released.length) {
+  if (!data.upcoming.length && !data.released.length && !(data.new_seasons || []).length) {
     container.innerHTML = placeholderHtml("Пока нет данных о новых релизах — загляни попозже", "🎬");
     fadeIn(container);
     return;
@@ -72,7 +72,7 @@ async function renderShowcaseContent() {
   }
 
   if (newSeasons.length) {
-    container.appendChild(showcaseGroup("🔔 Новые сезоны твоих сериалов", newSeasons, currentCat, true));
+    container.appendChild(showcaseGroup("🔔 Новые сезоны", newSeasons, currentCat, true));
   }
   container.appendChild(showcaseGroup("⏳ Скоро выйдет", upcoming, currentCat));
   container.appendChild(showcaseGroup("✅ Уже вышло", released, currentCat));

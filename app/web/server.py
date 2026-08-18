@@ -339,14 +339,14 @@ async def api_showcase(studio: str) -> dict:
             if key and key not in tv_id_by_title and not _is_showcase_junk(m):
                 tv_id_by_title[key] = m
 
-    tracked = [tv_id_by_title[t] for t in own_list if t in tv_id_by_title and tv_id_by_title[t].get("id")]
+    tracked = [m for m in tv_id_by_title.values() if m.get("id")]
     next_episodes = await asyncio.gather(*(get_tv_next_episode(m["id"]) for m in tracked))
     new_seasons = []
     for m, nxt in zip(tracked, next_episodes):
         if not nxt:
             continue
         entry = dict(m)
-        entry["in_list"] = True
+        entry["in_list"] = (m.get("title") or "").strip().lower() in own_list
         entry["next_season"] = nxt
         new_seasons.append(entry)
     new_seasons.sort(key=lambda m: m["next_season"]["air_date"])

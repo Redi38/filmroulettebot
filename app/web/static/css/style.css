@@ -307,4 +307,16 @@ button.btn {
   }
   #showcase-section .showcase-filter-options { flex-direction: column; }
   #showcase-section .showcase-filter-btn { text-align: left; }
+
+  /* Larger, more readable cards for Marvel/DC showcase and "В прокате" on desktop */
+  main > #theaters-section.active { max-width: 760px; }
+  .showcase-item {
+    gap: 18px; padding: 16px 4px;
+  }
+  .showcase-poster {
+    width: 74px; height: 110px; border-radius: 10px;
+  }
+  .showcase-poster-placeholder { font-size: 2rem; }
+  .showcase-title { font-size: 1.15rem; white-space: normal; }
+  .showcase-date { font-size: 0.92rem; margin-top: 5px; }
 }

@@ -257,7 +257,7 @@ async def get_recent_history(limit: int = 50) -> list[dict[str, Any]]:
 
 
 @_retry_on_lock
-async def save_history(user_id: int, category: str, title: str) -> None:
+async def save_history(user_id: int, category: str, title: str) -> float:
     film_cats = ("movies", "cartoons")
     limit = settings.HISTORY_CLEAR_LIMIT
 
@@ -296,11 +296,13 @@ async def save_history(user_id: int, category: str, title: str) -> None:
                     (user_id, category, excess),
                 )
 
+        ts = time.time()
         await db.execute(
             "INSERT INTO history (user_id, category, title, timestamp) VALUES (?,?,?,?)",
-            (user_id, category, title, time.time()),
+            (user_id, category, title, ts),
         )
         await db.commit()
+        return ts
 
 
 @_retry_on_lock
@@ -314,6 +316,13 @@ async def clear_user_history(user_id: int) -> None:
 async def clear_all_history() -> None:
     async with _conn() as db:
         await db.execute("DELETE FROM history")
+        await db.commit()
+
+
+@_retry_on_lock
+async def clear_history_category(category: str) -> None:
+    async with _conn() as db:
+        await db.execute("DELETE FROM history WHERE category = ?", (category,))
         await db.commit()
 
 

@@ -1,9 +1,12 @@
-function loadResolvedSet() {
-  try { return new Set(JSON.parse(localStorage.getItem(RESOLVED_HIST_KEY) || "[]")); }
-  catch { return new Set(); }
+function loadResolvedMap() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(RESOLVED_HIST_KEY) || "{}");
+    if (Array.isArray(raw)) return {};
+    return raw && typeof raw === "object" ? raw : {};
+  } catch { return {}; }
 }
-function saveResolvedSet(set) {
-  try { localStorage.setItem(RESOLVED_HIST_KEY, JSON.stringify([...set])); } catch {}
+function saveResolvedMap(map) {
+  try { localStorage.setItem(RESOLVED_HIST_KEY, JSON.stringify(map)); } catch {}
 }
 function histKey(e) { return `${e.category}|${e.title}|${e.timestamp}`; }
 
@@ -47,6 +50,7 @@ function ensureHistoryShell() {
       if (historyFilter === code) return;
       historyFilter = code;
       [...tabs.children].forEach((c) => c.classList.toggle("active", c === btn));
+      resetClearButton();
       const list = document.getElementById("history-list");
       await fadeOut(list);
       renderHistoryList();
@@ -56,11 +60,58 @@ function ensureHistoryShell() {
   }
   container.appendChild(tabs);
 
+  const clearRow = document.createElement("div");
+  clearRow.className = "hist-clear-row";
+  const clearBtn = document.createElement("button");
+  clearBtn.id = "hist-clear-btn";
+  clearBtn.className = "btn btn-danger btn-sm";
+  clearBtn.textContent = "Очистить историю";
+  clearBtn.onclick = () => handleClearClick(clearBtn);
+  clearRow.appendChild(clearBtn);
+  container.appendChild(clearRow);
+
   const list = document.createElement("div");
   list.id = "history-list";
   container.appendChild(list);
 
   historyTabsRendered = true;
+}
+
+let clearConfirmTimer = null;
+function resetClearButton() {
+  clearTimeout(clearConfirmTimer);
+  const btn = document.getElementById("hist-clear-btn");
+  if (!btn) return;
+  btn.textContent = "Очистить историю";
+  btn.classList.remove("confirming");
+}
+
+function handleClearClick(btn) {
+  if (!btn.classList.contains("confirming")) {
+    btn.classList.add("confirming");
+    btn.textContent = "Точно очистить? Нажмите ещё раз";
+    clearConfirmTimer = setTimeout(() => resetClearButton(), 3000);
+    return;
+  }
+  clearTimeout(clearConfirmTimer);
+  clearHistoryCategory(historyFilter);
+}
+
+async function clearHistoryCategory(cat) {
+  const btn = document.getElementById("hist-clear-btn");
+  const list = document.getElementById("history-list");
+  try {
+    await api(`/api/history/${cat}/clear`, {method: "POST"});
+    historyItems = historyItems.filter((e) => e.category !== cat);
+    resetClearButton();
+    await fadeOut(list);
+    renderHistoryList();
+    fadeIn(list);
+    showToast(`История «${CATS[cat]}» очищена`);
+  } catch (e) {
+    resetClearButton();
+    showToast(e.message);
+  }
 }
 
 function renderHistoryList() {
@@ -76,18 +127,19 @@ function renderHistoryList() {
     return;
   }
 
-  const resolved = loadResolvedSet();
+  const resolved = loadResolvedMap();
   filtered.forEach(({ e, idx }) => {
     const div = document.createElement("div");
     const key = histKey(e);
-    const isResolved = resolved.has(key);
+    const outcome = resolved[key];
+    const isResolved = !!outcome;
     div.className = "hist-item" + (isResolved ? " resolved" : "");
     div.dataset.category = e.category;
     div.dataset.title = e.title;
     div.dataset.key = key;
     const date = new Date(e.timestamp * 1000).toLocaleString("ru-RU");
     const actionsHtml = isResolved
-      ? `<span class="muted">Обработано ✅</span>`
+      ? `<span class="muted">${resolvedOutcomeLabel(e.title, outcome)}</span>`
       : `<button class="btn btn-success btn-sm" onclick="histConfirm(${idx})">Подтвердить</button>`;
     div.innerHTML = `
       <div class="hist-title">${escapeHtml(e.title)}</div>
@@ -97,19 +149,27 @@ function renderHistoryList() {
   });
 }
 
+function resolvedOutcomeLabel(title, outcome) {
+  if (outcome.type === "sequel" && outcome.newTitle) {
+    return `🔄 ${escapeHtml(title)} → ${escapeHtml(outcome.newTitle)}`;
+  }
+  if (outcome.type === "delete") {
+    return `❌ Удалено`;
+  }
+  return `Обработано ✅`;
+}
+
 function histConfirm(idx) {
   const actionsEl = document.getElementById(`hist-actions-${idx}`);
-  const div = actionsEl.closest(".hist-item");
-  markResolved(div.dataset.key);
   actionsEl.innerHTML = `
     <button class="btn btn-success btn-sm" onclick="histSequel(${idx})">Сиквел</button>
     <button class="btn btn-danger btn-sm" onclick="histDelete(${idx})">Удалить</button>`;
 }
 
-function markResolved(key) {
-  const set = loadResolvedSet();
-  set.add(key);
-  saveResolvedSet(set);
+function markResolved(key, outcome) {
+  const map = loadResolvedMap();
+  map[key] = outcome || { type: "unknown" };
+  saveResolvedMap(map);
 }
 
 async function histSequel(idx) {
@@ -122,9 +182,9 @@ async function histSequel(idx) {
       body: JSON.stringify({title}),
     });
     showToast(`${title} → ${r.new_title}`);
-    markResolved(key);
+    markResolved(key, { type: "sequel", newTitle: r.new_title });
     div.classList.add("resolved");
-    actionsEl.innerHTML = `<span class="muted">Обработано ✅</span>`;
+    actionsEl.innerHTML = `<span class="muted">${resolvedOutcomeLabel(title, { type: "sequel", newTitle: r.new_title })}</span>`;
   } catch (e) { showToast(e.message); }
 }
 
@@ -138,8 +198,8 @@ async function histDelete(idx) {
       body: JSON.stringify({title}),
     });
     showToast(`${title} удалён`);
-    markResolved(key);
+    markResolved(key, { type: "delete" });
     div.classList.add("resolved");
-    actionsEl.innerHTML = `<span class="muted">Обработано ✅</span>`;
+    actionsEl.innerHTML = `<span class="muted">${resolvedOutcomeLabel(title, { type: "delete" })}</span>`;
   } catch (e) { showToast(e.message); }
 }

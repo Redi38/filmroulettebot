@@ -29,6 +29,8 @@ async function loadList(page) {
     container.innerHTML = '<div class="spinner">Загрузка…</div>';
     featured.style.opacity = "1";
     featured.innerHTML = "";
+    const countElReset = document.getElementById("list-count");
+    if (countElReset) countElReset.textContent = "";
   }
 
   const isFeaturedCat = currentCat === "marvel" || currentCat === "dc";
@@ -56,13 +58,16 @@ async function loadList(page) {
     }
 
     await fadeOut(container);
+    const countEl = document.getElementById("list-count");
     if (!data.total_count) {
+      if (countEl) countEl.textContent = "";
       container.innerHTML = q
         ? placeholderHtml(`Ничего не найдено по «${escapeHtml(q)}»`, "🔍")
         : placeholderHtml("Пока здесь пусто — добавь первый тайтл выше 🍿", "📭");
       fadeIn(container);
       return;
     }
+    if (countEl) countEl.textContent = `Всего: ${data.total_count}`;
     container.innerHTML = "";
     for (const title of data.items) {
       const row = document.createElement("div");

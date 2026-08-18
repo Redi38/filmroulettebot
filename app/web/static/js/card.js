@@ -120,6 +120,12 @@ function confirmPick() {
     </div>`;
 }
 
+function markCurrentPickResolved(outcome) {
+  if (!currentCardData || currentCardData.history_timestamp == null) return;
+  const key = `${currentCardData.category}|${currentCardData.original_title}|${currentCardData.history_timestamp}`;
+  markResolved(key, outcome);
+}
+
 async function sequelYes() {
   if (!currentCardData) return;
   try {
@@ -127,6 +133,7 @@ async function sequelYes() {
       method: "POST", headers: {"Content-Type": "application/json"},
       body: JSON.stringify({title: currentCardData.original_title}),
     });
+    markCurrentPickResolved({ type: "sequel", newTitle: r.new_title });
     resultEl().innerHTML =
       `<div class="card"><div class="title">🔄 ${escapeHtml(currentCardData.original_title)} → ${escapeHtml(r.new_title)}</div></div>`;
     currentCardData = null;
@@ -140,6 +147,7 @@ async function sequelNo() {
       method: "POST", headers: {"Content-Type": "application/json"},
       body: JSON.stringify({title: currentCardData.original_title}),
     });
+    markCurrentPickResolved({ type: "delete" });
     resultEl().innerHTML =
       `<div class="card"><div class="title">❌ ${escapeHtml(currentCardData.original_title)} удалён</div></div>`;
     currentCardData = null;

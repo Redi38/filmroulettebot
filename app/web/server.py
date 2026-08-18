@@ -23,7 +23,7 @@ from pydantic import BaseModel
 from app.db.database import (
     init_db, get_items, add_item, delete_item, item_exists,
     get_upcoming_movies, add_upcoming_movie, delete_upcoming_movie,
-    save_history, get_recent_history,
+    save_history, get_recent_history, clear_history_category,
 )
 from app.services.tmdb import (
     get_movie_info, get_series_info, check_upcoming_released,
@@ -95,7 +95,7 @@ def _next_sequel_title(item: str) -> str:
     return f"{m.group(1)} {int(m.group(2)) + 1}" if m else f"{item} 2"
 
 
-async def _card_data(cat: str, title: str) -> dict[str, Any]:
+async def _card_data(cat: str, title: str, history_timestamp: float | None = None) -> dict[str, Any]:
     info = (await get_series_info(title)) if cat == "series" else (await get_movie_info(title))
     info = info or {}
     display_title = info.get("title", title)
@@ -119,6 +119,7 @@ async def _card_data(cat: str, title: str) -> dict[str, Any]:
         "episodes": info.get("episodes"),
         "poster_url": info.get("poster_url"),
         "watch_link": link,
+        "history_timestamp": history_timestamp,
     }
 
 
@@ -155,6 +156,13 @@ async def api_history(limit: int = 50) -> dict:
     return {"items": await get_recent_history(limit)}
 
 
+@app.post("/api/history/{cat}/clear")
+async def api_history_clear(cat: str) -> dict:
+    _check_category(cat)
+    await clear_history_category(cat)
+    return {"ok": True}
+
+
 # ─── Random spin across movies/cartoons/series ──────────────────────────────
 @app.post("/api/random-spin")
 async def api_random_spin(request: Request) -> dict:
@@ -165,8 +173,8 @@ async def api_random_spin(request: Request) -> dict:
     cat = random.choice(non_empty)
     items = await get_items(cat)
     title = _pick_title(_client_ip(request), cat, items)
-    await save_history(WEB_USER_ID, cat, title)
-    return await _card_data(cat, title)
+    ts = await save_history(WEB_USER_ID, cat, title)
+    return await _card_data(cat, title, ts)
 
 
 # ─── Upcoming routes —───────────────────────────────────────────────────────
@@ -250,8 +258,8 @@ async def api_spin(cat: str, request: Request) -> dict:
     if not items:
         raise HTTPException(404, "List is empty")
     title = _pick_title(_client_ip(request), cat, items)
-    await save_history(WEB_USER_ID, cat, title)
-    return await _card_data(cat, title)
+    ts = await save_history(WEB_USER_ID, cat, title)
+    return await _card_data(cat, title, ts)
 
 
 @app.get("/api/{cat}/featured")
@@ -277,7 +285,7 @@ async def api_featured(cat: str) -> dict:
 
 STUDIO_QUERIES = {
     "marvel": ("Marvel Studios",),
-    "dc": ("DC Studios", "DC Films"),
+    "dc": ("DC Studios",),
 }
 
 SHOWCASE_TITLE_BLOCKLIST = (

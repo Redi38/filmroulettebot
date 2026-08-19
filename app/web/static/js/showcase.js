@@ -121,64 +121,147 @@ function showcaseFilterGroup(title, options, key) {
   return wrap;
 }
  
+function simpleAddedFilterGroup(storageKey, currentValue, onChange) {
+  const wrap = document.createElement("div");
+  wrap.className = "showcase-filter-group";
+  const h4 = document.createElement("h4");
+  h4.textContent = "Показывать";
+  wrap.appendChild(h4);
+  const row = document.createElement("div");
+  row.className = "showcase-filter-options";
+  for (const [value, label] of [["all", "Все"], ["hide", "Не добавленные"], ["only", "Уже добавленные"]]) {
+    const btn = document.createElement("button");
+    btn.className = "showcase-filter-btn" + (currentValue === value ? " active" : "");
+    btn.textContent = label;
+    btn.onclick = () => {
+      try { localStorage.setItem(storageKey, value); } catch {}
+      onChange(value);
+    };
+    row.appendChild(btn);
+  }
+  wrap.appendChild(row);
+  return wrap;
+}
+function loadSimpleAddedFilter(storageKey) {
+  try { return localStorage.getItem(storageKey) || "all"; } catch { return "all"; }
+}
+
 let theatersLoaded = false;
 let theatersNowPlayingPage = 1;
 let theatersUpcomingPage = 1;
+const THEATERS_FILTER_KEY = "filmroulette_theaters_filter";
+let theatersAddedFilter = loadSimpleAddedFilter(THEATERS_FILTER_KEY);
+
+function renderTheatersFilters() {
+  const section = document.getElementById("theaters-section");
+  let panel = document.getElementById("theaters-filters");
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.id = "theaters-filters";
+    panel.className = "filter-panel";
+    section.insertBefore(panel, document.getElementById("theaters-container"));
+  }
+  panel.innerHTML = "";
+  panel.appendChild(simpleAddedFilterGroup(THEATERS_FILTER_KEY, theatersAddedFilter, (value) => {
+    theatersAddedFilter = value;
+    theatersNowPlayingPage = 1;
+    theatersUpcomingPage = 1;
+    renderTheatersFilters();
+    loadTheaters();
+  }));
+}
 
 async function loadTheaters() {
   const container = document.getElementById("theaters-container");
+  renderTheatersFilters();
   if (!theatersLoaded) {
     container.style.opacity = "1";
     container.innerHTML = '<div class="spinner">Загрузка…</div>';
   }
   try {
-    const data = await api(`/api/theaters?now_playing_page=${theatersNowPlayingPage}&upcoming_page=${theatersUpcomingPage}`);
+    const data = await api(`/api/theaters?now_playing_page=${theatersNowPlayingPage}&upcoming_page=${theatersUpcomingPage}&added=${theatersAddedFilter}`);
     await fadeOut(container);
     theatersLoaded = true;
     container.innerHTML = "";
     if (!data.now_playing.length && !data.upcoming.length
         && data.now_playing_total_pages <= 1 && data.upcoming_total_pages <= 1) {
-      container.innerHTML = placeholderHtml("Пока нет данных о прокате — загляни попозже", "🎬");
+      container.innerHTML = placeholderHtml(
+        theatersAddedFilter === "all" ? "Пока нет данных о прокате — загляни попозже" : "Ничего не подходит под выбранный фильтр",
+        theatersAddedFilter === "all" ? "🎬" : "🔍"
+      );
       fadeIn(container);
       return;
     }
-    container.appendChild(showcaseGroup("🎬 Сейчас в прокате / вышло", data.now_playing, "movies", false, "now-playing"));
+    const colNow = document.createElement("div");
+    colNow.className = "theaters-col";
+    colNow.appendChild(showcaseGroup("🎬 Сейчас в прокате / вышло", data.now_playing, "movies", false, "now-playing"));
     if (data.now_playing_total_pages > 1) {
-      container.appendChild(paginationRow(data.now_playing_page, data.now_playing_total_pages, (p) => {
+      colNow.appendChild(paginationRow(data.now_playing_page, data.now_playing_total_pages, (p) => {
         theatersNowPlayingPage = p;
         loadTheaters();
       }));
     }
-    container.appendChild(showcaseGroup("⏳ Скоро в кино", data.upcoming, "movies", false, "upcoming"));
+    container.appendChild(colNow);
+
+    const colUpcoming = document.createElement("div");
+    colUpcoming.className = "theaters-col";
+    colUpcoming.appendChild(showcaseGroup("⏳ Скоро в кино", data.upcoming, "movies", false, "upcoming"));
     if (data.upcoming_total_pages > 1) {
-      container.appendChild(paginationRow(data.upcoming_page, data.upcoming_total_pages, (p) => {
+      colUpcoming.appendChild(paginationRow(data.upcoming_page, data.upcoming_total_pages, (p) => {
         theatersUpcomingPage = p;
         loadTheaters();
       }));
     }
+    container.appendChild(colUpcoming);
     fadeIn(container);
   } catch (e) {
     container.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
     fadeIn(container);
   }
+
 }
 
 let seriesReleasesLoaded = false;
 let seriesReleasesPage = 1;
+const SERIES_RELEASES_FILTER_KEY = "filmroulette_series_releases_filter";
+let seriesReleasesAddedFilter = loadSimpleAddedFilter(SERIES_RELEASES_FILTER_KEY);
+
+function renderSeriesReleasesFilters() {
+  const section = document.getElementById("series-releases-section");
+  let panel = document.getElementById("series-releases-filters");
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.id = "series-releases-filters";
+    panel.className = "filter-panel";
+    section.insertBefore(panel, document.getElementById("series-releases-container"));
+  }
+  panel.innerHTML = "";
+  panel.appendChild(simpleAddedFilterGroup(SERIES_RELEASES_FILTER_KEY, seriesReleasesAddedFilter, (value) => {
+    seriesReleasesAddedFilter = value;
+    seriesReleasesPage = 1;
+    renderSeriesReleasesFilters();
+    loadSeriesReleases();
+  }));
+}
+
 async function loadSeriesReleases() {
   const container = document.getElementById("series-releases-container");
+  renderSeriesReleasesFilters();
   if (!seriesReleasesLoaded) {
     container.style.opacity = "1";
     container.innerHTML = '<div class="spinner">Загрузка…</div>';
   }
   try {
-    const data = await api(`/api/series-releases?page=${seriesReleasesPage}`);
+    const data = await api(`/api/series-releases?page=${seriesReleasesPage}&added=${seriesReleasesAddedFilter}`);
     await fadeOut(container);
     seriesReleasesLoaded = true;
     container.innerHTML = "";
     const releases = data.releases || [];
     if (!releases.length && data.total_pages <= 1) {
-      container.innerHTML = placeholderHtml("Пока нет анонсированных премьер с рейтингом 7+ — загляни попозже", "📺");
+      container.innerHTML = placeholderHtml(
+        seriesReleasesAddedFilter === "all" ? "Пока нет анонсированных премьер с рейтингом 7+ — загляни попозже" : "Ничего не подходит под выбранный фильтр",
+        seriesReleasesAddedFilter === "all" ? "📺" : "🔍"
+      );
       fadeIn(container);
       return;
     }
@@ -225,7 +308,9 @@ function showcaseRow(item, cat, isNewSeasons, addMode) {
     ? `<img class="showcase-poster" src="${item.poster_url}">`
     : `<div class="showcase-poster showcase-poster-placeholder">${item.is_series ? "📺" : "🎬"}</div>`;
   const dateLine = isNewSeasons && item.next_season
-    ? `Сезон ${item.next_season.season_number} — ${item.next_season.air_date}`
+    ? (item.airing_now
+        ? `📅 Сезон ${item.next_season.season_number} выходит — финал ${item.season_finale_date}`
+        : `Сезон ${item.next_season.season_number} — ${item.next_season.air_date}`)
     : item.is_new_season
     ? `🆕 Новый сезон — ${item.release_date}`
     : item.airing_now

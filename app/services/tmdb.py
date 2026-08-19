@@ -145,6 +145,12 @@ async def get_details_by_id(tmdb_id: int, is_series: bool) -> dict[str, Any] | N
         return None
     credits, videos = await asyncio.gather(
         _get(f"/{kind}/{tmdb_id}/credits"),
+        # TMDb's /videos endpoint filters strictly by `language` (unlike most
+        # other endpoints, where it only affects translated text fields) —
+        # with the default ru-RU this silently drops the many trailers that
+        # are only tagged en-US, so most upcoming titles showed no trailer.
+        # include_video_language pulls in Russian and English (and untagged)
+        # videos regardless of the request's own `language`.
         _get(f"/{kind}/{tmdb_id}/videos", include_video_language="ru,en,null"),
     )
     credits = credits or {}
@@ -367,6 +373,9 @@ async def discover_by_company(
     response_date_field = "first_air_date" if is_series else "release_date"
     one_year_ago = (datetime.now(timezone.utc) - timedelta(days=365)).strftime("%Y-%m-%d")
 
+    # TMDb returns 20 results/page — a studio with 20+ titles in-window
+    # would silently cut off the newest/announced ones (sorted to the end)
+    # if we only fetched page 1. Walk a few pages so nothing gets dropped.
     MAX_PAGES = 5
     results: list[dict[str, Any]] = []
     page = 1
@@ -467,7 +476,7 @@ async def _search_tv_cached(title: str) -> dict[str, Any] | None:
     return data
 
 
-async def _get_season_finale_date(tv_id: int, season_number: int) -> str | None:
+async def get_season_finale_date(tv_id: int, season_number: int) -> str | None:
     """Air date of a season's last known episode — used so a season that's
     already mid-release shows "complete by X" instead of just its next
     episode's date, which for a still-airing season isn't very useful."""
@@ -520,8 +529,10 @@ async def get_series_releases(region: str = "UA", pages: int = 2) -> list[dict[s
     next_eps = await asyncio.gather(*(get_tv_next_episode(r["id"]) for r in unique))
     pairs = [(r, nxt) for r, nxt in zip(unique, next_eps) if nxt and nxt.get("air_date")]
 
+    # A season already partway through airing (next episode isn't #1) gets
+    # its finale date resolved instead of just the next episode's date.
     finales = await asyncio.gather(*(
-        _get_season_finale_date(r["id"], nxt["season_number"])
+        get_season_finale_date(r["id"], nxt["season_number"])
         if (nxt.get("episode_number") or 1) > 1 and nxt.get("season_number")
         else asyncio.sleep(0)
         for r, nxt in pairs

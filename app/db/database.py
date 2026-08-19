@@ -16,9 +16,8 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-ALLOWED_TABLES = frozenset({"movies", "cartoons", "series", "dc", "marvel", "upcoming_movies"})
-# Таблицы, у которых должна быть регистронезависимая уникальность title.
-_NOCASE_TABLES = ("movies", "cartoons", "series", "dc", "marvel", "upcoming_movies")
+ALLOWED_TABLES = frozenset({"movies", "cartoons", "series", "dc", "marvel", "upcoming_movies", "tracked_series"})
+_NOCASE_TABLES = ("movies", "cartoons", "series", "dc", "marvel", "upcoming_movies", "tracked_series")
 
 _CACHE_PURGE_PROBABILITY = 0.05
 _CACHE_PURGE_MAX_AGE = 30 * 24 * 3600  # 30 days safety net
@@ -135,6 +134,7 @@ async def init_db() -> None:
             CREATE TABLE IF NOT EXISTS dc            (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE NOCASE);
             CREATE TABLE IF NOT EXISTS marvel        (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE NOCASE);
             CREATE TABLE IF NOT EXISTS upcoming_movies (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE NOCASE);
+            CREATE TABLE IF NOT EXISTS tracked_series  (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE NOCASE);
 
             CREATE TABLE IF NOT EXISTS tmdb_cache (
                 cache_key TEXT PRIMARY KEY,

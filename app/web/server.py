@@ -30,6 +30,7 @@ from app.services.tmdb import (
     get_movie_info, get_series_info, check_upcoming_released,
     discover_by_company, get_tv_next_episode, get_now_playing, get_upcoming_theatrical,
     get_details_by_id, get_series_releases, is_digitally_released, get_season_finale_date,
+    get_tracked_series_status,
 )
 from app.services.watch_link import find_watch_page_url
 from app.utils import build_watch_link, paginate
@@ -225,6 +226,33 @@ async def api_upcoming_check() -> dict:
 
 
 # ─── Generic per-category routes ────────────────────────────────────────────
+@app.get("/api/tracked-series")
+async def api_tracked_series() -> dict:
+    """The user's personal 'notify me about the next season' list — distinct
+    from the Сериалы roulette category, which is about picking something to
+    watch now, not tracking a specific show's future releases."""
+    titles = await get_items("tracked_series")
+    items = await get_tracked_series_status(titles) if titles else []
+    return {"items": items}
+
+
+@app.post("/api/tracked-series/add")
+async def api_tracked_series_add(body: TitleBody) -> dict:
+    title = body.title.strip()
+    if not title:
+        raise HTTPException(400, "Title can't be empty")
+    if await item_exists("tracked_series", title):
+        raise HTTPException(409, f"«{title}» уже отслеживается")
+    await add_item("tracked_series", title)
+    return {"ok": True}
+
+
+@app.post("/api/tracked-series/delete")
+async def api_tracked_series_delete(body: TitleBody) -> dict:
+    await delete_item("tracked_series", body.title)
+    return {"ok": True}
+
+
 @app.get("/api/{cat}/items")
 async def api_items(cat: str, page: int = 1, q: str = "") -> dict:
     _check_category(cat)

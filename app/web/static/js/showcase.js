@@ -287,6 +287,51 @@ async function loadSeriesReleases() {
     fadeIn(container);
   }
 }
+
+let trackedSeriesLoaded = false;
+async function loadTrackedSeries() {
+  const container = document.getElementById("tracked-series-container");
+  if (!trackedSeriesLoaded) {
+    container.style.opacity = "1";
+    container.innerHTML = '<div class="spinner">Загрузка…</div>';
+  }
+  try {
+    const data = await api(`/api/tracked-series`);
+    await fadeOut(container);
+    trackedSeriesLoaded = true;
+    container.innerHTML = "";
+    const items = data.items || [];
+    if (!items.length) {
+      container.innerHTML = placeholderHtml(
+        "Пока ничего не отслеживается — добавь сериал выше, и здесь появится дата следующего сезона 🔔", "🔔"
+      );
+      fadeIn(container);
+      return;
+    }
+    container.appendChild(showcaseGroup("🔔 Отслеживаемые сериалы", items, "series", false, "tracked-series"));
+    fadeIn(container);
+  } catch (e) {
+    container.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
+    fadeIn(container);
+  }
+}
+
+document.getElementById("tracked-series-add-btn").onclick = async () => {
+  const input = document.getElementById("tracked-series-add-input");
+  const title = input.value.trim();
+  if (!title) return;
+  try {
+    await api("/api/tracked-series/add", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({title}),
+    });
+    input.value = "";
+    loadTrackedSeries();
+  } catch (e) { showToast(e.message); }
+};
+document.getElementById("tracked-series-add-input").addEventListener("keydown", (ev) => {
+  if (ev.key === "Enter") document.getElementById("tracked-series-add-btn").click();
+});
  
 const _mediaDetailsCache = new Map();
 
@@ -316,7 +361,17 @@ function showcaseRow(item, cat, isNewSeasons, addMode, skipScope, onSkipSettled)
   const posterHtml = item.poster_url
     ? `<img class="showcase-poster" src="${item.poster_url}">`
     : `<div class="showcase-poster showcase-poster-placeholder">${item.is_series ? "📺" : "🎬"}</div>`;
-  const dateLine = isNewSeasons && item.next_season
+  const dateLine = addMode === "tracked-series"
+    ? (item.status === "not_found"
+        ? "⚠️ Не найдено на TMDb"
+        : item.status === "no_upcoming"
+        ? "Нет анонса нового сезона"
+        : item.is_new_season
+        ? `🆕 Новый сезон — ${item.release_date}`
+        : item.airing_now
+        ? `📅 Сезон выходит — финал ${item.release_date}`
+        : item.release_date)
+    : isNewSeasons && item.next_season
     ? (item.airing_now
         ? `📅 Сезон ${item.next_season.season_number} выходит — финал ${item.season_finale_date}`
         : `Сезон ${item.next_season.season_number} — ${item.next_season.air_date}`)
@@ -340,7 +395,33 @@ function showcaseRow(item, cat, isNewSeasons, addMode, skipScope, onSkipSettled)
 
   const actionSlot = document.createElement("div");
   actionSlot.className = "showcase-action";
-  if (item.in_list) {
+  if (addMode === "tracked-series") {
+    const del = document.createElement("button");
+    del.className = "del-btn";
+    del.innerHTML = TRASH_ICON_SVG;
+    del.onclick = (ev) => {
+      ev.stopPropagation();
+      const rowParent = wrap.parentNode;
+      const rowNext = wrap.nextSibling;
+      removeRowOptimistically(wrap, () => api("/api/tracked-series/delete", {
+        method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({title: item.title}),
+      }), () => {
+        showInlineUndo(rowParent, rowNext, `«${item.title}» больше не отслеживается`, "Отменить", async () => {
+          try {
+            await api("/api/tracked-series/add", {
+              method: "POST", headers: {"Content-Type": "application/json"},
+              body: JSON.stringify({title: item.title}),
+            });
+            if (onSkipSettled) onSkipSettled();
+          } catch (e) {
+            showToast("Не удалось восстановить");
+          }
+        });
+      });
+    };
+    actionSlot.appendChild(del);
+  } else if (item.in_list) {
     actionSlot.innerHTML = `<span class="muted">✓ В списке</span>`;
   } else {
     const btn = document.createElement("button");

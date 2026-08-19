@@ -53,6 +53,22 @@ def _pick_title(client_key: str, cat: str, items: list[str]) -> str:
     return title
 
 
+WHEEL_POOL_SIZE = 10  # segments shown on the "wheel" spin animation, winner included
+
+
+def _build_wheel_pool(items: list[str], winner: str, size: int = WHEEL_POOL_SIZE) -> list[str]:
+    """Sample a handful of titles (including the winner) to display as wheel
+    segments for the front-end's roulette-wheel spin animation. Keeps the
+    winner's exact position hidden from the client until it computes the
+    index itself, same random sample each call.
+    """
+    others = [i for i in items if i != winner]
+    random.shuffle(others)
+    pool = others[: max(size - 1, 0)] + [winner]
+    random.shuffle(pool)
+    return pool
+
+
 _featured_cache: dict[str, tuple[dict, float]] = {}
 FEATURED_CACHE_TTL = 600  # 10 min
 
@@ -182,7 +198,9 @@ async def api_random_spin(request: Request) -> dict:
     items = await get_items(cat)
     title = _pick_title(_client_ip(request), cat, items)
     ts = await save_history(WEB_USER_ID, cat, title)
-    return await _card_data(cat, title, ts)
+    data = await _card_data(cat, title, ts)
+    data["wheel_pool"] = _build_wheel_pool(items, title)
+    return data
 
 
 # ─── Upcoming routes —───────────────────────────────────────────────────────
@@ -294,7 +312,9 @@ async def api_spin(cat: str, request: Request) -> dict:
         raise HTTPException(404, "List is empty")
     title = _pick_title(_client_ip(request), cat, items)
     ts = await save_history(WEB_USER_ID, cat, title)
-    return await _card_data(cat, title, ts)
+    data = await _card_data(cat, title, ts)
+    data["wheel_pool"] = _build_wheel_pool(items, title)
+    return data
 
 
 @app.get("/api/{cat}/featured")

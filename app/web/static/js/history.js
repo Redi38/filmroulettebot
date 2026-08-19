@@ -66,6 +66,7 @@ function ensureHistoryShell() {
   clearBtn.id = "hist-clear-btn";
   clearBtn.className = "btn btn-danger";
   clearBtn.textContent = "Очистить историю";
+  clearBtn.disabled = true;
   clearBtn.onclick = () => handleClearClick(clearBtn);
   clearRow.appendChild(clearBtn);
   container.appendChild(clearRow);
@@ -84,6 +85,13 @@ function resetClearButton() {
   if (!btn) return;
   btn.textContent = "Очистить историю";
   btn.classList.remove("confirming");
+}
+
+function updateClearButtonState(hasItems) {
+  const btn = document.getElementById("hist-clear-btn");
+  if (!btn) return;
+  btn.disabled = !hasItems;
+  if (!hasItems) resetClearButton();
 }
 
 function handleClearClick(btn) {
@@ -124,8 +132,10 @@ function renderHistoryList() {
 
   if (!filtered.length) {
     list.innerHTML = placeholderHtml(`В категории «${CATS[historyFilter]}» пока нет истории — она появится после первого ролла 🎲`, "📜");
+    updateClearButtonState(false);
     return;
   }
+  updateClearButtonState(true);
 
   const resolved = loadResolvedMap();
   filtered.forEach(({ e, idx }) => {

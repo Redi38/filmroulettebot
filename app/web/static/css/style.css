@@ -225,6 +225,40 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
   border-color: transparent; color: white;
 }
 .spinner { text-align: center; padding: 30px; color: var(--muted); width: 100%; }
+
+/* ─── Spin mode toggle (classic vs. wheel) ─────────────────────────────── */
+.spin-mode-toggle-wrap { display: flex; justify-content: center; margin-bottom: 14px; }
+.spin-mode-toggle {
+  display: inline-flex; gap: 6px; padding: 12px 14px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+}
+
+/* ─── Roulette wheel ────────────────────────────────────────────────────── */
+.wheel-wrap { display: none; flex-direction: column; align-items: center; margin-bottom: 20px; }
+.wheel-holder {
+  position: relative; width: 280px; max-width: 84vw; aspect-ratio: 1 / 1;
+  display: flex; align-items: center; justify-content: center;
+  filter: drop-shadow(0 10px 26px rgba(0,0,0,0.35));
+}
+.wheel-canvas {
+  width: 100%; height: 100%; border-radius: 50%;
+  border: 4px solid var(--border); background: var(--card);
+  will-change: transform;
+}
+.wheel-pointer {
+  position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
+  width: 0; height: 0; z-index: 2;
+  border-left: 13px solid transparent; border-right: 13px solid transparent;
+  border-top: 22px solid var(--danger);
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+}
+.wheel-hub {
+  position: absolute; width: 20px; height: 20px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--primary-2));
+  border: 2px solid var(--border); z-index: 1;
+}
+.wheel-wrap.wheel-done .wheel-holder { animation: wheelPop 0.4s ease; }
+@keyframes wheelPop { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
 .toast {
   position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
   background: linear-gradient(135deg, var(--success), #16a97a); color: white; padding: 9px 20px; border-radius: 24px;

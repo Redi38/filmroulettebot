@@ -194,7 +194,10 @@ async function loadTheaters() {
     }
     const colNow = document.createElement("div");
     colNow.className = "theaters-col";
-    colNow.appendChild(showcaseGroup("🎬 Сейчас в прокате / вышло", data.now_playing, "movies", false, "now-playing"));
+    colNow.appendChild(showcaseGroup(
+      "🎬 Сейчас в прокате / вышло", data.now_playing, "movies", false, "now-playing",
+      "theaters_now_playing", loadTheaters,
+    ));
     if (data.now_playing_total_pages > 1) {
       colNow.appendChild(paginationRow(data.now_playing_page, data.now_playing_total_pages, (p) => {
         theatersNowPlayingPage = p;
@@ -205,7 +208,10 @@ async function loadTheaters() {
 
     const colUpcoming = document.createElement("div");
     colUpcoming.className = "theaters-col";
-    colUpcoming.appendChild(showcaseGroup("⏳ Скоро в кино", data.upcoming, "movies", false, "upcoming"));
+    colUpcoming.appendChild(showcaseGroup(
+      "⏳ Скоро в кино", data.upcoming, "movies", false, "upcoming",
+      "theaters_upcoming", loadTheaters,
+    ));
     if (data.upcoming_total_pages > 1) {
       colUpcoming.appendChild(paginationRow(data.upcoming_page, data.upcoming_total_pages, (p) => {
         theatersUpcomingPage = p;
@@ -265,7 +271,10 @@ async function loadSeriesReleases() {
       fadeIn(container);
       return;
     }
-    container.appendChild(showcaseGroup("📺 Премьеры и новые сезоны", releases, "series"));
+    container.appendChild(showcaseGroup(
+      "📺 Премьеры и новые сезоны", releases, "series", false, null,
+      "series_releases", loadSeriesReleases,
+    ));
     if (data.total_pages > 1) {
       container.appendChild(paginationRow(data.page, data.total_pages, (p) => {
         seriesReleasesPage = p;
@@ -281,7 +290,7 @@ async function loadSeriesReleases() {
  
 const _mediaDetailsCache = new Map();
 
-function showcaseGroup(title, items, cat, isNewSeasons, addMode) {
+function showcaseGroup(title, items, cat, isNewSeasons, addMode, skipScope, onSkipSettled) {
   const group = document.createElement("div");
   group.className = "check-group";
   const h3 = document.createElement("h3");
@@ -294,11 +303,11 @@ function showcaseGroup(title, items, cat, isNewSeasons, addMode) {
     group.appendChild(empty);
     return group;
   }
-  for (const item of items) group.appendChild(showcaseRow(item, cat, isNewSeasons, addMode));
+  for (const item of items) group.appendChild(showcaseRow(item, cat, isNewSeasons, addMode, skipScope, onSkipSettled));
   return group;
 }
 
-function showcaseRow(item, cat, isNewSeasons, addMode) {
+function showcaseRow(item, cat, isNewSeasons, addMode, skipScope, onSkipSettled) {
   const wrap = document.createElement("div");
   wrap.className = "showcase-item-wrap";
 
@@ -378,6 +387,57 @@ function showcaseRow(item, cat, isNewSeasons, addMode) {
       }
     };
     actionSlot.appendChild(btn);
+
+    if (skipScope) {
+      actionSlot.classList.add("showcase-action-stack");
+      const skipBtn = document.createElement("button");
+      skipBtn.className = "btn btn-ghost";
+      skipBtn.textContent = "Скип";
+      let confirmTimer = null;
+      const doSkip = async () => {
+        skipBtn.disabled = true;
+        try {
+          await api("/api/skip", {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({scope: skipScope, title: item.title}),
+          });
+          const rowParent = wrap.parentNode;
+          const rowNext = wrap.nextSibling;
+          wrap.remove();
+          let undoClicked = false;
+          showInlineUndo(rowParent, rowNext, `«${item.title}» скрыт`, "Отменить", async () => {
+            undoClicked = true;
+            try {
+              await api("/api/unskip", {
+                method: "POST", headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({scope: skipScope, title: item.title}),
+              });
+            } catch (e) {}
+            if (onSkipSettled) onSkipSettled();
+          }, () => {
+            if (!undoClicked && onSkipSettled) onSkipSettled();
+          });
+        } catch (e) {
+          skipBtn.disabled = false;
+          showToast(e.message || "Не удалось скрыть");
+        }
+      };
+      skipBtn.onclick = (ev) => {
+        ev.stopPropagation();
+        if (!skipBtn.classList.contains("confirming")) {
+          skipBtn.classList.add("confirming");
+          skipBtn.textContent = "Точно? Ещё раз";
+          confirmTimer = setTimeout(() => {
+            skipBtn.classList.remove("confirming");
+            skipBtn.textContent = "Скип";
+          }, 3000);
+          return;
+        }
+        clearTimeout(confirmTimer);
+        doSkip();
+      };
+      actionSlot.appendChild(skipBtn);
+    }
   }
   row.appendChild(actionSlot);
   wrap.appendChild(row);

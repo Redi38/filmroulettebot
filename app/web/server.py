@@ -24,6 +24,7 @@ from app.db.database import (
     init_db, get_items, add_item, delete_item, item_exists,
     get_upcoming_movies, add_upcoming_movie, delete_upcoming_movie,
     save_history, get_recent_history, clear_history_category,
+    get_skipped, add_skipped, remove_skipped, SKIP_SCOPES,
 )
 from app.services.tmdb import (
     get_movie_info, get_series_info, check_upcoming_released,
@@ -134,6 +135,11 @@ class MoveBody(BaseModel):
 
 
 class SequelBody(BaseModel):
+    title: str
+
+
+class SkipBody(BaseModel):
+    scope: str
     title: str
 
 
@@ -384,16 +390,22 @@ async def api_theaters(now_playing_page: int = 1, upcoming_page: int = 1, added:
     """TMDb's own "now playing" / "upcoming" theatrical calendars — global,
     not tied to any studio, unlike /api/showcase/{studio}. Movies and
     cartoons only; series live on their own /api/series-releases tab."""
-    now_playing, upcoming, own_movies, own_cartoons, own_upcoming = await asyncio.gather(
+    now_playing, upcoming, own_movies, own_cartoons, own_upcoming, skipped_now, skipped_upcoming = await asyncio.gather(
         get_now_playing(), get_upcoming_theatrical(),
         get_items("movies"), get_items("cartoons"),
         get_upcoming_movies(),
+        get_skipped("theaters_now_playing"), get_skipped("theaters_upcoming"),
     )
 
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     cutoff = (datetime.now(timezone.utc) - timedelta(days=NOW_PLAYING_MAX_AGE_DAYS)).strftime("%Y-%m-%d")
     now_playing = [m for m in now_playing if m.get("release_date", "") >= cutoff]
     upcoming = [m for m in upcoming if m.get("release_date", "") >= today]
+
+    skipped_now_set = {t.lower() for t in skipped_now}
+    skipped_upcoming_set = {t.lower() for t in skipped_upcoming}
+    now_playing = [m for m in now_playing if m["title"].lower() not in skipped_now_set]
+    upcoming = [m for m in upcoming if m["title"].lower() not in skipped_upcoming_set]
 
     own_all = {t.lower() for t in (*own_movies, *own_cartoons)}
     own_upcoming_set = {t.lower() for t in own_upcoming}
@@ -437,8 +449,12 @@ async def api_series_releases(page: int = 1, added: str = "all") -> dict:
     """Popular TV shows airing new seasons/episodes soon — global TMDb
     discovery (not tied to the user's own series list), separate from the
     movies/cartoons-only /api/theaters tab. Rating 7+ only."""
-    releases, own_series = await asyncio.gather(get_series_releases(), get_items("series"))
+    releases, own_series, skipped = await asyncio.gather(
+        get_series_releases(), get_items("series"), get_skipped("series_releases"),
+    )
     releases = [m for m in releases if isinstance(m.get("rating"), (int, float)) and m["rating"] >= 7]
+    skipped_set = {t.lower() for t in skipped}
+    releases = [m for m in releases if (m.get("title") or "").strip().lower() not in skipped_set]
     own_series_set = {t.lower() for t in own_series}
     for m in releases:
         m["in_list"] = (m.get("title") or "").strip().lower() in own_series_set
@@ -448,6 +464,25 @@ async def api_series_releases(page: int = 1, added: str = "all") -> dict:
         releases = [m for m in releases if m["in_list"]]
     items, page, total_pages = paginate(releases, page, THEATERS_PAGE_SIZE)
     return {"releases": items, "page": page, "total_pages": total_pages}
+
+
+@app.post("/api/skip")
+async def api_skip(body: SkipBody) -> dict:
+    """Hide a title from Афиша/Премьеры сериалов — it's not user-list data
+    (these tabs show global TMDb discovery, not the user's own titles), so
+    "not interested" is tracked separately per tab via skipped_titles."""
+    if body.scope not in SKIP_SCOPES:
+        raise HTTPException(400, f"Unknown skip scope: {body.scope!r}")
+    await add_skipped(body.scope, body.title)
+    return {"ok": True}
+
+
+@app.post("/api/unskip")
+async def api_unskip(body: SkipBody) -> dict:
+    if body.scope not in SKIP_SCOPES:
+        raise HTTPException(400, f"Unknown skip scope: {body.scope!r}")
+    await remove_skipped(body.scope, body.title)
+    return {"ok": True}
 
 
 @app.get("/api/media/{media_type}/{tmdb_id}")

@@ -145,12 +145,6 @@ async def get_details_by_id(tmdb_id: int, is_series: bool) -> dict[str, Any] | N
         return None
     credits, videos = await asyncio.gather(
         _get(f"/{kind}/{tmdb_id}/credits"),
-        # TMDb's /videos endpoint filters strictly by `language` (unlike most
-        # other endpoints, where it only affects translated text fields) —
-        # with the default ru-RU this silently drops the many trailers that
-        # are only tagged en-US, so most upcoming titles showed no trailer.
-        # include_video_language pulls in Russian and English (and untagged)
-        # videos regardless of the request's own `language`.
         _get(f"/{kind}/{tmdb_id}/videos", include_video_language="ru,en,null"),
     )
     credits = credits or {}
@@ -373,9 +367,6 @@ async def discover_by_company(
     response_date_field = "first_air_date" if is_series else "release_date"
     one_year_ago = (datetime.now(timezone.utc) - timedelta(days=365)).strftime("%Y-%m-%d")
 
-    # TMDb returns 20 results/page — a studio with 20+ titles in-window
-    # would silently cut off the newest/announced ones (sorted to the end)
-    # if we only fetched page 1. Walk a few pages so nothing gets dropped.
     MAX_PAGES = 5
     results: list[dict[str, Any]] = []
     page = 1
@@ -448,9 +439,18 @@ async def get_tv_next_episode(tv_id: int) -> dict[str, Any] | None:
 
 
 def _format_movie_results(results: list[dict]) -> list[dict[str, Any]]:
-    return [
-        {
-            "id": m.get("id"),
+    seen: set[int] = set()
+    out: list[dict[str, Any]] = []
+    for m in results:
+        mid = m.get("id")
+        if mid is not None:
+            if mid in seen:
+                continue
+            seen.add(mid)
+        if not m.get("release_date"):
+            continue
+        out.append({
+            "id": mid,
             "title": m.get("title"),
             "original_title": m.get("original_title") or "",
             "release_date": m.get("release_date") or "",
@@ -458,10 +458,8 @@ def _format_movie_results(results: list[dict]) -> list[dict[str, Any]]:
             "overview": m.get("overview") or "",
             "rating": round(m["vote_average"], 1) if m.get("vote_average") else "—",
             "is_series": False,
-        }
-        for m in results
-        if m.get("release_date")
-    ]
+        })
+    return out
 
 
 async def _search_tv_cached(title: str) -> dict[str, Any] | None:
@@ -492,7 +490,7 @@ async def get_season_finale_date(tv_id: int, season_number: int) -> str | None:
     return finale
 
 
-async def get_series_releases(region: str = "UA", pages: int = 2) -> list[dict[str, Any]]:
+async def get_series_releases(region: str = "UA", pages: int = 3) -> list[dict[str, Any]]:
     """Popular TV shows with an episode airing soon — new seasons of
     returning shows AND freshly debuting series, global TMDb discovery,
     independent of the user's own tracked list (unlike the old per-title
@@ -529,8 +527,6 @@ async def get_series_releases(region: str = "UA", pages: int = 2) -> list[dict[s
     next_eps = await asyncio.gather(*(get_tv_next_episode(r["id"]) for r in unique))
     pairs = [(r, nxt) for r, nxt in zip(unique, next_eps) if nxt and nxt.get("air_date")]
 
-    # A season already partway through airing (next episode isn't #1) gets
-    # its finale date resolved instead of just the next episode's date.
     finales = await asyncio.gather(*(
         get_season_finale_date(r["id"], nxt["season_number"])
         if (nxt.get("episode_number") or 1) > 1 and nxt.get("season_number")
@@ -575,28 +571,50 @@ async def is_digitally_released(movie_id: int, release_date: str) -> bool:
     return days_ago >= 0 if digital_date_str else days_ago >= 45
 
 
-async def get_now_playing(region: str = "UA") -> list[dict[str, Any]]:
-    """Movies currently in theaters, per TMDb's own now_playing endpoint."""
-    cache_key = f"now_playing:{region}"
+async def get_now_playing(region: str = "UA", pages: int = 3) -> list[dict[str, Any]]:
+    """Movies currently in theaters, per TMDb's own now_playing endpoint.
+
+    Fetches several pages (TMDb returns 20/page) rather than just the first —
+    a single page leaves too small a pool once the freshness cutoff and any
+    skipped titles are filtered out, so a skip has nothing left to backfill
+    the page with.
+    """
+    cache_key = f"now_playing:{region}:{pages}"
     cached = await get_tmdb_cache(cache_key, DISCOVER_CACHE_TTL)
     if cached is not None:
         return cached
-    data = await _get("/movie/now_playing", region=region)
-    out = _format_movie_results((data or {}).get("results", []))
+    raw: list[dict[str, Any]] = []
+    for page in range(1, pages + 1):
+        data = await _get("/movie/now_playing", region=region, page=page)
+        if not data or not data.get("results"):
+            break
+        raw.extend(data["results"])
+        if page >= (data.get("total_pages") or 1):
+            break
+    out = _format_movie_results(raw)
     await set_tmdb_cache(cache_key, out)
     return out
 
 
-async def get_upcoming_theatrical(region: str = "UA") -> list[dict[str, Any]]:
+async def get_upcoming_theatrical(region: str = "UA", pages: int = 3) -> list[dict[str, Any]]:
     """Movies with an upcoming theatrical release, per TMDb's own upcoming
     endpoint — distinct from the user's own manually-tracked upcoming list
-    in the database, this is TMDb's global release calendar."""
-    cache_key = f"upcoming_theatrical:{region}"
+    in the database, this is TMDb's global release calendar. Same
+    multi-page fetch as get_now_playing, for the same reason (skip backfill
+    needs a reserve pool beyond one page)."""
+    cache_key = f"upcoming_theatrical:{region}:{pages}"
     cached = await get_tmdb_cache(cache_key, DISCOVER_CACHE_TTL)
     if cached is not None:
         return cached
-    data = await _get("/movie/upcoming", region=region)
-    out = _format_movie_results((data or {}).get("results", []))
+    raw: list[dict[str, Any]] = []
+    for page in range(1, pages + 1):
+        data = await _get("/movie/upcoming", region=region, page=page)
+        if not data or not data.get("results"):
+            break
+        raw.extend(data["results"])
+        if page >= (data.get("total_pages") or 1):
+            break
+    out = _format_movie_results(raw)
     await set_tmdb_cache(cache_key, out)
     return out
 

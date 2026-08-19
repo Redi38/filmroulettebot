@@ -30,6 +30,7 @@ function renderMenu() {
 
   addItem("shuffle", "Наугад", () => switchView("random"), currentView === "random");
   addItem("theaters", "В прокате", () => switchView("theaters"), currentView === "theaters");
+  addItem("series", "Премьеры сериалов", () => switchView("series_releases"), currentView === "series_releases");
   sideMenuScroll.appendChild(document.createElement("hr"));
 
   for (const [code, label] of Object.entries(MENU_LABELS)) {
@@ -63,7 +64,7 @@ function switchView(view) {
 const SECTION_IDS = {
   random: "random-spin-section", spin: "spin-section", list: "list-section",
   upcoming: "upcoming-section", history: "history-section", showcase: "showcase-section",
-  theaters: "theaters-section",
+  theaters: "theaters-section", series_releases: "series-releases-section",
 };
 
 function showSection() {
@@ -80,7 +81,7 @@ function showSection() {
 
   const titles = {random: "🔄 Наугад", spin: `${ALL_CATS[currentCat] || ""}`, list: `${ALL_CATS[currentCat] || ""}`,
                    upcoming: "🕐 Ожидаемые", history: "📜 История", showcase: `${ALL_CATS[currentCat] || ""} — скоро`,
-                   theaters: "🎟 В прокате"};
+                   theaters: "🎟 В прокате", series_releases: "📺 Премьеры сериалов"};
   document.getElementById("page-title").textContent = titles[currentView] || "";
 
   if (currentView === "random") {
@@ -96,4 +97,5 @@ function showSection() {
   if (currentView === "history") loadHistory();
   if (currentView === "showcase") loadShowcase();
   if (currentView === "theaters") loadTheaters();
+  if (currentView === "series_releases") loadSeriesReleases();
 }

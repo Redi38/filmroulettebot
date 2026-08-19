@@ -256,6 +256,15 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
   animation: wipeout linear forwards; animation-duration: var(--toast-duration, 4.5s);
 }
 @keyframes wipeout { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.cooldown-anim { position: relative; overflow: hidden; }
+.cooldown-anim > span { position: relative; z-index: 1; }
+.cooldown-anim::after {
+  content: ""; position: absolute; inset: 0; background: rgba(5, 4, 15, 0.55);
+  transform: scaleX(0); transform-origin: right; pointer-events: none;
+}
+.cooldown-anim.wipe::after {
+  animation: wipeout linear forwards; animation-duration: var(--cooldown-duration, 1.5s);
+}
 .hist-item {
   background: var(--card); border: 1px solid var(--border); border-radius: 12px;
   padding: 13px; margin-bottom: 10px;
@@ -277,7 +286,7 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
   text-transform: uppercase; letter-spacing: 0.03em;
 }
 
-#list-container, #list-featured, #up-list-container, #history-list, #showcase-container, #theaters-container {
+#list-container, #list-featured, #up-list-container, #history-list, #showcase-container, #theaters-container, #series-releases-container {
   transition: opacity 0.22s ease;
 }
 

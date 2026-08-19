@@ -467,39 +467,84 @@ async def _search_tv_cached(title: str) -> dict[str, Any] | None:
     return data
 
 
-async def _get_new_season_entry(title: str) -> dict[str, Any] | None:
-    """If `title` (one of the user's own tracked series) has an announced
-    upcoming episode/season on TMDb, return a showcase-style row for it —
-    same shape the Marvel/DC studio showcase's new_seasons entries use."""
-    data = await _search_tv_cached(title)
-    if not data or not data.get("results"):
-        return None
-    series = _best_match(data["results"], title, title_field="name")
-    if series is None or not series.get("id"):
-        return None
-    nxt = await get_tv_next_episode(series["id"])
-    if not nxt:
-        return None
-    return {
-        "id": series["id"],
-        "title": series.get("name") or title,
-        "original_title": series.get("original_name") or "",
-        "release_date": nxt.get("air_date") or "",
-        "poster_url": _poster(series),
-        "overview": series.get("overview") or "",
-        "rating": round(series["vote_average"], 1) if series.get("vote_average") else "—",
-        "is_series": True,
-        "next_season": nxt,
-    }
+async def _get_season_finale_date(tv_id: int, season_number: int) -> str | None:
+    """Air date of a season's last known episode — used so a season that's
+    already mid-release shows "complete by X" instead of just its next
+    episode's date, which for a still-airing season isn't very useful."""
+    cache_key = f"tv_season_finale:{tv_id}:{season_number}"
+    cached = await get_tmdb_cache(cache_key, DISCOVER_CACHE_TTL)
+    if cached is not None:
+        return cached.get("date") or None
+    data = await _get(f"/tv/{tv_id}/season/{season_number}")
+    episodes = (data or {}).get("episodes") or []
+    dated = [e.get("air_date") for e in episodes if e.get("air_date")]
+    finale = max(dated) if dated else None
+    await set_tmdb_cache(cache_key, {"date": finale} if finale else {})
+    return finale
 
 
-async def get_new_seasons_for_titles(titles: list[str]) -> list[dict[str, Any]]:
-    """Announced new seasons/episodes for the user's own tracked series list —
-    the same TMDb next-episode check the Marvel/DC showcase does, but run
-    across the whole series list instead of one studio's titles."""
-    entries = await asyncio.gather(*(_get_new_season_entry(t) for t in titles))
-    out = [e for e in entries if e]
-    out.sort(key=lambda m: m["next_season"]["air_date"])
+async def get_series_releases(region: str = "UA", pages: int = 2) -> list[dict[str, Any]]:
+    """Popular TV shows with an episode airing soon — new seasons of
+    returning shows AND freshly debuting series, global TMDb discovery,
+    independent of the user's own tracked list (unlike the old per-title
+    check this replaces)."""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    horizon = (datetime.now(timezone.utc) + timedelta(days=45)).strftime("%Y-%m-%d")
+    raw: list[dict[str, Any]] = []
+    for page in range(1, pages + 1):
+        data = await _get(
+            "/discover/tv",
+            **{
+                "air_date.gte": today,
+                "air_date.lte": horizon,
+                "sort_by": "popularity.desc",
+                "page": page,
+                "watch_region": region,
+            },
+        )
+        if not data or not data.get("results"):
+            break
+        raw.extend(data["results"])
+        if page >= (data.get("total_pages") or 1):
+            break
+
+    seen: set[int] = set()
+    unique = []
+    for r in raw:
+        tv_id = r.get("id")
+        if not tv_id or tv_id in seen:
+            continue
+        seen.add(tv_id)
+        unique.append(r)
+
+    next_eps = await asyncio.gather(*(get_tv_next_episode(r["id"]) for r in unique))
+    pairs = [(r, nxt) for r, nxt in zip(unique, next_eps) if nxt and nxt.get("air_date")]
+
+    finales = await asyncio.gather(*(
+        _get_season_finale_date(r["id"], nxt["season_number"])
+        if (nxt.get("episode_number") or 1) > 1 and nxt.get("season_number")
+        else asyncio.sleep(0)
+        for r, nxt in pairs
+    ))
+
+    out: list[dict[str, Any]] = []
+    for (r, nxt), finale in zip(pairs, finales):
+        ep_no = nxt.get("episode_number") or 1
+        season_no = nxt.get("season_number") or 1
+        airing_now = ep_no > 1 and bool(finale)
+        out.append({
+            "id": r["id"],
+            "title": r.get("name") or "",
+            "original_title": r.get("original_name") or "",
+            "release_date": finale if airing_now else nxt["air_date"],
+            "poster_url": _poster(r),
+            "overview": r.get("overview") or "",
+            "rating": round(r["vote_average"], 1) if r.get("vote_average") else "—",
+            "is_series": True,
+            "is_new_season": season_no > 1 and ep_no == 1,
+            "airing_now": airing_now,
+        })
+    out.sort(key=lambda m: m["release_date"])
     return out
 
 

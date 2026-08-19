@@ -28,7 +28,7 @@ from app.db.database import (
 from app.services.tmdb import (
     get_movie_info, get_series_info, check_upcoming_released,
     discover_by_company, get_tv_next_episode, get_now_playing, get_upcoming_theatrical,
-    get_details_by_id, get_new_seasons_for_titles, is_digitally_released,
+    get_details_by_id, get_series_releases, is_digitally_released,
 )
 from app.services.watch_link import find_watch_page_url
 from app.utils import build_watch_link, paginate
@@ -317,14 +317,24 @@ async def api_showcase(studio: str) -> dict:
         asyncio.gather(*(discover_by_company(n, media_type="tv", date_filter=False) for n in names)),
     )
 
+    tv_original_keys = {
+        (m.get("original_title") or m.get("title") or "").strip().lower()
+        for lst in (*tv_lists, *tv_all_lists) for m in lst
+    }
+
     seen: set[str] = set()
     movies: list[dict] = []
-    for lst in (*movie_lists, *tv_lists):
+    for lst in (*tv_lists, *movie_lists):
         for m in lst:
             key = (m.get("title") or "").strip().lower()
+            original_key = (m.get("original_title") or "").strip().lower()
             if not key or key in seen or _is_showcase_junk(m):
                 continue
+            if not m.get("is_series") and original_key and original_key in tv_original_keys:
+                continue
             seen.add(key)
+            if original_key:
+                seen.add(original_key)
             movies.append(m)
 
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -364,12 +374,11 @@ NOW_PLAYING_MAX_AGE_DAYS = 90
 @app.get("/api/theaters")
 async def api_theaters(now_playing_page: int = 1, upcoming_page: int = 1) -> dict:
     """TMDb's own "now playing" / "upcoming" theatrical calendars — global,
-    not tied to any studio, unlike /api/showcase/{studio}. Also surfaces
-    announced new seasons/episodes for the user's own tracked series, the
-    same check the Marvel/DC showcase pages run for their own titles."""
-    now_playing, upcoming, own_movies, own_cartoons, own_series, own_upcoming = await asyncio.gather(
+    not tied to any studio, unlike /api/showcase/{studio}. Movies and
+    cartoons only; series live on their own /api/series-releases tab."""
+    now_playing, upcoming, own_movies, own_cartoons, own_upcoming = await asyncio.gather(
         get_now_playing(), get_upcoming_theatrical(),
-        get_items("movies"), get_items("cartoons"), get_items("series"),
+        get_items("movies"), get_items("cartoons"),
         get_upcoming_movies(),
     )
 
@@ -378,7 +387,7 @@ async def api_theaters(now_playing_page: int = 1, upcoming_page: int = 1) -> dic
     now_playing = [m for m in now_playing if m.get("release_date", "") >= cutoff]
     upcoming = [m for m in upcoming if m.get("release_date", "") >= today]
 
-    own_all = {t.lower() for t in (*own_movies, *own_cartoons, *own_series)}
+    own_all = {t.lower() for t in (*own_movies, *own_cartoons)}
     own_upcoming_set = {t.lower() for t in own_upcoming}
     for m in now_playing:
         m["in_list"] = m["title"].lower() in own_all
@@ -391,11 +400,6 @@ async def api_theaters(now_playing_page: int = 1, upcoming_page: int = 1) -> dic
     )
     for m, flag in zip(with_id, digitally_released):
         m["digitally_released"] = flag
-
-    new_seasons = await get_new_seasons_for_titles(own_series)
-    own_series_set = {t.lower() for t in own_series}
-    for m in new_seasons:
-        m["in_list"] = (m.get("title") or "").strip().lower() in own_series_set
 
     now_playing_items, now_playing_page, now_playing_total_pages = paginate(
         now_playing, now_playing_page, THEATERS_PAGE_SIZE
@@ -410,8 +414,21 @@ async def api_theaters(now_playing_page: int = 1, upcoming_page: int = 1) -> dic
         "upcoming": upcoming_items,
         "upcoming_page": upcoming_page,
         "upcoming_total_pages": upcoming_total_pages,
-        "new_seasons": new_seasons,
     }
+
+
+@app.get("/api/series-releases")
+async def api_series_releases(page: int = 1) -> dict:
+    """Popular TV shows airing new seasons/episodes soon — global TMDb
+    discovery (not tied to the user's own series list), separate from the
+    movies/cartoons-only /api/theaters tab. Rating 7+ only."""
+    releases, own_series = await asyncio.gather(get_series_releases(), get_items("series"))
+    releases = [m for m in releases if isinstance(m.get("rating"), (int, float)) and m["rating"] >= 7]
+    own_series_set = {t.lower() for t in own_series}
+    for m in releases:
+        m["in_list"] = (m.get("title") or "").strip().lower() in own_series_set
+    items, page, total_pages = paginate(releases, page, THEATERS_PAGE_SIZE)
+    return {"releases": items, "page": page, "total_pages": total_pages}
 
 
 @app.get("/api/media/{media_type}/{tmdb_id}")

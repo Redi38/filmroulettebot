@@ -1,9 +1,12 @@
-function openCategoryModal(titleText, onPick) {
+function openCategoryModal(titleText, onPick, allowedCats) {
   const overlay = document.getElementById("modal-overlay");
   const optionsEl = document.getElementById("modal-options");
   document.getElementById("modal-title").textContent = titleText;
   optionsEl.innerHTML = "";
-  for (const [code, label] of Object.entries(CATS)) {
+  const cats = allowedCats
+    ? Object.fromEntries(Object.entries(CATS).filter(([code]) => allowedCats.includes(code)))
+    : CATS;
+  for (const [code, label] of Object.entries(cats)) {
     const b = document.createElement("button");
     b.className = "btn btn-primary";
     b.textContent = label;

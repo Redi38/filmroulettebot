@@ -6,23 +6,26 @@ function applySpinCooldown(seconds) {
   const until = Date.now() + seconds * 1000;
   if (until <= spinCooldownUntil) return;
   spinCooldownUntil = until;
-  tickSpinCooldown();
+  startSpinCooldownAnim(seconds);
 }
 
-function tickSpinCooldown() {
+function startSpinCooldownAnim(seconds) {
   const randomBtn = document.getElementById("random-spin-btn");
   const spinBtn = document.getElementById("spin-btn");
-  const remaining = spinCooldownUntil - Date.now();
   clearTimeout(spinCooldownTimer);
-  if (remaining <= 0) {
-    randomBtn.disabled = false; randomBtn.textContent = "🎲 Крутить";
-    spinBtn.disabled = false; spinBtn.textContent = "🎲 Крутить";
-    return;
+  for (const btn of [randomBtn, spinBtn]) {
+    btn.disabled = true;
+    btn.classList.remove("wipe");
+    btn.style.setProperty("--cooldown-duration", seconds + "s");
+    void btn.offsetWidth; // restart the animation if already mid-cooldown
+    btn.classList.add("cooldown-anim", "wipe");
   }
-  const secs = Math.ceil(remaining / 1000);
-  randomBtn.disabled = true; randomBtn.textContent = `🎲 Крутить (${secs})`;
-  spinBtn.disabled = true; spinBtn.textContent = `🎲 Крутить (${secs})`;
-  spinCooldownTimer = setTimeout(tickSpinCooldown, 100);
+  spinCooldownTimer = setTimeout(() => {
+    for (const btn of [randomBtn, spinBtn]) {
+      btn.disabled = false;
+      btn.classList.remove("wipe");
+    }
+  }, seconds * 1000);
 }
 
 function renderCard(data, opts) {
@@ -37,8 +40,8 @@ function renderCard(data, opts) {
   const catLabel = ALL_CATS[data.category] || data.category;
   const actionsHtml = showActions ? `
       <div class="card-actions">
-        <button class="btn btn-success btn-sm" onclick="confirmPick()">Подтвердить</button>
-        <button class="btn btn-primary btn-sm" onclick="rerollPick('${data.category}')">Перекрутить</button>
+        <button class="btn btn-success btn" onclick="confirmPick()">Подтвердить</button>
+        <button class="btn btn-primary btn" onclick="rerollPick('${data.category}')">Перекрутить</button>
       </div>
       <div class="sequel-prompt" id="sequel-prompt" style="display:none"></div>` : "";
   // Title first, then the category it came from underneath it.
@@ -115,8 +118,8 @@ function confirmPick() {
   prompt.innerHTML = `
     <p>Добавить продолжение (сиквел)?</p>
     <div class="card-actions">
-      <button class="btn btn-success btn-sm" onclick="sequelYes()">Да, сиквел</button>
-      <button class="btn btn-danger btn-sm" onclick="sequelNo()">Нет, удалить</button>
+      <button class="btn btn-success btn" onclick="sequelYes()">Да, сиквел</button>
+      <button class="btn btn-danger btn" onclick="sequelNo()">Нет, удалить</button>
     </div>`;
 }
 

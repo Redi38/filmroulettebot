@@ -136,17 +136,13 @@ async function loadTheaters() {
     await fadeOut(container);
     theatersLoaded = true;
     container.innerHTML = "";
-    const newSeasons = data.new_seasons || [];
-    if (!data.now_playing.length && !data.upcoming.length && !newSeasons.length
+    if (!data.now_playing.length && !data.upcoming.length
         && data.now_playing_total_pages <= 1 && data.upcoming_total_pages <= 1) {
       container.innerHTML = placeholderHtml("Пока нет данных о прокате — загляни попозже", "🎬");
       fadeIn(container);
       return;
     }
-    if (newSeasons.length) {
-      container.appendChild(showcaseGroup("🔔 Новые сезоны", newSeasons, "series", true));
-    }
-    container.appendChild(showcaseGroup("🎬 Сейчас в прокате", data.now_playing, "movies", false, "now-playing"));
+    container.appendChild(showcaseGroup("🎬 Сейчас в прокате / вышло", data.now_playing, "movies", false, "now-playing"));
     if (data.now_playing_total_pages > 1) {
       container.appendChild(paginationRow(data.now_playing_page, data.now_playing_total_pages, (p) => {
         theatersNowPlayingPage = p;
@@ -158,6 +154,39 @@ async function loadTheaters() {
       container.appendChild(paginationRow(data.upcoming_page, data.upcoming_total_pages, (p) => {
         theatersUpcomingPage = p;
         loadTheaters();
+      }));
+    }
+    fadeIn(container);
+  } catch (e) {
+    container.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
+    fadeIn(container);
+  }
+}
+
+let seriesReleasesLoaded = false;
+let seriesReleasesPage = 1;
+async function loadSeriesReleases() {
+  const container = document.getElementById("series-releases-container");
+  if (!seriesReleasesLoaded) {
+    container.style.opacity = "1";
+    container.innerHTML = '<div class="spinner">Загрузка…</div>';
+  }
+  try {
+    const data = await api(`/api/series-releases?page=${seriesReleasesPage}`);
+    await fadeOut(container);
+    seriesReleasesLoaded = true;
+    container.innerHTML = "";
+    const releases = data.releases || [];
+    if (!releases.length && data.total_pages <= 1) {
+      container.innerHTML = placeholderHtml("Пока нет анонсированных премьер с рейтингом 7+ — загляни попозже", "📺");
+      fadeIn(container);
+      return;
+    }
+    container.appendChild(showcaseGroup("📺 Премьеры и новые сезоны", releases, "series"));
+    if (data.total_pages > 1) {
+      container.appendChild(paginationRow(data.page, data.total_pages, (p) => {
+        seriesReleasesPage = p;
+        loadSeriesReleases();
       }));
     }
     fadeIn(container);
@@ -197,6 +226,12 @@ function showcaseRow(item, cat, isNewSeasons, addMode) {
     : `<div class="showcase-poster showcase-poster-placeholder">${item.is_series ? "📺" : "🎬"}</div>`;
   const dateLine = isNewSeasons && item.next_season
     ? `Сезон ${item.next_season.season_number} — ${item.next_season.air_date}`
+    : item.is_new_season
+    ? `🆕 Новый сезон — ${item.release_date}`
+    : item.airing_now
+    ? `📅 Сезон выходит — финал ${item.release_date}`
+    : (addMode === "now-playing" && item.digitally_released)
+    ? `${item.release_date} · 📀 уже в цифре`
     : item.release_date;
 
   const infoBtn = document.createElement("div");
@@ -252,11 +287,7 @@ function showcaseRow(item, cat, isNewSeasons, addMode) {
       if (addMode === "upcoming") {
         addToUpcoming();
       } else if (addMode === "now-playing") {
-        if (item.digitally_released) {
-          openCategoryModal(`Куда добавить «${item.title}»?`, (category) => addTo(category));
-        } else {
-          addToUpcoming();
-        }
+        openCategoryModal(`Куда добавить «${item.title}»?`, (category) => addTo(category), ["movies", "cartoons"]);
       } else {
         addTo(cat);
       }

@@ -53,18 +53,24 @@ def _pick_title(client_key: str, cat: str, items: list[str]) -> str:
     return title
 
 
-WHEEL_POOL_SIZE = 10  # segments shown on the "wheel" spin animation, winner included
+WHEEL_POOL_SIZE = 120  # safety cap on wheel segments (perf/readability), winner included
 
 
 def _build_wheel_pool(items: list[str], winner: str, size: int = WHEEL_POOL_SIZE) -> list[str]:
-    """Sample a handful of titles (including the winner) to display as wheel
-    segments for the front-end's roulette-wheel spin animation. Keeps the
-    winner's exact position hidden from the client until it computes the
-    index itself, same random sample each call.
+    """Build the list of titles shown as wheel segments for the front-end's
+    roulette-wheel spin animation. Shows the *entire* roulette (all titles,
+    winner included) as long as it fits under the safety cap; only samples
+    down when the list is unusually large. Keeps the winner's exact position
+    hidden from the client until it computes the index itself.
     """
-    others = [i for i in items if i != winner]
-    random.shuffle(others)
-    pool = others[: max(size - 1, 0)] + [winner]
+    if len(items) <= size:
+        pool = list(items)
+        if winner not in pool:
+            pool.append(winner)
+    else:
+        others = [i for i in items if i != winner]
+        random.shuffle(others)
+        pool = others[: max(size - 1, 0)] + [winner]
     random.shuffle(pool)
     return pool
 
@@ -216,7 +222,7 @@ async def api_upcoming_add(body: TitleBody) -> dict:
     if not title:
         raise HTTPException(400, "Title can't be empty")
     if await item_exists("upcoming_movies", title):
-        raise HTTPException(409, f"«{title}» already in upcoming")
+        raise HTTPException(409, f"«{title}» уже в списке ожидаемых")
     await add_upcoming_movie(title)
     return {"ok": True}
 
@@ -289,7 +295,7 @@ async def api_add(cat: str, body: TitleBody) -> dict:
     if not title:
         raise HTTPException(400, "Title can't be empty")
     if await item_exists(cat, title):
-        raise HTTPException(409, f"«{title}» already in {cat}")
+        raise HTTPException(409, f"«{title}» уже добавлен(а) в «{CATEGORIES.get(cat, cat)}»")
     await add_item(cat, title)
     return {"ok": True}
 

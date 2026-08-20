@@ -2,8 +2,6 @@ const SPIN_COOLDOWN_SECONDS = 1.5;
 let spinCooldownUntil = 0;
 let spinCooldownTimer = null;
 
-// ─── Spin mode: "classic" (instant reveal, as before) vs "wheel" (spinning
-// roulette-wheel animation that lands on the pick) ─────────────────────────
 const SPIN_MODE_KEY = "filmroulette_spin_mode";
 function loadSpinMode() {
   try {
@@ -42,23 +40,44 @@ function renderSpinModeToggle(containerId) {
   el.appendChild(outer);
 }
 
+function detachResultFromWheel(wrap) {
+  const result = wrap.querySelector(".spin-result");
+  if (result) {
+    result.classList.remove("show");
+    wrap.insertAdjacentElement("afterend", result);
+  }
+}
+
 function resetWheelWraps() {
   for (const id of ["random-wheel-wrap", "spin-wheel-wrap"]) {
     const wrap = document.getElementById(id);
     if (!wrap) continue;
+    detachResultFromWheel(wrap);
     wrap.innerHTML = "";
     wrap.classList.remove("wheel-done");
     wrap.style.display = "none";
+    wrap.style.minHeight = "";
   }
 }
 
 const WHEEL_COLORS = ["#8b7cf6", "#5b8def", "#34d399", "#f2596b", "#f6c945", "#ef7fd1", "#5be3d0", "#f6975a"];
+const WHEEL_MIN_SIZE = 260;
+const WHEEL_MAX_SIZE = 720;
+
+function sizeWheelWrap(wrap) {
+  const top = wrap.getBoundingClientRect().top;
+  const pageBottomGap = 32;
+  const available = window.innerHeight - top - pageBottomGap;
+  wrap.style.minHeight = Math.max(available, WHEEL_MIN_SIZE) + "px";
+}
 
 function buildWheel(wrapId, items) {
   const wrap = document.getElementById(wrapId);
+  detachResultFromWheel(wrap);
   wrap.innerHTML = "";
   wrap.classList.remove("wheel-done");
   wrap.style.display = "flex";
+  sizeWheelWrap(wrap);
 
   const holder = document.createElement("div");
   holder.className = "wheel-holder";
@@ -67,7 +86,12 @@ function buildWheel(wrapId, items) {
   const canvas = document.createElement("canvas");
   canvas.className = "wheel-canvas";
   const dpr = window.devicePixelRatio || 1;
-  const cssSize = 280;
+  const cssSize = Math.min(
+    Math.max(Math.min(wrap.clientWidth, wrap.clientHeight) - 24, WHEEL_MIN_SIZE),
+    WHEEL_MAX_SIZE
+  );
+  holder.style.width = cssSize + "px";
+  holder.style.height = cssSize + "px";
   canvas.width = cssSize * dpr;
   canvas.height = cssSize * dpr;
   holder.appendChild(canvas);
@@ -89,6 +113,10 @@ function drawWheel(canvas, items, dpr) {
   const n = items.length;
   const seg = (Math.PI * 2) / n;
 
+  const fontSize = n <= 10 ? 13 : n <= 20 ? 11 : n <= 35 ? 9 : n <= 60 ? 7.5 : 6.5;
+  const maxChars = n <= 10 ? 18 : n <= 20 ? 14 : n <= 35 ? 10 : n <= 60 ? 7 : 5;
+  const showLabels = seg * r > fontSize * 0.9;
+
   for (let i = 0; i < n; i++) {
     const start = -Math.PI / 2 + i * seg;
     const end = start + seg;
@@ -99,18 +127,20 @@ function drawWheel(canvas, items, dpr) {
     ctx.fillStyle = WHEEL_COLORS[i % WHEEL_COLORS.length];
     ctx.fill();
     ctx.strokeStyle = "rgba(9,12,22,0.55)";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = n > 40 ? 1 : 2;
     ctx.stroke();
+
+    if (!showLabels) continue;
 
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(start + seg / 2);
     ctx.textAlign = "right";
     ctx.fillStyle = "#fff";
-    ctx.font = "600 12px Manrope, sans-serif";
+    ctx.font = `600 ${fontSize}px Manrope, sans-serif`;
     let label = items[i] || "";
-    if (label.length > 16) label = label.slice(0, 15) + "…";
-    ctx.fillText(label, r - 12, 4);
+    if (label.length > maxChars) label = label.slice(0, Math.max(maxChars - 1, 1)) + "…";
+    ctx.fillText(label, r - 10, fontSize * 0.35);
     ctx.restore();
   }
 
@@ -150,6 +180,7 @@ async function doWheelSpin(cat, isRandom) {
   const wheelWrapId = `${prefix}-wheel-wrap`;
   const prevResultHtml = result.innerHTML;
   const wrap = document.getElementById(wheelWrapId);
+  detachResultFromWheel(wrap);
   const prevWrapHtml = wrap.innerHTML;
   const prevWrapDisplay = wrap.style.display;
 
@@ -172,7 +203,12 @@ async function doWheelSpin(cat, isRandom) {
     await spinWheelTo(canvas, pool.length, winnerIndex, 4200);
 
     wrap.classList.add("wheel-done");
+
     result.innerHTML = renderCard(data);
+    await new Promise((r) => setTimeout(r, 650));
+    wrap.appendChild(result);
+    void result.offsetWidth;
+    result.classList.add("show");
   } catch (e) {
     wrap.innerHTML = prevWrapHtml;
     wrap.style.display = prevWrapDisplay;
@@ -202,7 +238,7 @@ function startSpinCooldownAnim(seconds) {
     btn.disabled = true;
     btn.classList.remove("wipe");
     btn.style.setProperty("--cooldown-duration", seconds + "s");
-    void btn.offsetWidth; // restart the animation if already mid-cooldown
+    void btn.offsetWidth;
     btn.classList.add("cooldown-anim", "wipe");
   }
   spinCooldownTimer = setTimeout(() => {
@@ -229,7 +265,6 @@ function renderCard(data, opts) {
         <button class="btn btn-primary btn" onclick="rerollPick('${data.category}')">Перекрутить</button>
       </div>
       <div class="sequel-prompt" id="sequel-prompt" style="display:none"></div>` : "";
-  // Title first, then the category it came from underneath it.
   return `
     <div class="card fade-in">
       ${poster}

@@ -40,19 +40,10 @@ function renderSpinModeToggle(containerId) {
   el.appendChild(outer);
 }
 
-function detachResultFromWheel(wrap) {
-  const result = wrap.querySelector(".spin-result");
-  if (result) {
-    result.classList.remove("show");
-    wrap.insertAdjacentElement("afterend", result);
-  }
-}
-
 function resetWheelWraps() {
   for (const id of ["random-wheel-wrap", "spin-wheel-wrap"]) {
     const wrap = document.getElementById(id);
     if (!wrap) continue;
-    detachResultFromWheel(wrap);
     wrap.innerHTML = "";
     wrap.classList.remove("wheel-done");
     wrap.style.display = "none";
@@ -62,22 +53,24 @@ function resetWheelWraps() {
 
 const WHEEL_COLORS = ["#8b7cf6", "#5b8def", "#34d399", "#f2596b", "#f6c945", "#ef7fd1", "#5be3d0", "#f6975a"];
 const WHEEL_MIN_SIZE = 260;
-const WHEEL_MAX_SIZE = 720;
-
-function sizeWheelWrap(wrap) {
-  const top = wrap.getBoundingClientRect().top;
-  const pageBottomGap = 32;
-  const available = window.innerHeight - top - pageBottomGap;
-  wrap.style.minHeight = Math.max(available, WHEEL_MIN_SIZE) + "px";
-}
+const WHEEL_MAX_SIZE = 820;
 
 function buildWheel(wrapId, items) {
   const wrap = document.getElementById(wrapId);
-  detachResultFromWheel(wrap);
   wrap.innerHTML = "";
   wrap.classList.remove("wheel-done");
+  wrap.style.minHeight = "";
   wrap.style.display = "flex";
-  sizeWheelWrap(wrap);
+
+  const top = wrap.getBoundingClientRect().top;
+  const pageBottomGap = 24;
+  const availableHeight = window.innerHeight - top - pageBottomGap;
+  const availableWidth = wrap.clientWidth;
+  const cssSize = Math.min(
+    Math.max(Math.min(availableWidth, availableHeight) - 16, WHEEL_MIN_SIZE),
+    WHEEL_MAX_SIZE
+  );
+  wrap.style.minHeight = cssSize + "px";
 
   const holder = document.createElement("div");
   holder.className = "wheel-holder";
@@ -86,10 +79,6 @@ function buildWheel(wrapId, items) {
   const canvas = document.createElement("canvas");
   canvas.className = "wheel-canvas";
   const dpr = window.devicePixelRatio || 1;
-  const cssSize = Math.min(
-    Math.max(Math.min(wrap.clientWidth, wrap.clientHeight) - 24, WHEEL_MIN_SIZE),
-    WHEEL_MAX_SIZE
-  );
   holder.style.width = cssSize + "px";
   holder.style.height = cssSize + "px";
   canvas.width = cssSize * dpr;
@@ -113,9 +102,9 @@ function drawWheel(canvas, items, dpr) {
   const n = items.length;
   const seg = (Math.PI * 2) / n;
 
-  const fontSize = n <= 10 ? 13 : n <= 20 ? 11 : n <= 35 ? 9 : n <= 60 ? 7.5 : 6.5;
-  const maxChars = n <= 10 ? 18 : n <= 20 ? 14 : n <= 35 ? 10 : n <= 60 ? 7 : 5;
-  const showLabels = seg * r > fontSize * 0.9;
+  const arcLen = seg * r;
+  const fontSize = Math.max(8, Math.min(22, arcLen * 0.55));
+  const maxChars = Math.max(4, Math.min(28, Math.floor((r * 0.66) / (fontSize * 0.56))));
 
   for (let i = 0; i < n; i++) {
     const start = -Math.PI / 2 + i * seg;
@@ -130,22 +119,22 @@ function drawWheel(canvas, items, dpr) {
     ctx.lineWidth = n > 40 ? 1 : 2;
     ctx.stroke();
 
-    if (!showLabels) continue;
-
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(start + seg / 2);
     ctx.textAlign = "right";
     ctx.fillStyle = "#fff";
-    ctx.font = `600 ${fontSize}px Manrope, sans-serif`;
+    ctx.font = `700 ${fontSize}px Manrope, sans-serif`;
+    ctx.shadowColor = "rgba(0,0,0,0.5)";
+    ctx.shadowBlur = 2;
     let label = items[i] || "";
     if (label.length > maxChars) label = label.slice(0, Math.max(maxChars - 1, 1)) + "…";
-    ctx.fillText(label, r - 10, fontSize * 0.35);
+    ctx.fillText(label, r - 10, fontSize * 0.32);
     ctx.restore();
   }
 
   ctx.beginPath();
-  ctx.arc(cx, cy, 18, 0, Math.PI * 2);
+  ctx.arc(cx, cy, Math.max(16, cssSize * 0.045), 0, Math.PI * 2);
   ctx.fillStyle = "#17132c";
   ctx.fill();
   ctx.strokeStyle = "#342a5c";
@@ -180,7 +169,6 @@ async function doWheelSpin(cat, isRandom) {
   const wheelWrapId = `${prefix}-wheel-wrap`;
   const prevResultHtml = result.innerHTML;
   const wrap = document.getElementById(wheelWrapId);
-  detachResultFromWheel(wrap);
   const prevWrapHtml = wrap.innerHTML;
   const prevWrapDisplay = wrap.style.display;
 
@@ -203,12 +191,11 @@ async function doWheelSpin(cat, isRandom) {
     await spinWheelTo(canvas, pool.length, winnerIndex, 4200);
 
     wrap.classList.add("wheel-done");
-
+    await new Promise((r) => setTimeout(r, 450));
+    wrap.style.display = "none";
+    wrap.innerHTML = "";
+    wrap.classList.remove("wheel-done");
     result.innerHTML = renderCard(data);
-    await new Promise((r) => setTimeout(r, 650));
-    wrap.appendChild(result);
-    void result.offsetWidth;
-    result.classList.add("show");
   } catch (e) {
     wrap.innerHTML = prevWrapHtml;
     wrap.style.display = prevWrapDisplay;

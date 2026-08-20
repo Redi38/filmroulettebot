@@ -14,6 +14,71 @@ function saveSpinMode(mode) {
 }
 let spinMode = loadSpinMode();
 
+const SPIN_SPEED_KEY = "filmroulette_spin_speed";
+const SPIN_SPEED_MIN = 1;
+const SPIN_SPEED_MAX = 60;
+const SPIN_SPEED_DEFAULT = 5;
+const SPIN_SPEED_STEP = 0.1;
+
+function loadSpinSpeed() {
+  try {
+    const v = parseFloat(localStorage.getItem(SPIN_SPEED_KEY));
+    if (!isNaN(v) && v >= SPIN_SPEED_MIN && v <= SPIN_SPEED_MAX) return v;
+  } catch {}
+  return SPIN_SPEED_DEFAULT;
+}
+function saveSpinSpeed(seconds) {
+  try { localStorage.setItem(SPIN_SPEED_KEY, String(seconds)); } catch {}
+}
+let spinSpeedSeconds = loadSpinSpeed();
+
+function clampSpinSpeed(v) {
+  if (isNaN(v)) return spinSpeedSeconds;
+  return Math.min(SPIN_SPEED_MAX, Math.max(SPIN_SPEED_MIN, v));
+}
+
+function renderSpinSpeedControl(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = "";
+  el.className = "spin-speed-wrap" + (spinMode === "wheel" ? " visible" : "");
+
+  const control = document.createElement("div");
+  control.className = "spin-speed-control";
+
+  const label = document.createElement("label");
+  label.textContent = "⏱ Скорость колеса";
+
+  const input = document.createElement("input");
+  input.type = "number";
+  input.inputMode = "decimal";
+  input.min = String(SPIN_SPEED_MIN);
+  input.max = String(SPIN_SPEED_MAX);
+  input.step = String(SPIN_SPEED_STEP);
+  input.value = spinSpeedSeconds.toFixed(1);
+
+  const unit = document.createElement("span");
+  unit.className = "spin-speed-unit";
+  unit.textContent = "сек";
+
+  const commit = () => {
+    const v = clampSpinSpeed(parseFloat(input.value.replace(",", ".")));
+    spinSpeedSeconds = v;
+    input.value = v.toFixed(1);
+    saveSpinSpeed(v);
+  };
+  input.onchange = commit;
+  input.onblur = commit;
+  input.onkeydown = (e) => {
+    if (e.key === "Enter") { commit(); input.blur(); }
+  };
+
+  control.appendChild(label);
+  control.appendChild(input);
+  control.appendChild(unit);
+  el.appendChild(control);
+}
+
 function renderSpinModeToggle(containerId) {
   const el = document.getElementById(containerId);
   if (!el) return;
@@ -32,6 +97,8 @@ function renderSpinModeToggle(containerId) {
       saveSpinMode(value);
       renderSpinModeToggle("random-mode-toggle");
       renderSpinModeToggle("spin-mode-toggle");
+      renderSpinSpeedControl("random-spin-speed");
+      renderSpinSpeedControl("spin-spin-speed");
       resetWheelWraps();
     };
     row.appendChild(btn);
@@ -51,7 +118,12 @@ function resetWheelWraps() {
   }
 }
 
-const WHEEL_COLORS = ["#8b7cf6", "#5b8def", "#34d399", "#f2596b", "#f6c945", "#ef7fd1", "#5be3d0", "#f6975a"];
+const WHEEL_COLORS = [
+  "#8b7cf6", "#5b8def", "#34d399", "#f2596b",
+  "#f6c945", "#ef7fd1", "#5be3d0", "#f6975a",
+  "#a78bfa", "#4fb8f7", "#67e08a", "#f4738c",
+  "#ffd166", "#d67cf0", "#45d4c9", "#ff9f68"
+];
 const WHEEL_MIN_SIZE = 260;
 const WHEEL_MAX_SIZE = 820;
 
@@ -72,6 +144,10 @@ function buildWheel(wrapId, items) {
   );
   wrap.style.minHeight = cssSize + "px";
 
+  const titleEl = document.createElement("div");
+  titleEl.className = "wheel-current-title";
+  wrap.appendChild(titleEl);
+
   const holder = document.createElement("div");
   holder.className = "wheel-holder";
   const pointer = document.createElement("div");
@@ -88,7 +164,35 @@ function buildWheel(wrapId, items) {
   wrap.appendChild(holder);
 
   drawWheel(canvas, items, dpr);
+  canvas._wheelItems = items;
+  canvas._wheelTitleEl = titleEl;
+  updatePointerTitle(canvas, 0);
   return canvas;
+}
+
+function getCanvasRotationDeg(canvas) {
+  const transform = getComputedStyle(canvas).transform;
+  if (!transform || transform === "none") return 0;
+  const match = transform.match(/matrix\(([^)]+)\)/);
+  if (!match) return 0;
+  const parts = match[1].split(",").map(Number);
+  const [a, b] = parts;
+  let deg = Math.atan2(b, a) * (180 / Math.PI);
+  if (deg < 0) deg += 360;
+  return deg;
+}
+
+function updatePointerTitle(canvas, rotationDeg) {
+  const items = canvas._wheelItems;
+  const titleEl = canvas._wheelTitleEl;
+  if (!items || !titleEl || !items.length) return;
+  const n = items.length;
+  const segDeg = 360 / n;
+  const angleAtPointer = ((360 - rotationDeg) % 360 + 360) % 360;
+  let idx = Math.floor(angleAtPointer / segDeg) % n;
+  if (idx < 0) idx += n;
+  const label = items[idx] || "";
+  if (titleEl.textContent !== label) titleEl.textContent = label;
 }
 
 function drawWheel(canvas, items, dpr) {
@@ -158,7 +262,23 @@ function spinWheelTo(canvas, n, winnerIndex, durationMs) {
     requestAnimationFrame(() => {
       canvas.style.transform = `rotate(${totalDeg}deg)`;
     });
-    setTimeout(resolve, durationMs);
+
+    let rafId;
+    const startTime = performance.now();
+    const tick = () => {
+      const rotDeg = getCanvasRotationDeg(canvas);
+      updatePointerTitle(canvas, rotDeg);
+      if (performance.now() - startTime < durationMs) {
+        rafId = requestAnimationFrame(tick);
+      }
+    };
+    rafId = requestAnimationFrame(tick);
+
+    setTimeout(() => {
+      cancelAnimationFrame(rafId);
+      updatePointerTitle(canvas, ((totalDeg % 360) + 360) % 360);
+      resolve();
+    }, durationMs);
   });
 }
 
@@ -188,7 +308,7 @@ async function doWheelSpin(cat, isRandom) {
 
     const canvas = buildWheel(wheelWrapId, pool);
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-    await spinWheelTo(canvas, pool.length, winnerIndex, 4200);
+    await spinWheelTo(canvas, pool.length, winnerIndex, Math.round(spinSpeedSeconds * 1000));
 
     wrap.classList.add("wheel-done");
     await new Promise((r) => setTimeout(r, 450));

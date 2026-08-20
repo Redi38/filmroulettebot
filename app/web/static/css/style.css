@@ -232,9 +232,34 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
   background: var(--card); border: 1px solid var(--border); border-radius: 14px;
 }
 
+.spin-speed-wrap { display: none; justify-content: center; margin-bottom: 14px; }
+.spin-speed-wrap.visible { display: flex; }
+.spin-speed-control {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px; background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+}
+.spin-speed-control label { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.spin-speed-control input[type="number"] {
+  width: 64px; text-align: center; font-size: 14px; font-weight: 700; color: var(--text);
+  background: var(--bg-c); border: 1px solid var(--border); border-radius: 8px; padding: 6px 4px;
+  -moz-appearance: textfield;
+}
+.spin-speed-control input[type="number"]::-webkit-inner-spin-button,
+.spin-speed-control input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none; margin: 0;
+}
+.spin-speed-control input[type="number"]:focus { outline: none; border-color: var(--primary); }
+.spin-speed-control .spin-speed-unit { font-size: 13px; color: var(--muted); }
+
 .wheel-wrap {
   display: none; flex-direction: column; align-items: center; justify-content: center;
   position: relative; width: 100%; min-height: 60vh; margin-bottom: 20px;
+}
+.wheel-current-title {
+  min-height: 1.4em; margin-bottom: 10px; padding: 6px 16px;
+  font-weight: 700; font-size: 1.05rem; text-align: center; color: #fff;
+  background: rgba(9,12,22,0.55); border-radius: 12px; max-width: 90%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .wheel-holder {
   position: relative; display: flex; align-items: center; justify-content: center;

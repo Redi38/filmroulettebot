@@ -90,12 +90,14 @@ function showSection() {
 
   if (currentView === "random") {
     renderSpinModeToggle("random-mode-toggle");
+    renderSpinSpeedControl("random-spin-speed");
     resetWheelWraps();
     document.getElementById("random-spin-result").innerHTML = placeholderHtml("Нажми «Крутить», и рулетка выберет фильм, сериал или мультфильм 🍿");
     currentCardData = null;
   }
   if (currentView === "spin") {
     renderSpinModeToggle("spin-mode-toggle");
+    renderSpinSpeedControl("spin-spin-speed");
     resetWheelWraps();
     document.getElementById("spin-result").innerHTML = placeholderHtml("Нажми «Крутить», чтобы узнать, что посмотреть 🎬");
     currentCardData = null;

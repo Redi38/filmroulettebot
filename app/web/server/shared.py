@@ -134,3 +134,11 @@ class SequelBody(BaseModel):
 class SkipBody(BaseModel):
     scope: str
     title: str
+
+
+class ResolveBody(BaseModel):
+    category: str
+    title: str
+    timestamp: float
+    resolved_type: str
+    new_title: str | None = None

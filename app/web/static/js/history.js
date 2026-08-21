@@ -141,11 +141,17 @@ function renderHistoryList() {
   filtered.forEach(({ e, idx }) => {
     const div = document.createElement("div");
     const key = histKey(e);
-    const outcome = resolved[key];
+    // Сервер — источник правды (видно всем устройствам); localStorage —
+    // резервный вариант для записей, сделанных до этой миграции.
+    const serverOutcome = e.resolved_type
+      ? { type: e.resolved_type, newTitle: e.resolved_new_title }
+      : null;
+    const outcome = serverOutcome || resolved[key];
     const isResolved = !!outcome;
     div.className = "hist-item" + (isResolved ? " resolved" : "");
     div.dataset.category = e.category;
     div.dataset.title = e.title;
+    div.dataset.timestamp = e.timestamp;
     div.dataset.key = key;
     const date = new Date(e.timestamp * 1000).toLocaleString("ru-RU");
     const actionsHtml = isResolved
@@ -182,10 +188,25 @@ function markResolved(key, outcome) {
   saveResolvedMap(map);
 }
 
+async function resolveOnServer(category, title, timestamp, resolvedType, newTitle) {
+  try {
+    await api("/api/history/resolve", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        category, title, timestamp: Number(timestamp),
+        resolved_type: resolvedType, new_title: newTitle || null,
+      }),
+    });
+  } catch {
+    // Не критично: локальная отметка (markResolved) уже применена на этом
+    // устройстве, серверная синхронизация — best-effort.
+  }
+}
+
 async function histSequel(idx) {
   const actionsEl = document.getElementById(`hist-actions-${idx}`);
   const div = actionsEl.closest(".hist-item");
-  const {category, title, key} = div.dataset;
+  const {category, title, timestamp, key} = div.dataset;
   try {
     const r = await api(`/api/${category}/sequel`, {
       method: "POST", headers: {"Content-Type": "application/json"},
@@ -193,6 +214,7 @@ async function histSequel(idx) {
     });
     showToast(`${title} → ${r.new_title}`);
     markResolved(key, { type: "sequel", newTitle: r.new_title });
+    resolveOnServer(category, title, timestamp, "sequel", r.new_title);
     div.classList.add("resolved");
     actionsEl.innerHTML = `<span class="muted">${resolvedOutcomeLabel(title, { type: "sequel", newTitle: r.new_title })}</span>`;
   } catch (e) { showToast(e.message); }
@@ -201,7 +223,7 @@ async function histSequel(idx) {
 async function histDelete(idx) {
   const actionsEl = document.getElementById(`hist-actions-${idx}`);
   const div = actionsEl.closest(".hist-item");
-  const {category, title, key} = div.dataset;
+  const {category, title, timestamp, key} = div.dataset;
   try {
     await api(`/api/${category}/delete`, {
       method: "POST", headers: {"Content-Type": "application/json"},
@@ -209,6 +231,7 @@ async function histDelete(idx) {
     });
     showToast(`${title} удалён`);
     markResolved(key, { type: "delete" });
+    resolveOnServer(category, title, timestamp, "delete", null);
     div.classList.add("resolved");
     actionsEl.innerHTML = `<span class="muted">${resolvedOutcomeLabel(title, { type: "delete" })}</span>`;
   } catch (e) { showToast(e.message); }

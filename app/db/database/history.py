@@ -30,14 +30,23 @@ async def load_history(user_id: int, category: str | None = None) -> list[dict[s
 async def get_recent_history(limit: int = 50) -> list[dict[str, Any]]:
     """History across ALL users (no user_id filter) — used by the web UI,
     which has no login/user concept by design (personal-use, no-auth site).
-    Newest first."""
+    Newest first. Includes server-side resolved state (confirmed/sequel/
+    deleted) so that "Подтвердить" correctly disappears for everyone once
+    any device has resolved a pick — not just the device that resolved it."""
     async with conn() as db:
         async with db.execute(
-            "SELECT category, title, timestamp FROM history ORDER BY timestamp DESC LIMIT ?",
+            "SELECT category, title, timestamp, resolved_type, resolved_new_title "
+            "FROM history ORDER BY timestamp DESC LIMIT ?",
             (limit,),
         ) as cur:
             return [
-                {"category": row[0], "title": row[1], "timestamp": row[2]}
+                {
+                    "category": row[0],
+                    "title": row[1],
+                    "timestamp": row[2],
+                    "resolved_type": row[3],
+                    "resolved_new_title": row[4],
+                }
                 async for row in cur
             ]
 
@@ -89,6 +98,27 @@ async def save_history(user_id: int, category: str, title: str) -> float:
         )
         await db.commit()
         return ts
+
+
+@retry_on_lock
+async def resolve_history_entry(
+    category: str, title: str, timestamp: float, resolved_type: str, new_title: str | None = None
+) -> bool:
+    """Mark a specific history pick as resolved (confirmed/sequel/deleted) on
+    the server, so every device sees the same state — previously this lived
+    only in each browser's localStorage, so a pick confirmed on one device
+    still showed a stale "Подтвердить" button (for a title that no longer
+    exists) on every other device. Matches on (category, title, timestamp)
+    since that's the same triple the client already uses as its dedup key.
+    Returns False if no matching row was found (e.g. timestamp mismatch)."""
+    async with conn() as db:
+        cur = await db.execute(
+            "UPDATE history SET resolved_type = ?, resolved_new_title = ? "
+            "WHERE category = ? AND title = ? AND timestamp = ?",
+            (resolved_type, new_title, category, title, timestamp),
+        )
+        await db.commit()
+        return cur.rowcount > 0
 
 
 @retry_on_lock

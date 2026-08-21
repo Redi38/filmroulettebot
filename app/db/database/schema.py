@@ -67,6 +67,14 @@ async def init_db() -> None:
             await db.execute(
                 "ALTER TABLE history ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0"
             )
+        if cols and "resolved_type" not in cols:
+            logger.info("Migration: adding resolved_type/resolved_new_title to history…")
+            await db.execute(
+                "ALTER TABLE history ADD COLUMN resolved_type TEXT"
+            )
+            await db.execute(
+                "ALTER TABLE history ADD COLUMN resolved_new_title TEXT"
+            )
         await db.commit()
 
         for table in NOCASE_TABLES:
@@ -80,7 +88,9 @@ async def init_db() -> None:
                 user_id   INTEGER NOT NULL DEFAULT 0,
                 category  TEXT    NOT NULL,
                 title     TEXT    NOT NULL,
-                timestamp REAL    NOT NULL
+                timestamp REAL    NOT NULL,
+                resolved_type      TEXT,
+                resolved_new_title TEXT
             );
             CREATE INDEX IF NOT EXISTS idx_history_user_category_ts
                 ON history (user_id, category, timestamp);

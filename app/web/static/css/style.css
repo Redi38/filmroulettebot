@@ -9,11 +9,25 @@
 button {
   -webkit-appearance: none; appearance: none; margin: 0; outline: none;
 }
+html {
+  overflow-x: hidden;
+  width: 100%;
+  background: var(--bg-c);
+  min-height: 100%;
+}
 body {
   margin: 0; font-family: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background: radial-gradient(circle at 20% -10%, var(--bg-a) 0%, var(--bg-b) 55%, var(--bg-c) 100%);
   background-attachment: fixed;
   color: var(--text); min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  width: 100%;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+@media (max-width: 899px) {
+  body { background-attachment: scroll; }
 }
 header {
   display: flex; align-items: center; justify-content: space-between;
@@ -253,7 +267,7 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
 
 .wheel-wrap {
   display: none; flex-direction: column; align-items: center; justify-content: center;
-  position: relative; width: 100%; min-height: 60vh; margin-bottom: 20px;
+  position: relative; width: 100%; min-height: 60vh; margin-top: 28px; margin-bottom: 20px;
 }
 .wheel-current-title {
   min-height: 1.4em; margin-bottom: 10px; padding: 6px 16px;
@@ -399,6 +413,10 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
 
   main > #showcase-section.active { max-width: 900px; }
   #showcase-section #showcase-filters { margin-bottom: 20px; }
+
+  #random-wheel-wrap, #spin-wheel-wrap {
+    width: 900px; max-width: 900px; margin-left: -130px; margin-right: -130px;
+  }
 
   main > #theaters-section.active { max-width: 1500px; }
   #theaters-container { display: flex; align-items: flex-start; gap: 128px; }

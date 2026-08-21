@@ -15,6 +15,7 @@ from .history import (
     get_recent_history,
     get_stats,
     load_history,
+    resolve_history_entry,
     save_history,
 )
 from .items import add_item, delete_item, get_items, item_exists
@@ -33,6 +34,7 @@ __all__ = [
     "load_history",
     "get_recent_history",
     "save_history",
+    "resolve_history_entry",
     "clear_user_history",
     "clear_all_history",
     "clear_history_category",

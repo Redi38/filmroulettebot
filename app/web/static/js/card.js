@@ -36,6 +36,10 @@ function clampSpinSpeed(v) {
   if (isNaN(v)) return spinSpeedSeconds;
   return Math.min(SPIN_SPEED_MAX, Math.max(SPIN_SPEED_MIN, v));
 }
+function formatSpinSpeed(v) {
+  const rounded = Math.round(v * 10) / 10;
+  return String(rounded);
+}
 
 function renderSpinSpeedControl(containerId) {
   const el = document.getElementById(containerId);
@@ -55,7 +59,7 @@ function renderSpinSpeedControl(containerId) {
   input.min = String(SPIN_SPEED_MIN);
   input.max = String(SPIN_SPEED_MAX);
   input.step = String(SPIN_SPEED_STEP);
-  input.value = spinSpeedSeconds.toFixed(1);
+  input.value = formatSpinSpeed(spinSpeedSeconds);
 
   const unit = document.createElement("span");
   unit.className = "spin-speed-unit";
@@ -64,7 +68,7 @@ function renderSpinSpeedControl(containerId) {
   const commit = () => {
     const v = clampSpinSpeed(parseFloat(input.value.replace(",", ".")));
     spinSpeedSeconds = v;
-    input.value = v.toFixed(1);
+    input.value = formatSpinSpeed(v);
     saveSpinSpeed(v);
   };
   input.onchange = commit;
@@ -125,7 +129,7 @@ const WHEEL_COLORS = [
   "#ffd166", "#d67cf0", "#45d4c9", "#ff9f68"
 ];
 const WHEEL_MIN_SIZE = 260;
-const WHEEL_MAX_SIZE = 820;
+const WHEEL_MAX_SIZE = 960;
 
 function buildWheel(wrapId, items) {
   const wrap = document.getElementById(wrapId);
@@ -135,11 +139,11 @@ function buildWheel(wrapId, items) {
   wrap.style.display = "flex";
 
   const top = wrap.getBoundingClientRect().top;
-  const pageBottomGap = 24;
+  const pageBottomGap = 12;
   const availableHeight = window.innerHeight - top - pageBottomGap;
   const availableWidth = wrap.clientWidth;
   const cssSize = Math.min(
-    Math.max(Math.min(availableWidth, availableHeight) - 16, WHEEL_MIN_SIZE),
+    Math.max(Math.min(availableWidth, availableHeight) - 4, WHEEL_MIN_SIZE),
     WHEEL_MAX_SIZE
   );
   wrap.style.minHeight = cssSize + "px";
@@ -456,6 +460,13 @@ function markCurrentPickResolved(outcome) {
   if (!currentCardData || currentCardData.history_timestamp == null) return;
   const key = `${currentCardData.category}|${currentCardData.original_title}|${currentCardData.history_timestamp}`;
   markResolved(key, outcome);
+  resolveOnServer(
+    currentCardData.category,
+    currentCardData.original_title,
+    currentCardData.history_timestamp,
+    outcome.type,
+    outcome.newTitle || null
+  );
 }
 
 async function sequelYes() {

@@ -101,6 +101,7 @@ function showSection() {
     resetWheelWraps();
     document.getElementById("spin-result").innerHTML = placeholderHtml("Нажми «Крутить», чтобы узнать, что посмотреть 🎬");
     currentCardData = null;
+    if (spinMode === "wheel") showIdleWheel(currentCat);
   }
   if (currentView === "list") loadList();
   if (currentView === "upcoming") loadUpcoming();

@@ -1,5 +1,19 @@
 // Roulette wheel: canvas drawing, spin animation, pointer title tracking.
 
+async function showIdleWheel(cat) {
+  const wrap = document.getElementById("spin-wheel-wrap");
+  if (!wrap) return;
+  try {
+    const data = await api(`/api/${cat}/wheel-preview`);
+    const pool = data.wheel_pool;
+    if (!pool || pool.length < 2) return;
+    wrap.classList.remove("wheel-done");
+    buildWheel("spin-wheel-wrap", pool);
+    document.getElementById("spin-result").innerHTML = "";
+  } catch (e) {
+  }
+}
+
 function resetWheelWraps() {
   for (const id of ["random-wheel-wrap", "spin-wheel-wrap"]) {
     const wrap = document.getElementById(id);

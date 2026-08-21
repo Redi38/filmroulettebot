@@ -30,7 +30,7 @@
   position: relative; width: 100%; min-height: 60vh; margin-top: 28px; margin-bottom: 20px;
 }
 .wheel-current-title {
-  min-height: 1.4em; margin-bottom: 10px; padding: 6px 16px;
+  min-height: 1.4em; margin-bottom: 22px; padding: 6px 16px;
   font-weight: 700; font-size: 1.05rem; text-align: center; color: #fff;
   background: rgba(9,12,22,0.55); border-radius: 12px; max-width: 90%;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -38,7 +38,6 @@
 .wheel-holder {
   position: relative; display: flex; align-items: center; justify-content: center;
   filter: drop-shadow(0 10px 26px rgba(0,0,0,0.35));
-  overflow: hidden;
 }
 .wheel-canvas {
   width: 100%; height: 100%; border-radius: 50%;
@@ -46,11 +45,23 @@
   will-change: transform;
 }
 .wheel-pointer {
-  position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
-  width: 0; height: 0; z-index: 2;
-  border-left: 13px solid transparent; border-right: 13px solid transparent;
-  border-top: 22px solid var(--danger);
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+  position: absolute; top: -20px; left: 50%; transform: translateX(-50%);
+  width: 54px; height: 78px; z-index: 2;
+  clip-path: path('M27,76 C15,55 8,40 8,24 C8,10 16,2 27,2 C38,2 46,10 46,24 C46,40 39,55 27,76 Z');
+  background: var(--border);
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,0.5));
+}
+.wheel-pointer::before {
+  content: '';
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  clip-path: path('M27,72 C17,53 12,40 12,26 C12,14 18,6 27,6 C36,6 42,14 42,26 C42,40 37,53 27,72 Z');
+  background: linear-gradient(150deg, #ff8ba0 0%, #e6304f 35%, #b91c3c 70%, #7a1220 100%);
+}
+.wheel-pointer::after {
+  content: '';
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  clip-path: path('M27,68 C24,52 23,40 23,26 C23,15 25,9 27,8 C29,9 31,15 31,26 C31,40 30,52 27,68 Z');
+  background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0) 75%);
 }
 .wheel-hub {
   position: absolute; width: 20px; height: 20px; border-radius: 50%;

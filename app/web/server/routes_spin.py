@@ -25,6 +25,21 @@ from .shared import (
 router = APIRouter()
 
 
+@router.get("/api/{cat}/wheel-preview")
+async def api_wheel_preview(cat: str) -> dict:
+    """Idle wheel pool for display before the user presses "Крутить" — no
+    winner is chosen, no history/cooldown side effects, just titles to show
+    on the wheel segments."""
+    _check_category(cat)
+    if cat not in ROULETTE_CATEGORIES:
+        raise HTTPException(400, f"{cat} has no roulette — it's a reference list only")
+    items = await get_items(cat)
+    if not items:
+        raise HTTPException(404, "List is empty")
+    dummy = random.choice(items)
+    return {"wheel_pool": _build_wheel_pool(items, dummy)}
+
+
 @router.post("/api/random-spin")
 async def api_random_spin(request: Request) -> dict:
     _check_spin_cooldown(_client_ip(request))

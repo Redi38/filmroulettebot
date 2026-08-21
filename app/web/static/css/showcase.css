@@ -1,0 +1,71 @@
+/* Marvel/DC showcase rows (expandable detail), filter panel, and spinner. */
+
+.showcase-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+}
+.showcase-item-wrap:last-child .showcase-item { border-bottom: none; }
+.showcase-item-wrap.expanded .showcase-item { border-bottom-color: transparent; }
+.showcase-info-clickable { cursor: pointer; flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; }
+.showcase-info-text { flex: 1; min-width: 0; }
+.showcase-poster { transition: width 0.25s ease, height 0.25s ease; }
+.showcase-item-wrap.expanded .showcase-poster {
+  width: 112px; height: 166px; border-radius: 12px;
+}
+.showcase-detail {
+  max-height: 0; overflow: hidden; opacity: 0;
+  transition: max-height 0.3s ease, opacity 0.25s ease;
+  border-bottom: 1px solid var(--border);
+}
+.showcase-item-wrap.expanded .showcase-detail {
+  max-height: 900px; opacity: 1;
+}
+.showcase-item-wrap:last-child .showcase-detail { border-bottom: none; }
+.showcase-detail-body { padding: 6px 4px 20px; }
+.showcase-detail .meta { margin-bottom: 6px; font-size: 0.95rem; }
+.showcase-detail .overview { color: var(--muted); font-size: 0.94rem; line-height: 1.6; margin: 12px 0; }
+.showcase-detail .btn { margin-top: 6px; text-decoration: none; }
+.showcase-poster {
+  width: 46px; height: 68px; border-radius: 8px; object-fit: cover; flex-shrink: 0;
+  background: var(--card);
+}
+.showcase-poster-placeholder {
+  display: flex; align-items: center; justify-content: center; font-size: 1.4rem;
+  border: 1px dashed var(--border);
+}
+.showcase-info { flex: 1; min-width: 0; }
+.showcase-title {
+  font-weight: 700; font-size: 0.95rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.showcase-date { color: var(--muted); font-size: 0.82rem; margin-top: 2px; }
+.showcase-action { flex-shrink: 0; }
+.showcase-action-stack { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.btn-ghost {
+  background: none; border: 1px solid var(--border); color: var(--muted); box-shadow: none;
+}
+.btn-ghost:hover { border-color: var(--danger); color: var(--danger); }
+.btn-ghost.confirming { border-color: var(--danger); color: var(--danger); background: rgba(242, 89, 107, 0.12); }
+
+#showcase-filters, .filter-panel {
+  display: flex; flex-wrap: wrap; gap: 10px 18px;
+  margin-bottom: 16px; padding: 12px 14px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+}
+.showcase-filter-group { display: flex; flex-direction: column; gap: 6px; }
+.showcase-filter-group h4 {
+  margin: 0; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.03em;
+  text-transform: uppercase; color: var(--muted);
+}
+.showcase-filter-options { display: flex; flex-wrap: wrap; gap: 6px; }
+.showcase-filter-btn {
+  border: 1px solid var(--border); background: rgba(255,255,255,0.03); color: var(--text);
+  font-family: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  padding: 6px 12px; border-radius: 999px; white-space: nowrap; transition: background 0.15s, border-color 0.15s;
+}
+.showcase-filter-btn:hover { border-color: var(--primary); }
+.showcase-filter-btn.active {
+  background: linear-gradient(90deg, var(--primary), var(--primary-2));
+  border-color: transparent; color: white;
+}
+.spinner { text-align: center; padding: 30px; color: var(--muted); width: 100%; }

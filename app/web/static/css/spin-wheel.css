@@ -1,0 +1,61 @@
+/* Spin mode toggle, spin speed control, and the roulette wheel (canvas). */
+
+.spin-mode-toggle-wrap { display: flex; justify-content: center; margin-bottom: 14px; }
+.spin-mode-toggle {
+  display: inline-flex; gap: 6px; padding: 12px 14px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+}
+
+.spin-speed-wrap { display: none; justify-content: center; margin-bottom: 14px; }
+.spin-speed-wrap.visible { display: flex; }
+.spin-speed-control {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px; background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+}
+.spin-speed-control label { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.spin-speed-control input[type="number"] {
+  width: 64px; text-align: center; font-size: 14px; font-weight: 700; color: var(--text);
+  background: var(--bg-c); border: 1px solid var(--border); border-radius: 8px; padding: 6px 4px;
+  -moz-appearance: textfield;
+}
+.spin-speed-control input[type="number"]::-webkit-inner-spin-button,
+.spin-speed-control input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none; margin: 0;
+}
+.spin-speed-control input[type="number"]:focus { outline: none; border-color: var(--primary); }
+.spin-speed-control .spin-speed-unit { font-size: 13px; color: var(--muted); }
+
+.wheel-wrap {
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  position: relative; width: 100%; min-height: 60vh; margin-top: 28px; margin-bottom: 20px;
+}
+.wheel-current-title {
+  min-height: 1.4em; margin-bottom: 10px; padding: 6px 16px;
+  font-weight: 700; font-size: 1.05rem; text-align: center; color: #fff;
+  background: rgba(9,12,22,0.55); border-radius: 12px; max-width: 90%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.wheel-holder {
+  position: relative; display: flex; align-items: center; justify-content: center;
+  filter: drop-shadow(0 10px 26px rgba(0,0,0,0.35));
+  overflow: hidden;
+}
+.wheel-canvas {
+  width: 100%; height: 100%; border-radius: 50%;
+  border: 4px solid var(--border); background: var(--card);
+  will-change: transform;
+}
+.wheel-pointer {
+  position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
+  width: 0; height: 0; z-index: 2;
+  border-left: 13px solid transparent; border-right: 13px solid transparent;
+  border-top: 22px solid var(--danger);
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+}
+.wheel-hub {
+  position: absolute; width: 20px; height: 20px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--primary-2));
+  border: 2px solid var(--border); z-index: 1;
+}
+.wheel-wrap.wheel-done .wheel-holder { animation: wheelPop 0.4s ease; }
+@keyframes wheelPop { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }

@@ -1,0 +1,72 @@
+/* Toast notifications, inline undo pill, cooldown wipe animation, and history items. */
+
+.toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: linear-gradient(135deg, var(--success), #16a97a); color: white; padding: 9px 20px; border-radius: 24px;
+  font-size: 0.9rem; font-weight: 600; opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 20;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+}
+.toast.show { opacity: 1; }
+.inline-undo-row {
+  display: flex; justify-content: center; margin: 10px 0;
+  animation: fadeIn 0.25s ease;
+}
+.inline-undo-pill {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--card); border: 1px solid var(--border); color: var(--text);
+  padding: 10px 10px 10px 20px; border-radius: 26px;
+  font-size: 0.95rem; font-weight: 700;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+  transition: opacity 0.2s ease;
+  max-width: 100%;
+}
+.inline-undo-pill .undo-text {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 55vw;
+}
+.inline-undo-pill button {
+  position: relative; overflow: hidden; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--primary), var(--primary-2)); color: white; border: none;
+  border-radius: 20px; padding: 9px 18px; font-size: 0.88rem; font-weight: 800; cursor: pointer; font-family: inherit;
+}
+.inline-undo-pill button span { position: relative; z-index: 1; }
+.inline-undo-pill button::after {
+  content: ""; position: absolute; inset: 0; background: var(--card);
+  transform: scaleX(0); transform-origin: right;
+}
+.inline-undo-pill button.wipe::after {
+  animation: wipeout linear forwards; animation-duration: var(--toast-duration, 4.5s);
+}
+@keyframes wipeout { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.cooldown-anim { position: relative; overflow: hidden; }
+.cooldown-anim > span { position: relative; z-index: 1; }
+.cooldown-anim::after {
+  content: ""; position: absolute; inset: 0; background: rgba(5, 4, 15, 0.55);
+  transform: scaleX(0); transform-origin: right; pointer-events: none;
+}
+.cooldown-anim.wipe::after {
+  animation: wipeout linear forwards; animation-duration: var(--cooldown-duration, 1.5s);
+}
+.hist-item {
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+  padding: 13px; margin-bottom: 10px;
+}
+.hist-item.resolved { opacity: 0.55; }
+.hist-item .hist-title { font-weight: 700; margin-bottom: 3px; }
+.hist-item .hist-meta { color: var(--muted); font-size: 0.82rem; margin-bottom: 8px; }
+.hist-item .hist-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.hist-tabs { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 16px; }
+.hist-tabs .btn { opacity: 0.55; }
+.hist-tabs .btn.active { opacity: 1; }
+.hist-clear-row { display: flex; justify-content: center; margin-bottom: 16px; }
+.hist-clear-row .btn { opacity: 0.75; }
+.hist-clear-row .btn.confirming { opacity: 1; }
+
+#list-featured .card { border-color: var(--primary); }
+#list-featured .featured-label {
+  font-size: 0.78rem; font-weight: 700; color: var(--muted); margin-bottom: 6px;
+  text-transform: uppercase; letter-spacing: 0.03em;
+}
+
+#list-container, #list-featured, #up-list-container, #history-list, #showcase-container, #theaters-container, #series-releases-container {
+  transition: opacity 0.22s ease;
+}

@@ -6,6 +6,7 @@ const MENU_LABELS = {movies: "Фильмы", cartoons: "Мульты", series: "
 const REF_MENU_LABELS = {marvel: "Marvel", dc: "DC"};
 
 const ICONS = {
+  home: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"></path><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"></path></svg>`,
   shuffle: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>`,
   movies: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="2"></rect><line x1="7" y1="3" x2="7" y2="21"></line><line x1="17" y1="3" x2="17" y2="21"></line><line x1="2" y1="8" x2="7" y2="8"></line><line x1="2" y1="16" x2="7" y2="16"></line><line x1="17" y1="8" x2="22" y2="8"></line><line x1="17" y1="16" x2="22" y2="16"></line></svg>`,
   cartoons: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>`,
@@ -29,6 +30,7 @@ function renderMenu() {
     sideMenuScroll.appendChild(b);
   };
 
+  addItem("home", "Афиша", () => switchView("home"), currentView === "home");
   addItem("shuffle", "Наугад", () => switchView("random"), currentView === "random");
   addItem("theaters", "В прокате", () => switchView("theaters"), currentView === "theaters");
   addItem("series", "Премьеры сериалов", () => switchView("series_releases"), currentView === "series_releases");
@@ -64,6 +66,7 @@ function switchView(view) {
 }
 
 const SECTION_IDS = {
+  home: "home-section",
   random: "random-spin-section", spin: "spin-section", list: "list-section",
   upcoming: "upcoming-section", history: "history-section", showcase: "showcase-section",
   theaters: "theaters-section", series_releases: "series-releases-section",
@@ -84,12 +87,13 @@ function showSection() {
     activeEl.classList.add("fade-in");
   }
 
-  const titles = {random: "🔄 Наугад", spin: `${ALL_CATS[currentCat] || ""}`, list: `${ALL_CATS[currentCat] || ""}`,
+  const titles = {home: "🎬 Афиша", random: "🔄 Наугад", spin: `${ALL_CATS[currentCat] || ""}`, list: `${ALL_CATS[currentCat] || ""}`,
                    upcoming: "🕐 Ожидаемые", history: "📜 История", showcase: `${ALL_CATS[currentCat] || ""} — скоро`,
                    theaters: "🎟 В прокате", series_releases: "📺 Премьеры сериалов",
                    tracked_series: "🔔 Отслеживание сериалов"};
   document.getElementById("page-title").textContent = titles[currentView] || "";
 
+  if (currentView === "home") loadHome();
   if (currentView === "random") {
     renderSpinModeToggle("random-mode-toggle");
     renderSpinSpeedControl("random-spin-speed");

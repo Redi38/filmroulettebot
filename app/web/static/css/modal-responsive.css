@@ -48,6 +48,8 @@
     max-width: none;
   }
 
+  main > #home-section.active { max-width: none; width: 100%; }
+
   main > #theaters-section.active { max-width: 1500px; }
   #theaters-container { display: flex; align-items: flex-start; gap: 128px; }
   .theaters-col { flex: 1 1 0; min-width: 0; }

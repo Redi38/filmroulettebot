@@ -11,6 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/css/base.css">
 <link rel="stylesheet" href="/static/css/buttons-cards.css">
+<link rel="stylesheet" href="/static/css/home.css">
 <link rel="stylesheet" href="/static/css/showcase.css">
 <link rel="stylesheet" href="/static/css/spin-wheel.css">
 <link rel="stylesheet" href="/static/css/feedback-history.css">
@@ -29,6 +30,27 @@
 <nav id="side-menu"><div id="side-menu-scroll"></div></nav>
 
 <main>
+  <div id="home-section" class="section">
+    <div class="home-content-wrap">
+      <div class="home-hero">
+        <div class="home-hero-text">
+          <h2>🎬 Киношная рулетка</h2>
+          <p>Твоя личная афиша: коллекция уже добавленных тайтлов и рулетка, которая подскажет, что посмотреть сегодня.</p>
+        </div>
+        <button class="btn btn-success home-cta" id="home-roulette-btn"><span>🎲 Крутить рулетку</span></button>
+      </div>
+    </div>
+    <div id="home-collection-block" class="home-collection-block" style="display:none">
+      <div class="home-collection-label">Твоя коллекция</div>
+      <div class="marquee" id="home-marquee">
+        <div class="marquee-track" id="home-marquee-track-1"></div>
+      </div>
+      <div class="marquee marquee-reverse" id="home-marquee-2">
+        <div class="marquee-track" id="home-marquee-track-2"></div>
+      </div>
+    </div>
+  </div>
+
   <div id="random-spin-section" class="section">
     <div class="spin-controls-dock">
       <div id="random-mode-toggle"></div>
@@ -127,6 +149,7 @@
 <script src="/static/js/showcase/showcase-row.js"></script>
 <script src="/static/js/showcase/showcase.js"></script>
 <script src="/static/js/theaters/theaters.js"></script>
+<script src="/static/js/home/home.js"></script>
 <script src="/static/js/core/main.js"></script>
 </body>
 </html>

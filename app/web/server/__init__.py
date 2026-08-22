@@ -20,6 +20,7 @@ from app.db.database import init_db
 from . import (
     routes_core,
     routes_history,
+    routes_home,
     routes_items,
     routes_media,
     routes_showcase,
@@ -42,6 +43,7 @@ async def _startup() -> None:
 for _router_module in (
     routes_core,
     routes_history,
+    routes_home,
     routes_upcoming,
     routes_items,
     routes_spin,

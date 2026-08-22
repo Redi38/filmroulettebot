@@ -8,10 +8,10 @@ const RESOLVED_HIST_KEY = "filmroulette_resolved_history";
 function loadState() {
   try {
     const raw = localStorage.getItem(STATE_KEY);
-    if (!raw) return {cat: "movies", view: "random"};
+    if (!raw) return {cat: "movies", view: "home"};
     const s = JSON.parse(raw);
-    return {cat: s.cat || "movies", view: s.view || "random"};
-  } catch { return {cat: "movies", view: "random"}; }
+    return {cat: s.cat || "movies", view: s.view || "home"};
+  } catch { return {cat: "movies", view: "home"}; }
 }
 function saveState() {
   try { localStorage.setItem(STATE_KEY, JSON.stringify({cat: currentCat, view: currentView})); } catch {}

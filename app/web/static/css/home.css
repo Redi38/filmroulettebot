@@ -1,0 +1,68 @@
+/* Home ("Афиша") screen: hero + "Твоя коллекция" running poster marquee. */
+
+.home-content-wrap { max-width: 900px; width: 100%; margin: 0 auto; }
+
+.home-hero {
+  display: flex; flex-direction: column; gap: 16px; align-items: flex-start;
+  padding: 22px 20px; margin-bottom: 22px;
+  background: linear-gradient(135deg, rgba(139,124,246,0.16), rgba(91,141,239,0.08));
+  border: 1px solid var(--border); border-radius: 18px;
+}
+.home-hero-text h2 { margin: 0 0 8px; font-size: 1.3rem; font-weight: 800; }
+.home-hero-text p { margin: 0; color: var(--muted); font-size: 0.95rem; line-height: 1.55; }
+.home-cta { width: 100%; font-size: 1.02rem; padding: 14px 18px; }
+
+.home-collection-block {
+  margin-bottom: 24px;
+  margin-left: -16px; margin-right: -16px;
+}
+.home-collection-block .home-content-wrap {
+  padding: 0 16px;
+}
+.home-collection-label {
+  font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 10px;
+}
+
+.marquee {
+  position: relative; overflow: hidden; width: 100%;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%);
+  margin-bottom: 10px;
+}
+.marquee-track {
+  display: flex; width: max-content;
+  animation: marquee-scroll var(--marquee-duration, 30s) linear infinite;
+}
+.marquee-reverse .marquee-track { animation-direction: reverse; }
+.marquee:hover .marquee-track,
+.marquee:active .marquee-track {
+  animation-play-state: paused;
+}
+
+.marquee-poster {
+  width: 140px; height: 210px; object-fit: cover; border-radius: 14px; flex-shrink: 0;
+  margin-right: 14px; background: var(--card); border: 1px solid var(--border);
+  box-shadow: 0 8px 22px rgba(5,4,15,0.4);
+  -webkit-user-drag: none;
+}
+
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.home-quicklinks {
+  display: flex; flex-wrap: wrap; gap: 10px;
+}
+.home-quick-btn {
+  flex: 1 1 auto; min-width: 130px;
+  background: var(--card); border: 1px solid var(--border); color: var(--text);
+  font-family: inherit; font-size: 0.92rem; font-weight: 700;
+  padding: 12px 14px; border-radius: 12px; cursor: pointer;
+}
+.home-quick-btn:hover { border-color: var(--primary); }
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track { animation: none; }
+}

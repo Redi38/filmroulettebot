@@ -1,5 +1,13 @@
 // Roulette wheel: canvas drawing, spin animation, pointer title tracking.
 
+let wheelSpinActive = false;
+
+function nextSettledFrame() {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(resolve));
+  });
+}
+
 async function showIdleWheel(cat) {
   const wrap = document.getElementById("spin-wheel-wrap");
   if (!wrap) return;
@@ -8,6 +16,8 @@ async function showIdleWheel(cat) {
     const pool = data.wheel_pool;
     if (!pool || pool.length < 2) return;
     wrap.classList.remove("wheel-done");
+    await nextSettledFrame();
+    if (!wrap.isConnected || document.getElementById("spin-wheel-wrap") !== wrap) return;
     buildWheel("spin-wheel-wrap", pool);
     document.getElementById("spin-result").innerHTML = "";
   } catch (e) {
@@ -31,6 +41,8 @@ function resetWheelWraps() {
     wrap.classList.remove("wheel-done");
     wrap.style.display = "none";
     wrap.style.minHeight = "";
+    wrap.style.paddingTop = "";
+    wrap._wheelPool = null;
   }
 }
 
@@ -41,25 +53,54 @@ const WHEEL_COLORS = [
   "#ffd166", "#d67cf0", "#45d4c9", "#ff9f68"
 ];
 const WHEEL_MIN_SIZE = 260;
-const WHEEL_MAX_SIZE = 960;
+const WHEEL_MAX_SIZE = 1400;
 const WHEEL_HUB_GIF_URL = "";
+
+function computeDockClearance(wrap, dock) {
+  if (!dock) return 0;
+  const dockPos = getComputedStyle(dock).position;
+  if (dockPos !== "absolute" && dockPos !== "fixed") return 0;
+  const dockRect = dock.getBoundingClientRect();
+  const wrapRect = wrap.getBoundingClientRect();
+  const wrapTop = wrapRect.top - (parseFloat(wrap.style.paddingTop) || 0);
+  if (dockRect.bottom <= wrapTop) return 0;
+  const availableWidth = wrap.clientWidth;
+  const viewportHeight = document.documentElement.clientHeight || window.innerHeight;
+  const provisionalHeight = viewportHeight - wrapTop - 16;
+  const provisionalSize = Math.min(
+    Math.max(Math.min(availableWidth, provisionalHeight) - 4, WHEEL_MIN_SIZE),
+    WHEEL_MAX_SIZE
+  );
+  const contentCenterX = wrapRect.left + wrapRect.width / 2;
+  const contentRight = contentCenterX + provisionalSize / 2;
+  if (contentRight <= dockRect.left) return 0;
+  return Math.max(0, Math.ceil(dockRect.bottom - wrapTop) + 14);
+}
 
 function buildWheel(wrapId, items) {
   const wrap = document.getElementById(wrapId);
   wrap.innerHTML = "";
   wrap.classList.remove("wheel-done");
   wrap.style.minHeight = "";
+  wrap.style.paddingTop = "";
   wrap.style.display = "flex";
+  wrap._wheelPool = items;
+
+  const dock = wrap.parentElement && wrap.parentElement.querySelector(".spin-controls-dock");
+  const dockClearance = computeDockClearance(wrap, dock);
+  wrap.style.paddingTop = dockClearance + "px";
 
   const top = wrap.getBoundingClientRect().top;
-  const pageBottomGap = 12;
-  const availableHeight = window.innerHeight - top - pageBottomGap;
+  const pageBottomGap = 16;
+  const viewportHeight = document.documentElement.clientHeight || window.innerHeight;
+  const availableHeight = viewportHeight - top - pageBottomGap - dockClearance;
   const availableWidth = wrap.clientWidth;
   const cssSize = Math.min(
     Math.max(Math.min(availableWidth, availableHeight) - 4, WHEEL_MIN_SIZE),
     WHEEL_MAX_SIZE
   );
-  wrap.style.minHeight = cssSize + "px";
+  wrap.style.minHeight = (cssSize + dockClearance) + "px";
+  wrap._wheelBuiltSize = cssSize;
 
   const titleEl = document.createElement("div");
   titleEl.className = "wheel-current-title";
@@ -187,6 +228,7 @@ function drawWheel(canvas, items, dpr) {
 }
 
 function spinWheelTo(canvas, n, winnerIndex, durationMs) {
+  wheelSpinActive = true;
   return new Promise((resolve) => {
     const segDeg = 360 / n;
     const centerDeg = winnerIndex * segDeg + segDeg / 2;
@@ -217,7 +259,39 @@ function spinWheelTo(canvas, n, winnerIndex, durationMs) {
     setTimeout(() => {
       cancelAnimationFrame(rafId);
       updatePointerTitle(canvas, ((totalDeg % 360) + 360) % 360);
+      wheelSpinActive = false;
       resolve();
     }, durationMs);
   });
 }
+
+function predictWheelSize(wrap) {
+  const dock = wrap.parentElement && wrap.parentElement.querySelector(".spin-controls-dock");
+  const dockClearance = computeDockClearance(wrap, dock);
+  const top = wrap.getBoundingClientRect().top - (parseFloat(wrap.style.paddingTop) || 0);
+  const pageBottomGap = 16;
+  const viewportHeight = document.documentElement.clientHeight || window.innerHeight;
+  const availableHeight = viewportHeight - top - pageBottomGap - dockClearance;
+  const availableWidth = wrap.clientWidth;
+  return Math.min(
+    Math.max(Math.min(availableWidth, availableHeight) - 4, WHEEL_MIN_SIZE),
+    WHEEL_MAX_SIZE
+  );
+}
+
+function rebuildVisibleWheels() {
+  if (wheelSpinActive) return;
+  for (const id of ["random-wheel-wrap", "spin-wheel-wrap"]) {
+    const wrap = document.getElementById(id);
+    if (!wrap || wrap.style.display === "none" || !wrap._wheelPool) continue;
+    const predicted = predictWheelSize(wrap);
+    if (Math.abs(predicted - (wrap._wheelBuiltSize || 0)) < 3) continue;
+    buildWheel(id, wrap._wheelPool);
+  }
+}
+
+const debouncedRebuildVisibleWheels = typeof debounce === "function"
+  ? debounce(rebuildVisibleWheels, 150)
+  : rebuildVisibleWheels;
+window.addEventListener("resize", debouncedRebuildVisibleWheels);
+window.addEventListener("orientationchange", debouncedRebuildVisibleWheels);

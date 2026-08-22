@@ -14,6 +14,7 @@ button {
 html {
   overflow-x: hidden;
   width: 100%;
+  scrollbar-gutter: stable;
 }
 body {
   margin: 0; font-family: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -66,4 +67,3 @@ header .header-spacer { width: 34px; height: 34px; flex-shrink: 0; }
 #side-menu .menu-item.sub { padding-left: 46px; font-size: 0.9rem; color: var(--muted); }
 #side-menu .menu-item.sub.active { color: white; }
 #side-menu hr { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
-

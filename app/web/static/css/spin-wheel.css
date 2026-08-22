@@ -1,20 +1,37 @@
 /* Spin mode toggle, spin speed control, and the roulette wheel (canvas). */
 
-.spin-mode-toggle-wrap { display: flex; justify-content: center; margin-bottom: 14px; }
-.spin-mode-toggle {
-  display: inline-flex; gap: 6px; padding: 12px 14px;
-  background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+#random-spin-section, #spin-section { position: relative; }
+#random-spin-section.active, #spin-section.active {
+  display: flex; flex-direction: column; align-items: center;
 }
 
-.spin-speed-wrap { display: none; justify-content: center; margin-bottom: 14px; }
+.spin-controls-dock {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 10px; width: fit-content; margin: 0 0 18px; padding: 12px 16px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+}
+
+@media (min-width: 900px) {
+  .spin-controls-dock {
+    position: fixed; top: calc(var(--header-h) + 14px); right: 16px; z-index: 5;
+    margin: 0;
+  }
+
+  .spin-controls-dock ~ .spin-result { padding-top: 190px; }
+}
+
+.spin-mode-toggle-wrap { display: flex; justify-content: center; margin: 0; }
+.spin-mode-toggle { display: inline-flex; gap: 6px; }
+
+.spin-speed-wrap { display: none; justify-content: center; margin: 0; }
 .spin-speed-wrap.visible { display: flex; }
 .spin-speed-control {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 16px; background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+  display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;
 }
 .spin-speed-control label { font-size: 13px; color: var(--muted); white-space: nowrap; }
 .spin-speed-control input[type="number"] {
-  width: 64px; text-align: center; font-size: 14px; font-weight: 700; color: var(--text);
+  width: 56px; text-align: center; font-size: 14px; font-weight: 700; color: var(--text);
   background: var(--bg-c); border: 1px solid var(--border); border-radius: 8px; padding: 6px 4px;
   -moz-appearance: textfield;
 }
@@ -27,8 +44,9 @@
 
 .wheel-wrap {
   display: none; flex-direction: column; align-items: center; justify-content: center;
-  position: relative; width: 100%; min-height: 60vh; margin-top: 28px; margin-bottom: 20px;
+  position: relative; width: 100%; min-height: 60vh; margin-top: 8px; margin-bottom: 0;
 }
+#random-spin-result, #spin-result { width: 100%; }
 .wheel-current-title {
   min-height: 1.4em; margin-bottom: 22px; padding: 6px 16px;
   font-weight: 700; font-size: 1.05rem; text-align: center; color: #fff;

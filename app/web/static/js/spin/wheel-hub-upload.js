@@ -50,7 +50,7 @@ function ensureHubUploadDom() {
       <div class="wheel-hub-emote-grid">
         ${HUB_EMOTE_PRESETS.map((e) => `<button type="button" class="wheel-hub-emote-btn" data-url="${hubEmoteFullUrl(e.id)}" title="${e.name}"><img src="${hubEmoteThumbUrl(e.id)}" alt="${e.name}" loading="lazy"></button>`).join("")}
       </div>
-      <button type="button" id="wheel-hub-open-modal">Добавить своё изображение</button>`;
+      <button type="button" id="wheel-hub-open-modal">Добавить изображение</button>`;
     document.body.appendChild(hubPopoverEl);
     hubPopoverEl.querySelectorAll(".wheel-hub-emote-btn").forEach((btn) => {
       btn.onclick = () => { setWheelHubImage(btn.dataset.url); closeHubPopover(); };
@@ -66,7 +66,7 @@ function ensureHubUploadDom() {
     hubModalEl.innerHTML = `
       <div class="wheel-hub-modal-box">
         <button type="button" class="wheel-hub-modal-close" aria-label="Закрыть">✕</button>
-        <h3>Добавьте своё изображение для колеса</h3>
+        <h3>Добавьте изображение для колеса</h3>
         <div class="wheel-hub-dropzone" id="wheel-hub-dropzone" tabindex="0">
           Перетащите файл сюда или нажмите
         </div>

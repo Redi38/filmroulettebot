@@ -44,8 +44,8 @@
   main > #showcase-section.active { max-width: 900px; }
   #showcase-section #showcase-filters { margin-bottom: 20px; }
 
-  #random-wheel-wrap, #spin-wheel-wrap {
-    width: 900px; max-width: 900px; margin-left: -130px; margin-right: -130px;
+  main > #random-spin-section.active, main > #spin-section.active {
+    max-width: none;
   }
 
   main > #theaters-section.active { max-width: 1500px; }
@@ -65,4 +65,3 @@
   .showcase-title { font-size: 1.15rem; white-space: normal; }
   .showcase-date { font-size: 0.92rem; margin-top: 5px; }
 }
-

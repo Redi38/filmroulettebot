@@ -106,6 +106,7 @@ function renderSpinModeToggle(containerId) {
       renderSpinSpeedControl("random-spin-speed");
       renderSpinSpeedControl("spin-spin-speed");
       resetWheelWraps();
+      if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
 
       if (currentCardData) return;
 

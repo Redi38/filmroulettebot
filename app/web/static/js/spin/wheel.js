@@ -53,8 +53,16 @@ const WHEEL_COLORS = [
   "#ffd166", "#d67cf0", "#45d4c9", "#ff9f68"
 ];
 const WHEEL_MIN_SIZE = 260;
-const WHEEL_MAX_SIZE = 1400;
+const WHEEL_MAX_SIZE = 1100;
 const WHEEL_HUB_GIF_URL = "";
+const WHEEL_VERTICAL_RESERVE = 70;
+
+function computeWheelSize(availableWidth, availableHeight) {
+  return Math.min(
+    Math.max(Math.min(availableWidth, availableHeight - WHEEL_VERTICAL_RESERVE) - 4, WHEEL_MIN_SIZE),
+    WHEEL_MAX_SIZE
+  );
+}
 
 function computeDockClearance(wrap, dock) {
   if (!dock) return 0;
@@ -67,10 +75,7 @@ function computeDockClearance(wrap, dock) {
   const availableWidth = wrap.clientWidth;
   const viewportHeight = document.documentElement.clientHeight || window.innerHeight;
   const provisionalHeight = viewportHeight - wrapTop - 16;
-  const provisionalSize = Math.min(
-    Math.max(Math.min(availableWidth, provisionalHeight) - 4, WHEEL_MIN_SIZE),
-    WHEEL_MAX_SIZE
-  );
+  const provisionalSize = computeWheelSize(availableWidth, provisionalHeight);
   const contentCenterX = wrapRect.left + wrapRect.width / 2;
   const contentRight = contentCenterX + provisionalSize / 2;
   if (contentRight <= dockRect.left) return 0;
@@ -95,11 +100,8 @@ function buildWheel(wrapId, items) {
   const viewportHeight = document.documentElement.clientHeight || window.innerHeight;
   const availableHeight = viewportHeight - top - pageBottomGap - dockClearance;
   const availableWidth = wrap.clientWidth;
-  const cssSize = Math.min(
-    Math.max(Math.min(availableWidth, availableHeight) - 4, WHEEL_MIN_SIZE),
-    WHEEL_MAX_SIZE
-  );
-  wrap.style.minHeight = (cssSize + dockClearance) + "px";
+  const cssSize = computeWheelSize(availableWidth, availableHeight);
+  wrap.style.minHeight = (cssSize + dockClearance + WHEEL_VERTICAL_RESERVE) + "px";
   wrap._wheelBuiltSize = cssSize;
 
   const titleEl = document.createElement("div");
@@ -273,10 +275,7 @@ function predictWheelSize(wrap) {
   const viewportHeight = document.documentElement.clientHeight || window.innerHeight;
   const availableHeight = viewportHeight - top - pageBottomGap - dockClearance;
   const availableWidth = wrap.clientWidth;
-  return Math.min(
-    Math.max(Math.min(availableWidth, availableHeight) - 4, WHEEL_MIN_SIZE),
-    WHEEL_MAX_SIZE
-  );
+  return computeWheelSize(availableWidth, availableHeight);
 }
 
 function rebuildVisibleWheels() {
@@ -289,6 +288,48 @@ function rebuildVisibleWheels() {
     buildWheel(id, wrap._wheelPool);
   }
 }
+
+const SPIN_RESULT_PAIRS = [
+  { sectionId: "random-spin-section", resultId: "random-spin-result" },
+  { sectionId: "spin-section", resultId: "spin-result" },
+];
+
+function syncSpinResultClearance() {
+  for (const { sectionId, resultId } of SPIN_RESULT_PAIRS) {
+    const section = document.getElementById(sectionId);
+    const result = document.getElementById(resultId);
+    if (!section || !result) continue;
+    result.style.paddingTop = "";
+    const dock = section.querySelector(".spin-controls-dock");
+    if (!dock || !section.classList.contains("active")) continue;
+    const dockPos = getComputedStyle(dock).position;
+    if (dockPos !== "fixed" && dockPos !== "absolute") continue;
+    const dockRect = dock.getBoundingClientRect();
+    const resultRect = result.getBoundingClientRect();
+    result.style.paddingTop = Math.max(0, Math.ceil(dockRect.bottom - resultRect.top) + 16) + "px";
+  }
+}
+
+const debouncedSyncSpinResultClearance = typeof debounce === "function"
+  ? debounce(syncSpinResultClearance, 150)
+  : syncSpinResultClearance;
+window.addEventListener("resize", debouncedSyncSpinResultClearance);
+window.addEventListener("orientationchange", debouncedSyncSpinResultClearance);
+
+let dockRevealTimer = null;
+let dockRevealed = false;
+function scheduleDockReveal() {
+  if (dockRevealed) return;
+  clearTimeout(dockRevealTimer);
+  dockRevealTimer = setTimeout(() => {
+    dockRevealed = true;
+    document.body.classList.add("dock-ready");
+    syncSpinResultClearance();
+  }, 220);
+}
+window.addEventListener("resize", scheduleDockReveal);
+window.addEventListener("orientationchange", scheduleDockReveal);
+scheduleDockReveal();
 
 const debouncedRebuildVisibleWheels = typeof debounce === "function"
   ? debounce(rebuildVisibleWheels, 150)

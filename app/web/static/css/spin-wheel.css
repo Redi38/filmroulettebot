@@ -6,19 +6,41 @@
 }
 
 .spin-controls-dock {
+  position: fixed; z-index: 5;
+  top: calc(var(--header-h) + 10px); left: 50%; right: auto;
+  transform: translateX(-50%);
   display: flex; flex-direction: column; align-items: center;
-  gap: 10px; width: fit-content; margin: 0 0 18px; padding: 12px 16px;
+  gap: 10px; width: fit-content; max-width: calc(100vw - 32px); padding: 12px 16px;
   background: var(--card); border: 1px solid var(--border); border-radius: 14px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  opacity: 0; pointer-events: none;
+  transition: top 0.2s ease, right 0.2s ease, left 0.2s ease, transform 0.2s ease,
+              padding 0.2s ease, gap 0.2s ease, opacity 0.25s ease;
 }
+body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
+.spin-controls-dock ~ .spin-result { padding-top: 150px; }
 
 @media (min-width: 900px) {
   .spin-controls-dock {
-    position: fixed; top: calc(var(--header-h) + 14px); right: 16px; z-index: 5;
-    margin: 0;
+    top: calc(var(--header-h) + 14px); right: 16px; left: auto;
+    transform: none;
+    padding: 20px 26px; gap: 16px; border-radius: 18px;
   }
 
   .spin-controls-dock ~ .spin-result { padding-top: 190px; }
+
+  .spin-controls-dock .showcase-filter-btn {
+    padding: 11px 22px; font-size: 1.05rem; border-radius: 999px;
+  }
+  .spin-controls-dock .spin-speed-control { gap: 10px; }
+  .spin-controls-dock .spin-speed-control label,
+  .spin-controls-dock .spin-speed-control .spin-speed-unit { font-size: 1rem; }
+  .spin-controls-dock .spin-speed-control input[type="number"] {
+    width: 76px; font-size: 1.15rem; padding: 9px 6px; border-radius: 10px;
+  }
+  .spin-controls-dock .btn {
+    padding: 16px 32px; font-size: 1.2rem; border-radius: 14px; gap: 8px;
+  }
 }
 
 .spin-mode-toggle-wrap { display: flex; justify-content: center; margin: 0; }
@@ -46,7 +68,7 @@
   display: none; flex-direction: column; align-items: center; justify-content: center;
   position: relative; width: 100%; min-height: 60vh; margin-top: 8px; margin-bottom: 0;
 }
-#random-spin-result, #spin-result { width: 100%; }
+#random-spin-result, #spin-result { width: 100%; max-width: 640px; margin: 0 auto; }
 .wheel-current-title {
   min-height: 1.4em; margin-bottom: 22px; padding: 6px 16px;
   font-weight: 700; font-size: 1.05rem; text-align: center; color: #fff;

@@ -103,6 +103,9 @@ function showSection() {
     currentCardData = null;
     if (spinMode === "wheel") showIdleWheel(currentCat);
   }
+  if (currentView === "random" || currentView === "spin") {
+    if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
+  }
   if (currentView === "list") loadList();
   if (currentView === "upcoming") loadUpcoming();
   if (currentView === "history") loadHistory();

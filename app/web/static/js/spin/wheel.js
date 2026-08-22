@@ -2,10 +2,17 @@
 
 let wheelSpinActive = false;
 
+function fontsSettled() {
+  const fontsReady = (document.fonts && document.fonts.ready)
+    ? document.fonts.ready
+    : Promise.resolve();
+  return Promise.race([fontsReady, new Promise((resolve) => setTimeout(resolve, 800))]);
+}
+
 function nextSettledFrame() {
-  return new Promise((resolve) => {
+  return fontsSettled().then(() => new Promise((resolve) => {
     requestAnimationFrame(() => requestAnimationFrame(resolve));
-  });
+  }));
 }
 
 async function showIdleWheel(cat) {
@@ -44,6 +51,16 @@ function resetWheelWraps() {
     wrap.style.paddingTop = "";
     wrap._wheelPool = null;
   }
+  updateWheelScrollLock();
+}
+
+function updateWheelScrollLock() {
+  const anyWheelOpen = ["random-wheel-wrap", "spin-wheel-wrap"].some((id) => {
+    const wrap = document.getElementById(id);
+    return !!wrap && wrap.style.display !== "none" && wrap.offsetParent !== null;
+  });
+  document.documentElement.classList.toggle("wheel-scroll-lock", anyWheelOpen);
+  document.body.classList.toggle("wheel-scroll-lock", anyWheelOpen);
 }
 
 const WHEEL_COLORS = [
@@ -150,6 +167,7 @@ function buildWheel(wrapId, items) {
   canvas._wheelItems = items;
   canvas._wheelTitleEl = titleEl;
   updatePointerTitle(canvas, 0);
+  updateWheelScrollLock();
   return canvas;
 }
 
@@ -289,24 +307,57 @@ function rebuildVisibleWheels() {
   }
 }
 
+function forceRebuildVisibleWheels() {
+  if (wheelSpinActive) return;
+  for (const id of ["random-wheel-wrap", "spin-wheel-wrap"]) {
+    const wrap = document.getElementById(id);
+    if (!wrap || wrap.style.display === "none" || !wrap._wheelPool) continue;
+    buildWheel(id, wrap._wheelPool);
+  }
+}
+
+const SPIN_RESULT_MAX_WIDTH = 860;
 const SPIN_RESULT_PAIRS = [
   { sectionId: "random-spin-section", resultId: "random-spin-result" },
   { sectionId: "spin-section", resultId: "spin-result" },
 ];
 
 function syncSpinResultClearance() {
+  const isDesktop = window.matchMedia("(min-width: 900px)").matches;
   for (const { sectionId, resultId } of SPIN_RESULT_PAIRS) {
     const section = document.getElementById(sectionId);
     const result = document.getElementById(resultId);
     if (!section || !result) continue;
     result.style.paddingTop = "";
+    result.style.width = "";
+    result.style.maxWidth = "";
+    result.style.marginLeft = "";
+    result.style.marginRight = "";
+
     const dock = section.querySelector(".spin-controls-dock");
     if (!dock || !section.classList.contains("active")) continue;
     const dockPos = getComputedStyle(dock).position;
     if (dockPos !== "fixed" && dockPos !== "absolute") continue;
     const dockRect = dock.getBoundingClientRect();
-    const resultRect = result.getBoundingClientRect();
-    result.style.paddingTop = Math.max(0, Math.ceil(dockRect.bottom - resultRect.top) + 16) + "px";
+
+    if (isDesktop) {
+      const sectionRect = section.getBoundingClientRect();
+      const centerX = (sectionRect.left + sectionRect.right) / 2;
+      const gap = 28;
+      const safeWidth = Math.floor((dockRect.left - centerX - gap) * 2);
+      const width = Math.max(320, Math.min(SPIN_RESULT_MAX_WIDTH, safeWidth));
+      result.style.width = width + "px";
+      result.style.maxWidth = width + "px";
+      result.style.marginLeft = "auto";
+      result.style.marginRight = "auto";
+      if (safeWidth < 320) {
+        const resultRect = result.getBoundingClientRect();
+        result.style.paddingTop = Math.max(0, Math.ceil(dockRect.bottom - resultRect.top) + 16) + "px";
+      }
+    } else {
+      const resultRect = result.getBoundingClientRect();
+      result.style.paddingTop = Math.max(0, Math.ceil(dockRect.bottom - resultRect.top) + 16) + "px";
+    }
   }
 }
 
@@ -316,16 +367,18 @@ const debouncedSyncSpinResultClearance = typeof debounce === "function"
 window.addEventListener("resize", debouncedSyncSpinResultClearance);
 window.addEventListener("orientationchange", debouncedSyncSpinResultClearance);
 
-let dockRevealTimer = null;
+let dockRevealToken = 0;
 let dockRevealed = false;
 function scheduleDockReveal() {
   if (dockRevealed) return;
-  clearTimeout(dockRevealTimer);
-  dockRevealTimer = setTimeout(() => {
+  const myToken = ++dockRevealToken;
+  nextSettledFrame().then(() => {
+    if (myToken !== dockRevealToken || dockRevealed) return;
     dockRevealed = true;
     document.body.classList.add("dock-ready");
     syncSpinResultClearance();
-  }, 220);
+    rebuildVisibleWheels();
+  });
 }
 window.addEventListener("resize", scheduleDockReveal);
 window.addEventListener("orientationchange", scheduleDockReveal);
@@ -336,3 +389,18 @@ const debouncedRebuildVisibleWheels = typeof debounce === "function"
   : rebuildVisibleWheels;
 window.addEventListener("resize", debouncedRebuildVisibleWheels);
 window.addEventListener("orientationchange", debouncedRebuildVisibleWheels);
+
+if (document.fonts && document.fonts.ready) {
+  document.fonts.ready.then(forceRebuildVisibleWheels).catch(() => {});
+}
+
+if (typeof ResizeObserver !== "undefined") {
+  const wheelLayoutObserver = new ResizeObserver(() => {
+    debouncedRebuildVisibleWheels();
+  });
+  for (const sectionId of ["random-spin-section", "spin-section"]) {
+    const section = document.getElementById(sectionId);
+    const dock = section && section.querySelector(".spin-controls-dock");
+    if (dock) wheelLayoutObserver.observe(dock);
+  }
+}

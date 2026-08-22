@@ -75,6 +75,8 @@ function showSection() {
     document.getElementById(id).classList.toggle("active", currentView === view);
   }
 
+  if (typeof updateWheelScrollLock === "function") updateWheelScrollLock();
+
   const activeEl = document.getElementById(SECTION_IDS[currentView]);
   if (activeEl) {
     activeEl.classList.remove("fade-in");

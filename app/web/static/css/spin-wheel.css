@@ -1,5 +1,6 @@
 /* Spin mode toggle, spin speed control, and the roulette wheel (canvas). */
 
+html.wheel-scroll-lock, body.wheel-scroll-lock { overflow: hidden; height: 100%; overscroll-behavior: none; }
 #random-spin-section, #spin-section { position: relative; }
 #random-spin-section.active, #spin-section.active {
   display: flex; flex-direction: column; align-items: center;
@@ -20,6 +21,8 @@
 body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
 .spin-controls-dock ~ .spin-result { padding-top: 150px; }
 
+#random-spin-result, #spin-result { container-type: inline-size; }
+
 @media (min-width: 900px) {
   .spin-controls-dock {
     top: calc(var(--header-h) + 14px); right: 16px; left: auto;
@@ -27,7 +30,7 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
     padding: 20px 26px; gap: 16px; border-radius: 18px;
   }
 
-  .spin-controls-dock ~ .spin-result { padding-top: 190px; }
+  .spin-controls-dock ~ .spin-result { padding-top: 0; }
 
   .spin-controls-dock .showcase-filter-btn {
     padding: 11px 22px; font-size: 1.05rem; border-radius: 999px;
@@ -41,6 +44,29 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
   .spin-controls-dock .btn {
     padding: 16px 32px; font-size: 1.2rem; border-radius: 14px; gap: 8px;
   }
+}
+
+@container (min-width: 620px) {
+  #random-spin-result .placeholder, #spin-result .placeholder {
+    padding: 60px 30px; font-size: 1.08rem;
+  }
+  #random-spin-result .placeholder .big, #spin-result .placeholder .big { font-size: 2.9rem; }
+  #random-spin-result .card, #spin-result .card { padding: 24px; }
+  #random-spin-result .card .title, #spin-result .card .title { font-size: 1.4rem; }
+  #random-spin-result .card .meta, #spin-result .card .meta { font-size: 0.98rem; }
+  #random-spin-result .card .overview, #spin-result .card .overview { font-size: 1.02rem; line-height: 1.6; }
+  #random-spin-result .card .poster, #spin-result .card .poster { max-width: 320px; }
+}
+@container (min-width: 760px) {
+  #random-spin-result .placeholder, #spin-result .placeholder {
+    padding: 76px 34px; font-size: 1.18rem;
+  }
+  #random-spin-result .placeholder .big, #spin-result .placeholder .big { font-size: 3.4rem; }
+  #random-spin-result .card, #spin-result .card { padding: 30px; }
+  #random-spin-result .card .title, #spin-result .card .title { font-size: 1.6rem; }
+  #random-spin-result .card .meta, #spin-result .card .meta { font-size: 1.05rem; }
+  #random-spin-result .card .overview, #spin-result .card .overview { font-size: 1.1rem; line-height: 1.65; }
+  #random-spin-result .card .poster, #spin-result .card .poster { max-width: 360px; }
 }
 
 .spin-mode-toggle-wrap { display: flex; justify-content: center; margin: 0; }

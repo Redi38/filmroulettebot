@@ -20,6 +20,8 @@ async function loadHome() {
       homeLoading = false;
       homeLoaded = true;
     }
+  } else {
+    syncMarqueeSize();
   }
 }
 
@@ -47,7 +49,51 @@ function renderHomeMarquee(posters) {
   }
 
   block.style.display = "";
+  syncMarqueeSize();
 }
+
+function syncMarqueeSize() {
+  const block = document.getElementById("home-collection-block");
+  const section = document.getElementById("home-section");
+  if (!block || !section || !section.classList.contains("active") || block.style.display === "none") return;
+
+  const heroWrap = section.querySelector(".home-content-wrap");
+  const label = block.querySelector(".home-collection-label");
+  const row2 = document.getElementById("home-marquee-2");
+  if (!heroWrap || !label) return;
+
+  document.documentElement.style.removeProperty("--marquee-poster-h");
+  document.documentElement.style.removeProperty("--marquee-poster-w");
+
+  const mainEl = section.closest("main");
+  const mainBottomPadding = mainEl ? parseFloat(getComputedStyle(mainEl).paddingBottom) || 0 : 0;
+  const blockStyles = getComputedStyle(block);
+  const blockMarginBottom = parseFloat(blockStyles.marginBottom) || 0;
+  const lastRow = row2 && row2.style.display !== "none" ? row2 : document.getElementById("home-marquee");
+  const lastRowMarginBottom = lastRow ? parseFloat(getComputedStyle(lastRow).marginBottom) || 0 : 0;
+
+  const heroRect = heroWrap.getBoundingClientRect();
+  const labelRect = label.getBoundingClientRect();
+  const rowCount = row2 && row2.style.display !== "none" ? 2 : 1;
+  const rowGap = 10;
+  const safetyMargin = 28;
+  const trailingChrome = mainBottomPadding + blockMarginBottom + lastRowMarginBottom + safetyMargin;
+
+  const availableForRows = window.innerHeight - heroRect.bottom - labelRect.height
+    - (rowCount - 1) * rowGap - trailingChrome;
+  let posterH = Math.floor(availableForRows / rowCount);
+  posterH = Math.max(110, Math.min(360, posterH));
+  const posterW = Math.round(posterH * (140 / 210));
+
+  document.documentElement.style.setProperty("--marquee-poster-h", posterH + "px");
+  document.documentElement.style.setProperty("--marquee-poster-w", posterW + "px");
+}
+
+const debouncedSyncMarqueeSize = typeof debounce === "function"
+  ? debounce(syncMarqueeSize, 120)
+  : syncMarqueeSize;
+window.addEventListener("resize", debouncedSyncMarqueeSize);
+window.addEventListener("orientationchange", debouncedSyncMarqueeSize);
 
 function fillMarqueeTrack(track, posters) {
   const frag = document.createDocumentFragment();

@@ -1,6 +1,6 @@
 /* Home ("Афиша") screen: hero + "Твоя коллекция" running poster marquee. */
 
-.home-content-wrap { max-width: 900px; width: 100%; margin: 0 auto; }
+.home-content-wrap { max-width: 640px; width: 100%; margin: 0 auto; }
 
 .home-hero {
   display: flex; flex-direction: column; gap: 16px; align-items: flex-start;
@@ -16,12 +16,9 @@
   margin-bottom: 24px;
   margin-left: -16px; margin-right: -16px;
 }
-.home-collection-block .home-content-wrap {
-  padding: 0 16px;
-}
 .home-collection-label {
-  font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
-  color: var(--muted); margin-bottom: 10px;
+  font-size: 1.15rem; font-weight: 800; color: var(--text);
+  margin: 0 0 14px; padding: 0 16px;
 }
 
 .marquee {
@@ -41,10 +38,21 @@
 }
 
 .marquee-poster {
-  width: 140px; height: 210px; object-fit: cover; border-radius: 14px; flex-shrink: 0;
+  width: var(--marquee-poster-w, 140px); height: var(--marquee-poster-h, 210px);
+  object-fit: cover; border-radius: 14px; flex-shrink: 0;
   margin-right: 14px; background: var(--card); border: 1px solid var(--border);
   box-shadow: 0 8px 22px rgba(5,4,15,0.4);
   -webkit-user-drag: none;
+}
+
+@media (min-width: 640px) {
+  .home-collection-label { font-size: 1.25rem; padding: 0 24px; }
+}
+@media (min-width: 1000px) {
+  .home-collection-label { font-size: 1.4rem; padding: 0 32px; }
+}
+@media (min-width: 1400px) {
+  .home-collection-label { font-size: 1.55rem; padding: 0 40px; }
 }
 
 @keyframes marquee-scroll {

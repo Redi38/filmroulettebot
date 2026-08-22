@@ -67,3 +67,9 @@ header .header-spacer { width: 34px; height: 34px; flex-shrink: 0; }
 #side-menu .menu-item.sub { padding-left: 46px; font-size: 0.9rem; color: var(--muted); }
 #side-menu .menu-item.sub.active { color: white; }
 #side-menu hr { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
+#side-menu .menu-group-label {
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--muted); opacity: 0.75;
+  padding: 0 20px; margin: 18px 0 6px;
+}
+#side-menu .menu-group-label:first-child { margin-top: 4px; }

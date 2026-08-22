@@ -29,24 +29,35 @@ function renderMenu() {
     b.onclick = () => { onClick(); closeMenu(); };
     sideMenuScroll.appendChild(b);
   };
+  const addGroup = (label) => {
+    const h = document.createElement("div");
+    h.className = "menu-group-label";
+    h.textContent = label;
+    sideMenuScroll.appendChild(h);
+  };
 
+  addGroup("Главное");
   addItem("home", "Афиша", () => switchView("home"), currentView === "home");
   addItem("shuffle", "Наугад", () => switchView("random"), currentView === "random");
+
+  addGroup("Кино и сериалы");
   addItem("theaters", "В прокате", () => switchView("theaters"), currentView === "theaters");
   addItem("series", "Премьеры сериалов", () => switchView("series_releases"), currentView === "series_releases");
   addItem("bell", "Отслеживание сериалов", () => switchView("tracked_series"), currentView === "tracked_series");
-  sideMenuScroll.appendChild(document.createElement("hr"));
 
+  addGroup("Рулетка по категориям");
   for (const [code, label] of Object.entries(MENU_LABELS)) {
     addItem(code, label, () => switchCat(code, "spin"), currentView === "spin" && currentCat === code);
     addItem("list", "Список", () => switchCat(code, "list"), currentView === "list" && currentCat === code, true);
   }
-  sideMenuScroll.appendChild(document.createElement("hr"));
+
+  addGroup("Подборки");
   for (const [code, label] of Object.entries(REF_MENU_LABELS)) {
     addItem(code, label, () => switchCat(code, "list"), currentView === "list" && currentCat === code);
     addItem("upcoming", "Скоро", () => switchCat(code, "showcase"), currentView === "showcase" && currentCat === code, true);
   }
-  sideMenuScroll.appendChild(document.createElement("hr"));
+
+  addGroup("Прочее");
   addItem("upcoming", "Ожидаемые", () => switchView("upcoming"), currentView === "upcoming");
   addItem("history", "История", () => switchView("history"), currentView === "history");
 }

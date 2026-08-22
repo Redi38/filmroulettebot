@@ -106,7 +106,18 @@ function renderSpinModeToggle(containerId) {
       renderSpinSpeedControl("random-spin-speed");
       renderSpinSpeedControl("spin-spin-speed");
       resetWheelWraps();
-      if (spinMode === "wheel" && currentView === "spin") showIdleWheel(currentCat);
+
+      if (currentCardData) return;
+
+      if (spinMode === "wheel" && currentView === "spin") {
+        showIdleWheel(currentCat);
+      } else if (currentView === "spin") {
+        document.getElementById("spin-result").innerHTML =
+          placeholderHtml("Нажми «Крутить», чтобы узнать, что посмотреть 🎬");
+      } else if (currentView === "random") {
+        document.getElementById("random-spin-result").innerHTML =
+          placeholderHtml("Нажми «Крутить», и рулетка выберет фильм, сериал или мультфильм 🍿");
+      }
     };
     row.appendChild(btn);
   }

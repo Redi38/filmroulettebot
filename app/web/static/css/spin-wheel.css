@@ -68,5 +68,103 @@
   background: linear-gradient(135deg, var(--primary), var(--primary-2));
   border: 2px solid var(--border); z-index: 1;
 }
+.wheel-count-label {
+  position: fixed; left: 12px; bottom: 12px; z-index: 5;
+  font-size: 1rem; font-weight: 700; color: var(--text);
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 8px 14px; box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+}
+@media (min-width: 900px) {
+  .wheel-count-label { left: calc(var(--sidebar-w) + 16px); }
+}
+.wheel-hub-media {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 25%; height: 25%;
+  border-radius: 50%; overflow: hidden; z-index: 1;
+  border: 3px solid var(--border);
+  background: var(--card);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  cursor: pointer;
+}
+.wheel-hub-media img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.wheel-hub-overlay {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: rgba(5,4,15,0.62);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 0.78rem; font-weight: 700; text-align: center;
+  opacity: 0; transition: opacity 0.15s ease; padding: 6px; box-sizing: border-box;
+}
+.wheel-hub-media:hover .wheel-hub-overlay,
+.wheel-hub-media:focus-visible .wheel-hub-overlay { opacity: 1; }
+
+.wheel-hub-popover {
+  position: fixed; z-index: 40; display: none;
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+  padding: 10px; box-shadow: 0 12px 32px rgba(0,0,0,0.45);
+  max-width: 220px;
+}
+.wheel-hub-popover.open { display: block; }
+.wheel-hub-emote-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+  margin-bottom: 10px;
+}
+.wheel-hub-emote-btn {
+  width: 40px; height: 40px; padding: 4px; border-radius: 8px;
+  background: var(--bg-c); border: 1px solid transparent; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.wheel-hub-emote-btn:hover { border-color: var(--primary); background: rgba(139,124,246,0.12); }
+.wheel-hub-emote-btn img { max-width: 100%; max-height: 100%; display: block; }
+.wheel-hub-popover button#wheel-hub-open-modal {
+  width: 100%;
+}
+.wheel-hub-popover > button {
+  white-space: nowrap; padding: 10px 14px; border-radius: 8px;
+  background: var(--primary); color: #fff; border: none; cursor: pointer;
+  font-family: inherit; font-size: 0.88rem; font-weight: 600;
+}
+
+.wheel-hub-modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(5,4,15,0.7); z-index: 41;
+  align-items: center; justify-content: center; padding: 20px;
+}
+.wheel-hub-modal-overlay.open { display: flex; }
+.wheel-hub-modal-box {
+  background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+  padding: 22px; max-width: 360px; width: 100%; box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  position: relative;
+}
+.wheel-hub-modal-box h3 { margin: 0 0 16px; font-size: 1.05rem; padding-right: 24px; }
+.wheel-hub-modal-close {
+  position: absolute; top: 18px; right: 18px; background: none; border: none;
+  color: var(--muted); font-size: 1.1rem; cursor: pointer; line-height: 1; padding: 2px;
+}
+.wheel-hub-dropzone {
+  border: 2px dashed var(--border); border-radius: 12px; padding: 26px 14px;
+  text-align: center; color: var(--muted); font-size: 0.9rem; cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.wheel-hub-dropzone:hover, .wheel-hub-dropzone.dragover {
+  border-color: var(--primary); background: rgba(139,124,246,0.08); color: var(--text);
+}
+.wheel-hub-modal-sep {
+  display: flex; align-items: center; gap: 10px; margin: 16px 0;
+  color: var(--muted); font-size: 0.8rem;
+}
+.wheel-hub-modal-sep::before, .wheel-hub-modal-sep::after {
+  content: ""; flex: 1; height: 1px; background: var(--border);
+}
+.wheel-hub-url-row { display: flex; gap: 8px; }
+.wheel-hub-url-row input {
+  flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px;
+  background: var(--bg-c); border: 1px solid var(--border); color: var(--text); font-family: inherit;
+}
+.wheel-hub-url-row button {
+  padding: 10px 14px; border-radius: 10px; background: var(--primary); color: #fff;
+  border: none; cursor: pointer; font-family: inherit; font-weight: 600;
+}
 .wheel-wrap.wheel-done .wheel-holder { animation: wheelPop 0.4s ease; }
 @keyframes wheelPop { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }

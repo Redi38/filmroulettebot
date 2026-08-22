@@ -14,6 +14,15 @@ async function showIdleWheel(cat) {
   }
 }
 
+function pluralizeTitles(n) {
+  const mod10 = n % 10, mod100 = n % 100;
+  let word;
+  if (mod10 === 1 && mod100 !== 11) word = "позиция";
+  else if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) word = "позиции";
+  else word = "позиций";
+  return `${n} ${word}`;
+}
+
 function resetWheelWraps() {
   for (const id of ["random-wheel-wrap", "spin-wheel-wrap"]) {
     const wrap = document.getElementById(id);
@@ -33,6 +42,7 @@ const WHEEL_COLORS = [
 ];
 const WHEEL_MIN_SIZE = 260;
 const WHEEL_MAX_SIZE = 960;
+const WHEEL_HUB_GIF_URL = "";
 
 function buildWheel(wrapId, items) {
   const wrap = document.getElementById(wrapId);
@@ -68,7 +78,30 @@ function buildWheel(wrapId, items) {
   canvas.height = cssSize * dpr;
   holder.appendChild(canvas);
   holder.appendChild(pointer);
+  const hubUrl = typeof getWheelHubImage === "function" ? getWheelHubImage() : WHEEL_HUB_GIF_URL;
+  const hubMedia = document.createElement("div");
+  hubMedia.className = "wheel-hub-media";
+  hubMedia.tabIndex = 0;
+  const overlay = document.createElement("div");
+  overlay.className = "wheel-hub-overlay";
+  overlay.textContent = "Изменить";
+  if (hubUrl) {
+    const img = document.createElement("img");
+    img.src = hubUrl;
+    img.alt = "";
+    img.onerror = () => { img.remove(); hubMedia.classList.add("wheel-hub-empty"); };
+    hubMedia.appendChild(img);
+  } else {
+    hubMedia.classList.add("wheel-hub-empty");
+  }
+  hubMedia.appendChild(overlay);
+  holder.appendChild(hubMedia);
   wrap.appendChild(holder);
+
+  const countEl = document.createElement("div");
+  countEl.className = "wheel-count-label";
+  countEl.textContent = pluralizeTitles(items.length);
+  wrap.appendChild(countEl);
 
   drawWheel(canvas, items, dpr);
   canvas._wheelItems = items;

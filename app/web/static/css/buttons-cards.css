@@ -70,6 +70,11 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
   padding: 5px 11px; cursor: pointer; flex-shrink: 0;
   display: inline-flex; align-items: center; justify-content: center;
 }
+.list-row button.edit-btn, button.edit-btn {
+  background: var(--primary); color: white; border: none; border-radius: 8px;
+  padding: 5px 11px; cursor: pointer; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+}
 .add-row { display: flex; gap: 8px; margin-bottom: 14px; }
 .add-row input {
   flex: 1; background: var(--card); border: 1px solid var(--border); color: var(--text);

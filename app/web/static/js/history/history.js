@@ -141,8 +141,6 @@ function renderHistoryList() {
   filtered.forEach(({ e, idx }) => {
     const div = document.createElement("div");
     const key = histKey(e);
-    // Сервер — источник правды (видно всем устройствам); localStorage —
-    // резервный вариант для записей, сделанных до этой миграции.
     const serverOutcome = e.resolved_type
       ? { type: e.resolved_type, newTitle: e.resolved_new_title }
       : null;
@@ -160,11 +158,32 @@ function renderHistoryList() {
     div.innerHTML = `
       <div class="hist-title">${escapeHtml(e.title)}</div>
       <div class="hist-meta">${date}</div>
-      <div class="hist-actions" id="hist-actions-${idx}">${actionsHtml}</div>`;
+      <div class="hist-actions" id="hist-actions-${idx}">
+        ${actionsHtml}
+        <button class="btn btn-danger hist-clear-entry-btn" onclick="histClearEntry(${idx})" title="Удалить эту запись из истории">Очистить</button>
+      </div>`;
     list.appendChild(div);
   });
 }
 
+async function histClearEntry(idx) {
+  const entry = historyItems[idx];
+  if (!entry) return;
+  try {
+    await api("/api/history/delete", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        category: entry.category, title: entry.title, timestamp: Number(entry.timestamp),
+      }),
+    });
+    historyItems = historyItems.filter((_, i) => i !== idx);
+    const list = document.getElementById("history-list");
+    await fadeOut(list);
+    renderHistoryList();
+    fadeIn(list);
+    showToast(`Запись «${entry.title}» удалена из истории`);
+  } catch (e) { showToast(e.message); }
+}
 function resolvedOutcomeLabel(title, outcome) {
   if (outcome.type === "sequel" && outcome.newTitle) {
     return `🔄 ${escapeHtml(title)} → ${escapeHtml(outcome.newTitle)}`;
@@ -179,7 +198,8 @@ function histConfirm(idx) {
   const actionsEl = document.getElementById(`hist-actions-${idx}`);
   actionsEl.innerHTML = `
     <button class="btn btn-success" onclick="histSequel(${idx})">Сиквел</button>
-    <button class="btn btn-danger" onclick="histDelete(${idx})">Удалить</button>`;
+    <button class="btn btn-danger" onclick="histDelete(${idx})">Удалить</button>
+    <button class="btn btn-danger hist-clear-entry-btn" onclick="histClearEntry(${idx})" title="Удалить эту запись из истории">Очистить</button>`;
 }
 
 function markResolved(key, outcome) {
@@ -198,8 +218,6 @@ async function resolveOnServer(category, title, timestamp, resolvedType, newTitl
       }),
     });
   } catch {
-    // Не критично: локальная отметка (markResolved) уже применена на этом
-    // устройстве, серверная синхронизация — best-effort.
   }
 }
 
@@ -216,7 +234,9 @@ async function histSequel(idx) {
     markResolved(key, { type: "sequel", newTitle: r.new_title });
     resolveOnServer(category, title, timestamp, "sequel", r.new_title);
     div.classList.add("resolved");
-    actionsEl.innerHTML = `<span class="muted">${resolvedOutcomeLabel(title, { type: "sequel", newTitle: r.new_title })}</span>`;
+    actionsEl.innerHTML = `
+      <span class="muted">${resolvedOutcomeLabel(title, { type: "sequel", newTitle: r.new_title })}</span>
+      <button class="btn btn-danger hist-clear-entry-btn" onclick="histClearEntry(${idx})" title="Удалить эту запись из истории">Очистить</button>`;
   } catch (e) { showToast(e.message); }
 }
 
@@ -233,6 +253,8 @@ async function histDelete(idx) {
     markResolved(key, { type: "delete" });
     resolveOnServer(category, title, timestamp, "delete", null);
     div.classList.add("resolved");
-    actionsEl.innerHTML = `<span class="muted">${resolvedOutcomeLabel(title, { type: "delete" })}</span>`;
+    actionsEl.innerHTML = `
+      <span class="muted">${resolvedOutcomeLabel(title, { type: "delete" })}</span>
+      <button class="btn btn-danger hist-clear-entry-btn" onclick="histClearEntry(${idx})" title="Удалить эту запись из истории">Очистить</button>`;
   } catch (e) { showToast(e.message); }
 }

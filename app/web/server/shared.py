@@ -122,6 +122,11 @@ class TitleBody(BaseModel):
     title: str
 
 
+class RenameBody(BaseModel):
+    old_title: str
+    new_title: str
+
+
 class MoveBody(BaseModel):
     title: str
     category: str
@@ -142,3 +147,9 @@ class ResolveBody(BaseModel):
     timestamp: float
     resolved_type: str
     new_title: str | None = None
+
+
+class DeleteHistoryEntryBody(BaseModel):
+    category: str
+    title: str
+    timestamp: float

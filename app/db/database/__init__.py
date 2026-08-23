@@ -12,13 +12,14 @@ from .history import (
     clear_all_history,
     clear_history_category,
     clear_user_history,
+    delete_history_entry,
     get_recent_history,
     get_stats,
     load_history,
     resolve_history_entry,
     save_history,
 )
-from .items import add_item, delete_item, get_items, item_exists
+from .items import add_item, delete_item, get_items, item_exists, rename_item
 from .schema import init_db
 from .skipped import SKIP_SCOPES, add_skipped, get_skipped, remove_skipped
 from .upcoming import add_upcoming_movie, delete_upcoming_movie, get_upcoming_movies
@@ -29,6 +30,7 @@ __all__ = [
     "item_exists",
     "add_item",
     "delete_item",
+    "rename_item",
     "get_tmdb_cache",
     "set_tmdb_cache",
     "load_history",
@@ -38,6 +40,7 @@ __all__ = [
     "clear_user_history",
     "clear_all_history",
     "clear_history_category",
+    "delete_history_entry",
     "get_stats",
     "get_upcoming_movies",
     "add_upcoming_movie",

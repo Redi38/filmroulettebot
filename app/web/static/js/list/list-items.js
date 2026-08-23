@@ -80,9 +80,30 @@ async function loadList(page) {
       span.title = "Нажмите, чтобы скопировать";
       span.onclick = () => copyToClipboard(title, span);
       row.appendChild(span);
+      const edit = document.createElement("button");
+      edit.className = "edit-btn";
+      edit.innerHTML = PENCIL_ICON_SVG;
+      edit.setAttribute("aria-label", "Изменить название");
+      edit.onclick = (ev) => {
+        ev.stopPropagation();
+        const cat = currentCat;
+        openRenameModal(title, async (newTitle) => {
+          try {
+            await api(`/api/${cat}/rename`, {
+              method: "POST", headers: {"Content-Type": "application/json"},
+              body: JSON.stringify({old_title: title, new_title: newTitle}),
+            });
+            if (currentCat === cat) loadList(currentListPage);
+          } catch (e) {
+            showToast(e.message || "Не удалось изменить название");
+          }
+        });
+      };
+      row.appendChild(edit);
       const del = document.createElement("button");
       del.className = "del-btn";
       del.innerHTML = TRASH_ICON_SVG;
+      del.setAttribute("aria-label", "Удалить");
       del.onclick = (ev) => {
         ev.stopPropagation();
         const cat = currentCat;
@@ -104,7 +125,8 @@ async function loadList(page) {
             }
           }, () => checkListEmpty(container));
         });
-      };      row.appendChild(del);
+      };
+      row.appendChild(del);
       container.appendChild(row);
     }
     if (data.total_pages > 1) container.appendChild(paginationRow(data.page, data.total_pages, (p) => loadList(p)));

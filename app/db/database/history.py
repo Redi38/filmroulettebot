@@ -142,6 +142,21 @@ async def clear_history_category(category: str) -> None:
         await db.commit()
 
 
+@retry_on_lock
+async def delete_history_entry(category: str, title: str, timestamp: float) -> bool:
+    """Remove a single history pick (identified the same way resolve_history_entry
+    matches one: category + title + timestamp), leaving the rest of the category's
+    history and the title's list membership untouched. Returns False if no matching
+    row was found."""
+    async with conn() as db:
+        cur = await db.execute(
+            "DELETE FROM history WHERE category = ? AND title = ? AND timestamp = ?",
+            (category, title, timestamp),
+        )
+        await db.commit()
+        return cur.rowcount > 0
+
+
 async def get_stats(user_id: int) -> dict[str, int]:
     cats = ("movies", "cartoons", "series")
     result = {c: 0 for c in cats}

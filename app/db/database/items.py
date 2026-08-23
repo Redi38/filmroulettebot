@@ -37,3 +37,14 @@ async def delete_item(table: str, title: str) -> None:
     async with conn() as db:
         await db.execute(f"DELETE FROM {table} WHERE title = ?", (title,))
         await db.commit()
+
+
+@retry_on_lock
+async def rename_item(table: str, old_title: str, new_title: str) -> None:
+    check_table(table)
+    new_title = new_title.strip()
+    if not new_title:
+        raise ValueError("Title cannot be empty.")
+    async with conn() as db:
+        await db.execute(f"UPDATE {table} SET title = ? WHERE title = ?", (new_title, old_title))
+        await db.commit()

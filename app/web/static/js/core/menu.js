@@ -69,11 +69,15 @@ overlay.onclick = closeMenu;
 
 function switchCat(code, view) {
   currentCat = code; currentView = view;
-  saveState(); renderMenu(); showSection();
+  saveState(); renderMenu();
+  pushViewToHistory(view, code);
+  showSection();
 }
 function switchView(view) {
   currentView = view;
-  saveState(); renderMenu(); showSection();
+  saveState(); renderMenu();
+  pushViewToHistory(view, currentCat);
+  showSection();
 }
 
 const SECTION_IDS = {

@@ -1,11 +1,11 @@
-"""Pick history: recent list and per-category clear."""
+"""Pick history: recent list, per-entry delete, and per-category clear."""
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from app.db.database import clear_history_category, get_recent_history, resolve_history_entry
+from app.db.database import clear_history_category, delete_history_entry, get_recent_history, resolve_history_entry
 
-from .shared import ResolveBody, _check_category
+from .shared import DeleteHistoryEntryBody, ResolveBody, _check_category
 
 router = APIRouter()
 
@@ -24,6 +24,19 @@ async def api_history_resolve(body: ResolveBody) -> dict:
     ok = await resolve_history_entry(
         body.category, body.title, body.timestamp, body.resolved_type, body.new_title
     )
+    if not ok:
+        raise HTTPException(404, "History entry not found")
+    return {"ok": True}
+
+
+@router.post("/api/history/delete")
+async def api_history_delete_entry(body: DeleteHistoryEntryBody) -> dict:
+    """Remove one history pick (the per-item 'Очистить' button) without
+    touching the title's list membership or the rest of the category's
+    history — distinct from /api/history/{cat}/clear, which wipes the
+    whole category."""
+    _check_category(body.category)
+    ok = await delete_history_entry(body.category, body.title, body.timestamp)
     if not ok:
         raise HTTPException(404, "History entry not found")
     return {"ok": True}

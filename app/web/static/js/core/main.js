@@ -1,2 +1,1 @@
-renderMenu();
-showSection();
+initRouting();

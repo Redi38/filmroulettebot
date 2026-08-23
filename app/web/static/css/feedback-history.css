@@ -53,7 +53,8 @@
 .hist-item.resolved { opacity: 0.55; }
 .hist-item .hist-title { font-weight: 700; margin-bottom: 3px; }
 .hist-item .hist-meta { color: var(--muted); font-size: 0.82rem; margin-bottom: 8px; }
-.hist-item .hist-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.hist-item .hist-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.hist-item .hist-actions .hist-clear-entry-btn { margin-left: auto; }
 .hist-tabs { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 16px; }
 .hist-tabs .btn { opacity: 0.55; }
 .hist-tabs .btn.active { opacity: 1; }

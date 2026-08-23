@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from app.db.database import add_item, delete_item, get_items, item_exists
+from app.db.database import add_item, delete_item, get_items, item_exists, rename_item
 from app.services.tmdb import get_tracked_series_status
 from app.utils import paginate
 
-from .shared import CATEGORIES, LIST_PAGE_SIZE, TitleBody, _check_category
+from .shared import CATEGORIES, LIST_PAGE_SIZE, RenameBody, TitleBody, _check_category
 
 router = APIRouter()
 
@@ -67,4 +67,21 @@ async def api_add(cat: str, body: TitleBody) -> dict:
 async def api_delete(cat: str, body: TitleBody) -> dict:
     _check_category(cat)
     await delete_item(cat, body.title)
+    return {"ok": True}
+
+
+@router.post("/api/{cat}/rename")
+async def api_rename(cat: str, body: RenameBody) -> dict:
+    _check_category(cat)
+    old_title = body.old_title.strip()
+    new_title = body.new_title.strip()
+    if not new_title:
+        raise HTTPException(400, "Title can't be empty")
+    if new_title == old_title:
+        return {"ok": True}
+    if not await item_exists(cat, old_title):
+        raise HTTPException(404, f"«{old_title}» не найден(а)")
+    if await item_exists(cat, new_title):
+        raise HTTPException(409, f"«{new_title}» уже добавлен(а) в «{CATEGORIES.get(cat, cat)}»")
+    await rename_item(cat, old_title, new_title)
     return {"ok": True}

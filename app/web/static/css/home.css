@@ -43,7 +43,9 @@
   margin-right: 14px; background: var(--card); border: 1px solid var(--border);
   box-shadow: 0 8px 22px rgba(5,4,15,0.4);
   -webkit-user-drag: none;
+  cursor: pointer; transition: transform 0.15s ease;
 }
+.marquee-poster:active { transform: scale(0.96); }
 
 @media (min-width: 640px) {
   .home-collection-label { font-size: 1.25rem; padding: 0 24px; }

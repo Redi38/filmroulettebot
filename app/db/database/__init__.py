@@ -22,7 +22,12 @@ from .history import (
 from .items import add_item, delete_item, get_items, item_exists, rename_item
 from .schema import init_db
 from .skipped import SKIP_SCOPES, add_skipped, get_skipped, remove_skipped
-from .upcoming import add_upcoming_movie, delete_upcoming_movie, get_upcoming_movies
+from .upcoming import (
+    add_upcoming_movie,
+    delete_upcoming_movie,
+    get_upcoming_movies,
+    rename_upcoming_movie,
+)
 
 __all__ = [
     "init_db",
@@ -45,6 +50,7 @@ __all__ = [
     "get_upcoming_movies",
     "add_upcoming_movie",
     "delete_upcoming_movie",
+    "rename_upcoming_movie",
     "SKIP_SCOPES",
     "get_skipped",
     "add_skipped",

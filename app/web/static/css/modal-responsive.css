@@ -40,6 +40,24 @@
   color: var(--muted); border-radius: 10px; padding: 10px; cursor: pointer; font-family: inherit; font-size: 0.9rem;
 }
 
+#poster-info-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(5,4,15,0.7); z-index: 30;
+  align-items: center; justify-content: center; padding: 20px;
+}
+#poster-info-overlay.open { display: flex; }
+#poster-info-box {
+  position: relative; background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+  max-width: 420px; width: 100%; max-height: 85vh; overflow-y: auto;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4); padding: 22px;
+}
+#poster-info-box .card { margin: 0; padding: 0; border: none; box-shadow: none; }
+.modal-close {
+  position: absolute; top: 12px; right: 12px; z-index: 1;
+  width: 32px; height: 32px; border-radius: 50%; border: none;
+  background: rgba(5,4,15,0.55); color: var(--text); font-size: 1rem; line-height: 1;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+
 @media (min-width: 900px) {
   #burger-btn { display: none; }
   #overlay { display: none !important; }

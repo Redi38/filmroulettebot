@@ -11,7 +11,7 @@ from app.db.database import get_upcoming_movies, add_upcoming_movie, delete_upco
 from app.states import UpcomingStates
 from app.keyboards import (
     upcoming_menu_kb, upcoming_delete_kb, cancel_add_kb, BackMainCB, pagination_row, PageCB,
-    UpcomingMoveCB, UpcomingDeleteOneCB, UpcomingAddCB, CancelAddCB,
+    UpcomingMoveCB, UpcomingDeleteOneCB, UpcomingAddCB, CancelAddCB, DELETE_PAGE_SIZE,
 )
 from app.utils import esc, render_paginated_list, safe_edit_text
 
@@ -22,7 +22,7 @@ from .common import router, logger
 async def upcoming_cmd(msg: Message, state: FSMContext) -> None:
     await state.clear()
     items = await get_upcoming_movies()
-    text, page, total_pages = render_paginated_list(items, 1)
+    text, page, total_pages = render_paginated_list(items, 1, page_size=DELETE_PAGE_SIZE)
     row = pagination_row("up", page, total_pages)
     await msg.answer(f"<b>🎬 Ожидаемые фильмы:</b>\n\n{text}", reply_markup=upcoming_menu_kb(row))
 
@@ -75,7 +75,7 @@ async def cancel_upcoming_add(call: CallbackQuery, state: FSMContext) -> None:
     await call.answer()
     await state.clear()
     items = await get_upcoming_movies()
-    text, page, total_pages = render_paginated_list(items, 1)
+    text, page, total_pages = render_paginated_list(items, 1, page_size=DELETE_PAGE_SIZE)
     row = pagination_row("up", page, total_pages)
     await safe_edit_text(call.message, f"<b>🎬 Ожидаемые фильмы:</b>\n\n{text}", reply_markup=upcoming_menu_kb(row))
 
@@ -124,7 +124,7 @@ async def up_back_to_menu(call: CallbackQuery) -> None:
         return
     await call.answer()
     items = await get_upcoming_movies()
-    text, page, total_pages = render_paginated_list(items, 1)
+    text, page, total_pages = render_paginated_list(items, 1, page_size=DELETE_PAGE_SIZE)
     row = pagination_row("up", page, total_pages)
     await safe_edit_text(call.message, f"<b>🎬 Ожидаемые фильмы:</b>\n\n{text}", reply_markup=upcoming_menu_kb(row))
 
@@ -135,7 +135,7 @@ async def up_page(call: CallbackQuery, callback_data: PageCB) -> None:
         return
     await call.answer()
     items = await get_upcoming_movies()
-    text, page, total_pages = render_paginated_list(items, callback_data.page)
+    text, page, total_pages = render_paginated_list(items, callback_data.page, page_size=DELETE_PAGE_SIZE)
     row = pagination_row("up", page, total_pages)
     await safe_edit_text(call.message, f"<b>🎬 Ожидаемые фильмы:</b>\n\n{text}", reply_markup=upcoming_menu_kb(row))
 

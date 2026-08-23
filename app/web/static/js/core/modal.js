@@ -53,3 +53,19 @@ function openRenameModal(currentTitle, onSave) {
   input.addEventListener("keydown", onKeydown);
   overlay.addEventListener("click", onOverlayClick);
 }
+
+function openPosterInfoModal(category, title) {
+  const overlay = document.getElementById("poster-info-overlay");
+  const content = document.getElementById("poster-info-content");
+  content.innerHTML = '<div class="spinner">Загрузка…</div>';
+  overlay.classList.add("open");
+
+  api(`/api/home/card?category=${encodeURIComponent(category)}&title=${encodeURIComponent(title)}`)
+    .then((data) => { content.innerHTML = renderCard(data, {actions: false}); })
+    .catch((e) => { content.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`; });
+}
+function closePosterInfoModal() { document.getElementById("poster-info-overlay").classList.remove("open"); }
+document.getElementById("poster-info-close").onclick = closePosterInfoModal;
+document.getElementById("poster-info-overlay").onclick = (ev) => {
+  if (ev.target.id === "poster-info-overlay") closePosterInfoModal();
+};

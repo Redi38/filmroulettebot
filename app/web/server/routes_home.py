@@ -13,9 +13,11 @@ from __future__ import annotations
 
 import random
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
-from app.db.database import get_items, get_tmdb_cache
+from app.db.database import get_items, get_tmdb_cache, item_exists
+
+from .shared import _card_data, _check_category
 
 router = APIRouter()
 
@@ -60,8 +62,24 @@ async def api_home_collection() -> dict:
             continue
         posters.append({
             "title": info.get("title") or title,
+            "original_title": title,
             "poster_url": info["poster_url"],
             "category": cat,
         })
 
     return {"posters": posters, "total_items": total_items}
+
+
+@router.get("/api/home/card")
+async def api_home_card(category: str, title: str) -> dict:
+    """Full card info for a poster tapped in the 'Афиша' marquee — same
+    shape as the spin/list-featured cards, minus spin actions (the poster
+    is just something the user already has in a list, not a fresh pick).
+    `title` here must be the raw title as stored in the DB (the marquee's
+    `original_title`), not the TMDb-resolved display title — those can
+    differ (translated/alternate titles) and item_exists checks the raw
+    table."""
+    _check_category(category)
+    if not await item_exists(category, title):
+        raise HTTPException(404, "Title not found in this category")
+    return await _card_data(category, title)

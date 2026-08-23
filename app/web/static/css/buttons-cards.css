@@ -50,35 +50,35 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
 .sequel-prompt p { margin: 0 0 10px; color: var(--muted); }
 
 @container (min-width: 560px) {
-  #random-spin-result .card, #spin-result .card, #list-featured .card {
+  #random-spin-result .card, #spin-result .card, #list-featured .card, #poster-info-content .card {
     display: grid; grid-template-columns: 220px 1fr; column-gap: clamp(16px, 2.6vh, 26px);
     align-items: start; padding: clamp(16px, 2.6vh, 30px);
   }
-  #random-spin-result .card .poster, #spin-result .card .poster, #list-featured .card .poster {
+  #random-spin-result .card .poster, #spin-result .card .poster, #list-featured .card .poster, #poster-info-content .card .poster {
     margin: 0; max-height: clamp(220px, 42vh, 420px);
   }
-  #random-spin-result .card .title, #spin-result .card .title, #list-featured .card .title {
+  #random-spin-result .card .title, #spin-result .card .title, #list-featured .card .title, #poster-info-content .card .title {
     font-size: clamp(1.1rem, 2.4vh, 1.5rem); margin-bottom: clamp(4px, 1vh, 10px);
   }
-  #random-spin-result .card .cat-badge, #spin-result .card .cat-badge, #list-featured .card .cat-badge {
+  #random-spin-result .card .cat-badge, #spin-result .card .cat-badge, #list-featured .card .cat-badge, #poster-info-content .card .cat-badge {
     margin-top: 0; font-size: clamp(0.72rem, 1.3vh, 0.82rem);
     padding: clamp(2px, 0.4vh, 4px) 10px; margin-bottom: clamp(2px, 0.6vh, 6px);
   }
-  #random-spin-result .card .meta, #spin-result .card .meta, #list-featured .card .meta {
+  #random-spin-result .card .meta, #spin-result .card .meta, #list-featured .card .meta, #poster-info-content .card .meta {
     font-size: clamp(0.82rem, 1.5vh, 0.98rem); margin-bottom: clamp(2px, 0.5vh, 5px);
   }
-  #random-spin-result .card .overview, #spin-result .card .overview, #list-featured .card .overview {
+  #random-spin-result .card .overview, #spin-result .card .overview, #list-featured .card .overview, #poster-info-content .card .overview {
     font-size: clamp(0.85rem, 1.5vh, 1.02rem); line-height: 1.5;
     margin-top: clamp(6px, 1.2vh, 12px);
     max-height: 26vh; overflow-y: auto;
   }
-  #random-spin-result .card .watch-link, #spin-result .card .watch-link, #list-featured .card .watch-link {
+  #random-spin-result .card .watch-link, #spin-result .card .watch-link, #list-featured .card .watch-link, #poster-info-content .card .watch-link {
     margin-top: clamp(8px, 1.6vh, 16px); padding: clamp(6px, 1.2vh, 10px) 16px;
   }
-  #random-spin-result .card .card-actions, #spin-result .card .card-actions, #list-featured .card .card-actions {
+  #random-spin-result .card .card-actions, #spin-result .card .card-actions, #list-featured .card .card-actions, #poster-info-content .card .card-actions {
     justify-content: flex-start; margin-top: clamp(10px, 2vh, 20px);
   }
-  #random-spin-result .card .sequel-prompt, #spin-result .card .sequel-prompt, #list-featured .card .sequel-prompt {
+  #random-spin-result .card .sequel-prompt, #spin-result .card .sequel-prompt, #list-featured .card .sequel-prompt, #poster-info-content .card .sequel-prompt {
     text-align: left; margin-top: clamp(8px, 1.4vh, 14px); padding-top: clamp(8px, 1.4vh, 14px);
   }
 }
@@ -136,7 +136,7 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
   color: var(--muted); font-size: 0.82rem; margin: 0 2px 8px; letter-spacing: 0.01em;
 }
 
-#list-container, #list-featured { container-type: inline-size; }
+#list-container, #list-featured, #up-list-container { container-type: inline-size; }
 
 @container (min-width: 420px) {
   .list-row { padding: 13px 14px; gap: 12px; }

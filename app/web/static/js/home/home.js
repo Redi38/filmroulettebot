@@ -1,6 +1,6 @@
 // Home screen ("Афиша"): a CSS-only running poster marquee built from the
-// user's own lists (pure teaser, no click interactions), plus quick actions
-// to jump into the roulette or a category list.
+// user's own lists, plus quick actions to jump into the roulette or a
+// category list. Tapping a poster opens its full card info in a modal.
 
 let homeLoaded = false;
 let homeLoading = false;
@@ -104,6 +104,8 @@ function fillMarqueeTrack(track, posters) {
     img.alt = item.title || "";
     img.loading = "lazy";
     img.draggable = false;
+    img.title = item.title || "";
+    img.onclick = () => openPosterInfoModal(item.category, item.original_title || item.title);
     frag.appendChild(img);
   }
   track.innerHTML = "";

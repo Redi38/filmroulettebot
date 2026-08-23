@@ -47,10 +47,11 @@
 #poster-info-overlay.open { display: flex; }
 #poster-info-box {
   position: relative; background: var(--card); border: 1px solid var(--border); border-radius: 16px;
-  max-width: 420px; width: 100%; max-height: 85vh; overflow-y: auto;
+  max-width: 640px; width: 100%; max-height: 85vh; overflow-y: auto;
   box-shadow: 0 12px 40px rgba(0,0,0,0.4); padding: 22px;
 }
 #poster-info-box .card { margin: 0; padding: 0; border: none; box-shadow: none; }
+#poster-info-content { container-type: inline-size; }
 .modal-close {
   position: absolute; top: 12px; right: 12px; z-index: 1;
   width: 32px; height: 32px; border-radius: 50%; border: none;
@@ -80,6 +81,8 @@
   }
   main > .section { max-width: 640px; width: 100%; }
   .toast { left: calc(50% + var(--sidebar-w) / 2); }
+
+  #poster-info-overlay { left: var(--sidebar-w); }
 
   main > #showcase-section.active { max-width: 900px; }
   #showcase-section #showcase-filters { margin-bottom: 20px; }

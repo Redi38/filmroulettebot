@@ -89,6 +89,10 @@ const SECTION_IDS = {
 };
 
 function showSection() {
+  if (typeof closePosterInfoModal === "function") closePosterInfoModal();
+  if (typeof closeModal === "function") closeModal();
+  if (typeof closeRenameModal === "function") closeRenameModal();
+
   for (const [view, id] of Object.entries(SECTION_IDS)) {
     document.getElementById(id).classList.toggle("active", currentView === view);
   }
@@ -100,6 +104,11 @@ function showSection() {
     activeEl.classList.remove("fade-in");
     void activeEl.offsetWidth;
     activeEl.classList.add("fade-in");
+    activeEl.addEventListener("animationend", function onDone(ev) {
+      if (ev.target !== activeEl) return;
+      activeEl.classList.remove("fade-in");
+      activeEl.removeEventListener("animationend", onDone);
+    });
   }
 
   const titles = {home: "🎬 Афиша", random: "🔄 Наугад", spin: `${ALL_CATS[currentCat] || ""}`, list: `${ALL_CATS[currentCat] || ""}`,

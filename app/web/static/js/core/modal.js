@@ -19,6 +19,8 @@ function closeModal() { document.getElementById("modal-overlay").classList.remov
 document.getElementById("modal-cancel").onclick = closeModal;
 document.getElementById("modal-overlay").onclick = (ev) => { if (ev.target.id === "modal-overlay") closeModal(); };
 
+let _closeActiveRenameModal = null;
+
 function openRenameModal(currentTitle, onSave) {
   const overlay = document.getElementById("rename-modal-overlay");
   const input = document.getElementById("rename-modal-input");
@@ -44,6 +46,7 @@ function openRenameModal(currentTitle, onSave) {
     cancelBtn.removeEventListener("click", close);
     input.removeEventListener("keydown", onKeydown);
     overlay.removeEventListener("click", onOverlayClick);
+    _closeActiveRenameModal = null;
   }
 
   const saveBtn = document.getElementById("rename-modal-save");
@@ -52,7 +55,9 @@ function openRenameModal(currentTitle, onSave) {
   cancelBtn.addEventListener("click", close);
   input.addEventListener("keydown", onKeydown);
   overlay.addEventListener("click", onOverlayClick);
+  _closeActiveRenameModal = close;
 }
+function closeRenameModal() { if (_closeActiveRenameModal) _closeActiveRenameModal(); }
 
 function openPosterInfoModal(category, title) {
   const overlay = document.getElementById("poster-info-overlay");

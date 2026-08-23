@@ -33,10 +33,11 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
 }
 .title { font-size: 1.25rem; font-weight: 800; margin-bottom: 8px; }
 .title.copy-title {
-  font-family: "Manrope", sans-serif; background: none; padding: 0; cursor: pointer;
-  display: inline-block; border-bottom: 1px dashed var(--muted);
+  font-family: "Manrope", sans-serif; cursor: pointer;
+  display: inline-block; background: rgba(139,124,246,0.08); padding: 3px 10px; border-radius: 8px;
+  transition: background 0.15s;
 }
-.title.copy-title:active, .title.copy-title.copied { background: rgba(139,124,246,0.2); border-radius: 6px; }
+.title.copy-title:active, .title.copy-title.copied { background: rgba(139,124,246,0.35); }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 .fade-in { animation: fadeIn 0.35s ease; animation-fill-mode: backwards; }
 .meta { color: var(--muted); font-size: 0.9rem; margin-bottom: 4px; }

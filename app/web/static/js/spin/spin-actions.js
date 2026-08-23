@@ -33,10 +33,12 @@ async function doWheelSpin(cat, isRandom) {
     wrap.style.display = "none";
     wrap.innerHTML = "";
     wrap.classList.remove("wheel-done");
+    updateWheelScrollLock();
     result.innerHTML = renderCard(data);
   } catch (e) {
     wrap.innerHTML = prevWrapHtml;
     wrap.style.display = prevWrapDisplay;
+    updateWheelScrollLock();
     if (e.status === 429) {
       result.innerHTML = prevResultHtml;
       const m = e.message.match(/[\d.]+/);

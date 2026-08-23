@@ -19,15 +19,17 @@ function renderCard(data, opts) {
   return `
     <div class="card fade-in">
       ${poster}
-      <div class="title copy-title" onclick="copyToClipboard('${escapeAttr(data.title)}', this)" title="Нажмите, чтобы скопировать">${escapeHtml(data.title)}</div>
-      <span class="cat-badge">${catLabel}</span>
-      <div class="meta">${rating}</div>
-      <div class="meta">🗓 ${escapeHtml(String(data.release_date))}</div>
-      ${extra}
-      <div class="meta">🎭 ${escapeHtml(data.genres)}</div>
-      <div class="meta">👥 ${escapeHtml(data.actors)}</div>
-      <div class="overview">${escapeHtml(data.overview)}</div>
-      ${link}
-      ${actionsHtml}
+      <div class="card-body">
+        <div class="title copy-title" onclick="copyToClipboard('${escapeAttr(data.title)}', this)" title="Нажмите, чтобы скопировать">${escapeHtml(data.title)}</div>
+        <span class="cat-badge">${catLabel}</span>
+        <div class="meta">${rating}</div>
+        <div class="meta">🗓 ${escapeHtml(String(data.release_date))}</div>
+        ${extra}
+        <div class="meta">🎭 ${escapeHtml(data.genres)}</div>
+        <div class="meta">👥 ${escapeHtml(data.actors)}</div>
+        <div class="overview">${escapeHtml(data.overview)}</div>
+        ${link}
+        ${actionsHtml}
+      </div>
     </div>`;
 }

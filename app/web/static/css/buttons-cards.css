@@ -25,7 +25,7 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
   background: var(--card); border: 1px solid var(--border); border-radius: 16px;
   padding: 18px; margin-bottom: 14px; box-shadow: 0 8px 30px rgba(0,0,0,0.25);
 }
-.poster { width: 100%; max-width: 280px; border-radius: 12px; display: block; margin: 0 auto 14px;
+.poster { width: 100%; max-width: min(280px, 100%); max-height: 44vh; object-fit: cover; border-radius: 12px; display: block; margin: 0 auto 14px;
   box-shadow: 0 6px 24px var(--glow); }
 .cat-badge {
   display: inline-block; font-size: 0.78rem; font-weight: 700; padding: 3px 10px;
@@ -49,6 +49,40 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
 .sequel-prompt { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); text-align: center; }
 .sequel-prompt p { margin: 0 0 10px; color: var(--muted); }
 
+@container (min-width: 560px) {
+  #random-spin-result .card, #spin-result .card, #list-featured .card {
+    display: grid; grid-template-columns: 220px 1fr; column-gap: clamp(16px, 2.6vh, 26px);
+    align-items: start; padding: clamp(16px, 2.6vh, 30px);
+  }
+  #random-spin-result .card .poster, #spin-result .card .poster, #list-featured .card .poster {
+    margin: 0; max-height: clamp(220px, 42vh, 420px);
+  }
+  #random-spin-result .card .title, #spin-result .card .title, #list-featured .card .title {
+    font-size: clamp(1.1rem, 2.4vh, 1.5rem); margin-bottom: clamp(4px, 1vh, 10px);
+  }
+  #random-spin-result .card .cat-badge, #spin-result .card .cat-badge, #list-featured .card .cat-badge {
+    margin-top: 0; font-size: clamp(0.72rem, 1.3vh, 0.82rem);
+    padding: clamp(2px, 0.4vh, 4px) 10px; margin-bottom: clamp(2px, 0.6vh, 6px);
+  }
+  #random-spin-result .card .meta, #spin-result .card .meta, #list-featured .card .meta {
+    font-size: clamp(0.82rem, 1.5vh, 0.98rem); margin-bottom: clamp(2px, 0.5vh, 5px);
+  }
+  #random-spin-result .card .overview, #spin-result .card .overview, #list-featured .card .overview {
+    font-size: clamp(0.85rem, 1.5vh, 1.02rem); line-height: 1.5;
+    margin-top: clamp(6px, 1.2vh, 12px);
+    max-height: 26vh; overflow-y: auto;
+  }
+  #random-spin-result .card .watch-link, #spin-result .card .watch-link, #list-featured .card .watch-link {
+    margin-top: clamp(8px, 1.6vh, 16px); padding: clamp(6px, 1.2vh, 10px) 16px;
+  }
+  #random-spin-result .card .card-actions, #spin-result .card .card-actions, #list-featured .card .card-actions {
+    justify-content: flex-start; margin-top: clamp(10px, 2vh, 20px);
+  }
+  #random-spin-result .card .sequel-prompt, #spin-result .card .sequel-prompt, #list-featured .card .sequel-prompt {
+    text-align: left; margin-top: clamp(8px, 1.4vh, 14px); padding-top: clamp(8px, 1.4vh, 14px);
+  }
+}
+
 .placeholder {
   text-align: center; padding: 50px 20px; color: var(--muted); border: 1px dashed var(--border);
   border-radius: 16px; font-size: 0.98rem; line-height: 1.6;
@@ -63,6 +97,7 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
 .copy-title {
   flex: 1; word-break: break-word; cursor: pointer; font-family: "Manrope", monospace;
   background: rgba(139,124,246,0.08); padding: 4px 10px; border-radius: 8px; transition: background 0.15s;
+  font-size: 0.95rem;
 }
 .copy-title:active, .copy-title.copied { background: rgba(139,124,246,0.35); }
 .list-row button.del-btn, button.del-btn {
@@ -77,15 +112,21 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
 }
 .add-row { display: flex; gap: 8px; margin-bottom: 14px; }
 .add-row input {
-  flex: 1; background: var(--card); border: 1px solid var(--border); color: var(--text);
+  flex: 1; background: rgba(52,211,153,0.06); border: 1.5px solid rgba(52,211,153,0.4); color: var(--text);
   padding: 11px 13px; border-radius: 10px; font-size: 0.95rem; font-family: inherit;
+  transition: border-color 0.15s, background 0.15s;
 }
 .add-row input::placeholder { color: var(--muted); }
+.add-row input:focus {
+  outline: none; border-color: var(--success); background: rgba(52,211,153,0.1);
+}
 .search-row {
   display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
-  background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 9px 13px;
-  color: var(--muted);
+  background: rgba(139,124,246,0.05); border: 1.5px solid rgba(139,124,246,0.3); border-radius: 10px; padding: 9px 13px;
+  color: var(--muted); transition: border-color 0.15s, background 0.15s;
 }
+.search-row svg { color: var(--primary); flex-shrink: 0; }
+.search-row:focus-within { border-color: var(--primary); background: rgba(139,124,246,0.09); }
 .search-row input {
   flex: 1; background: none; border: none; outline: none; color: var(--text);
   font-size: 0.95rem; font-family: inherit;
@@ -94,6 +135,31 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
 .list-count {
   color: var(--muted); font-size: 0.82rem; margin: 0 2px 8px; letter-spacing: 0.01em;
 }
+
+#list-container, #list-featured { container-type: inline-size; }
+
+@container (min-width: 420px) {
+  .list-row { padding: 13px 14px; gap: 12px; }
+  .copy-title { font-size: 1.02rem; padding: 5px 12px; }
+  .list-row button.del-btn, .list-row button.edit-btn { padding: 6px 13px; }
+  .list-row button.del-btn svg, .list-row button.edit-btn svg { width: 17px; height: 17px; }
+}
+@container (min-width: 520px) {
+  .list-row { padding: 15px 16px; gap: 14px; }
+  .copy-title { font-size: 1.08rem; padding: 6px 13px; }
+  .list-row button.del-btn, .list-row button.edit-btn { padding: 7px 15px; }
+  .list-row button.del-btn svg, .list-row button.edit-btn svg { width: 19px; height: 19px; }
+}
+
+@media (min-width: 640px) {
+  .search-row, .add-row input { font-size: 1rem; padding-top: 11px; padding-bottom: 11px; }
+  .list-count { font-size: 0.88rem; }
+}
+@media (min-width: 1000px) {
+  .search-row, .add-row input { font-size: 1.05rem; padding-top: 13px; padding-bottom: 13px; }
+  .list-count { font-size: 0.92rem; }
+}
+
 .muted { color: var(--muted); text-align: center; padding: 20px 0; }
 .check-group { margin-bottom: 18px; }
 .check-group h3 { font-size: 1rem; margin-bottom: 8px; }

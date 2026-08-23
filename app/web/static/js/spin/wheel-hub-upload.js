@@ -118,6 +118,12 @@ function openHubPopover(anchorEl) {
   let left = rect.right + 10;
   let top = rect.top + rect.height / 2 - popRect.height / 2;
   if (left + popRect.width > window.innerWidth - 8) left = rect.left - popRect.width - 10;
+  if (left < 8 || left + popRect.width > window.innerWidth - 8) {
+    left = Math.max(8, Math.min(rect.left + rect.width / 2 - popRect.width / 2, window.innerWidth - popRect.width - 8));
+    top = rect.bottom + 10;
+    if (top + popRect.height > window.innerHeight - 8) top = rect.top - popRect.height - 10;
+  }
+  left = Math.max(8, Math.min(left, window.innerWidth - popRect.width - 8));
   top = Math.max(8, Math.min(top, window.innerHeight - popRect.height - 8));
   hubPopoverEl.style.left = left + "px";
   hubPopoverEl.style.top = top + "px";

@@ -197,8 +197,7 @@ function drawWheel(canvas, items, dpr) {
   ctx.clearRect(0, 0, size, size);
   ctx.scale(dpr, dpr);
   const cssSize = size / dpr;
-  const cx = cssSize / 2, cy = cssSize / 2, r = cssSize / 2 - 3;
-  const n = items.length;
+  const cx = cssSize / 2, cy = cssSize / 2, r = cssSize / 2 - 3;  const n = items.length;
   const seg = (Math.PI * 2) / n;
 
   const arcLen = seg * r;
@@ -310,6 +309,18 @@ function forceRebuildVisibleWheels() {
   }
 }
 
+function redrawVisibleWheelCanvases() {
+  if (wheelSpinActive) return;
+  const dpr = window.devicePixelRatio || 1;
+  for (const id of ["random-wheel-wrap", "spin-wheel-wrap"]) {
+    const wrap = document.getElementById(id);
+    if (!wrap || wrap.style.display === "none" || !wrap._wheelPool) continue;
+    const canvas = wrap.querySelector(".wheel-canvas");
+    if (!canvas) continue;
+    drawWheel(canvas, wrap._wheelPool, dpr);
+  }
+}
+
 const SPIN_RESULT_MAX_WIDTH = 860;
 const SPIN_RESULT_PAIRS = [
   { sectionId: "random-spin-section", resultId: "random-spin-result" },
@@ -355,10 +366,29 @@ function syncSpinResultClearance() {
   }
 }
 
+const IS_TOUCH_PRIMARY = !!(window.matchMedia && window.matchMedia("(hover: none) and (pointer: coarse)").matches);
+const TOOLBAR_RESIZE_THRESHOLD = 150;
+
+let _wheelViewportWidth = window.innerWidth;
+let _wheelViewportHeight = window.innerHeight;
+function onRealResize(handler) {
+  return () => {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const widthDelta = Math.abs(w - _wheelViewportWidth);
+    const heightDelta = Math.abs(h - _wheelViewportHeight);
+    _wheelViewportWidth = w;
+    _wheelViewportHeight = h;
+    if (widthDelta < 1 && heightDelta < 1) return;
+    if (IS_TOUCH_PRIMARY && widthDelta < 1 && heightDelta < TOOLBAR_RESIZE_THRESHOLD) return;
+    handler();
+  };
+}
+
 const debouncedSyncSpinResultClearance = typeof debounce === "function"
   ? debounce(syncSpinResultClearance, 150)
   : syncSpinResultClearance;
-window.addEventListener("resize", debouncedSyncSpinResultClearance);
+window.addEventListener("resize", onRealResize(debouncedSyncSpinResultClearance));
 window.addEventListener("orientationchange", debouncedSyncSpinResultClearance);
 
 let dockRevealToken = 0;
@@ -374,18 +404,18 @@ function scheduleDockReveal() {
     rebuildVisibleWheels();
   });
 }
-window.addEventListener("resize", scheduleDockReveal);
+window.addEventListener("resize", onRealResize(scheduleDockReveal));
 window.addEventListener("orientationchange", scheduleDockReveal);
 scheduleDockReveal();
 
 const debouncedRebuildVisibleWheels = typeof debounce === "function"
   ? debounce(rebuildVisibleWheels, 150)
   : rebuildVisibleWheels;
-window.addEventListener("resize", debouncedRebuildVisibleWheels);
+window.addEventListener("resize", onRealResize(debouncedRebuildVisibleWheels));
 window.addEventListener("orientationchange", debouncedRebuildVisibleWheels);
 
 if (document.fonts && document.fonts.ready) {
-  document.fonts.ready.then(forceRebuildVisibleWheels).catch(() => {});
+  document.fonts.ready.then(redrawVisibleWheelCanvases).catch(() => {});
 }
 
 if (typeof ResizeObserver !== "undefined") {

@@ -1,5 +1,4 @@
 // Upcoming releases list: load, add/delete, and TMDb release-date check flow.
-// Depends on removeRowOptimistically() and fadeIn/fadeOut() from list-items.js (loaded first).
 
 function checkUpcomingEmpty(container) {
   if (container.querySelector(".list-row") || container.querySelector(".inline-undo-row")) return;
@@ -115,7 +114,7 @@ document.getElementById("up-check-btn").onclick = async () => {
       }
     }
     html += "</div>";
-    html += '<div class="check-group"><h3>⏳ Ещё не вышли</h3>';
+    html += '<div class="check-group"><h3>⏳ Ещё не вышли в цифре</h3>';
     if (!data.not_yet.length) {
       html += '<div class="muted">—</div>';
     } else {

@@ -55,12 +55,6 @@ function resetWheelWraps() {
 }
 
 function updateWheelScrollLock() {
-  const anyWheelOpen = ["random-wheel-wrap", "spin-wheel-wrap"].some((id) => {
-    const wrap = document.getElementById(id);
-    return !!wrap && wrap.style.display !== "none" && wrap.offsetParent !== null;
-  });
-  document.documentElement.classList.toggle("wheel-scroll-lock", anyWheelOpen);
-  document.body.classList.toggle("wheel-scroll-lock", anyWheelOpen);
 }
 
 const WHEEL_COLORS = [

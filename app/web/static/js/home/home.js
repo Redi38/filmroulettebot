@@ -92,8 +92,18 @@ function syncMarqueeSize() {
 const debouncedSyncMarqueeSize = typeof debounce === "function"
   ? debounce(syncMarqueeSize, 120)
   : syncMarqueeSize;
-window.addEventListener("resize", debouncedSyncMarqueeSize);
-window.addEventListener("orientationchange", debouncedSyncMarqueeSize);
+
+let lastMarqueeViewportWidth = window.innerWidth;
+function handleMarqueeViewportResize() {
+  if (window.innerWidth === lastMarqueeViewportWidth) return;
+  lastMarqueeViewportWidth = window.innerWidth;
+  debouncedSyncMarqueeSize();
+}
+window.addEventListener("resize", handleMarqueeViewportResize);
+window.addEventListener("orientationchange", () => {
+  lastMarqueeViewportWidth = window.innerWidth;
+  debouncedSyncMarqueeSize();
+});
 
 function fillMarqueeTrack(track, posters) {
   const frag = document.createDocumentFragment();

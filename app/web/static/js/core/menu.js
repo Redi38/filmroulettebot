@@ -93,6 +93,8 @@ function showSection() {
   if (typeof closeModal === "function") closeModal();
   if (typeof closeRenameModal === "function") closeRenameModal();
 
+  window.scrollTo(0, 0);
+
   for (const [view, id] of Object.entries(SECTION_IDS)) {
     document.getElementById(id).classList.toggle("active", currentView === view);
   }

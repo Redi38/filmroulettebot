@@ -9,6 +9,7 @@ const WHEEL_COLORS = [
   "#ffd166", "#d67cf0", "#45d4c9", "#ff9f68"
 ];
 const WHEEL_HUB_GIF_URL = "";
+const WHEEL_WRAP_IDS = ["random-wheel-wrap", "spin-wheel-wrap"];
 
 function pluralizeTitles(n) {
   const mod10 = n % 10, mod100 = n % 100;
@@ -20,7 +21,7 @@ function pluralizeTitles(n) {
 }
 
 function resetWheelWraps() {
-  for (const id of ["random-wheel-wrap", "spin-wheel-wrap"]) {
+  for (const id of WHEEL_WRAP_IDS) {
     const wrap = document.getElementById(id);
     if (!wrap) continue;
     wrap.innerHTML = "";

@@ -40,7 +40,7 @@ function spinWheelTo(canvas, n, winnerIndex, durationMs) {
 
 function rebuildVisibleWheels() {
   if (wheelSpinActive) return;
-  for (const id of ["random-wheel-wrap", "spin-wheel-wrap"]) {
+  for (const id of WHEEL_WRAP_IDS) {
     const wrap = document.getElementById(id);
     if (!wrap || wrap.style.display === "none" || !wrap._wheelPool) continue;
     const predicted = predictWheelSize(wrap);
@@ -51,7 +51,7 @@ function rebuildVisibleWheels() {
 
 function forceRebuildVisibleWheels() {
   if (wheelSpinActive) return;
-  for (const id of ["random-wheel-wrap", "spin-wheel-wrap"]) {
+  for (const id of WHEEL_WRAP_IDS) {
     const wrap = document.getElementById(id);
     if (!wrap || wrap.style.display === "none" || !wrap._wheelPool) continue;
     buildWheel(id, wrap._wheelPool);
@@ -61,7 +61,7 @@ function forceRebuildVisibleWheels() {
 function redrawVisibleWheelCanvases() {
   if (wheelSpinActive) return;
   const dpr = window.devicePixelRatio || 1;
-  for (const id of ["random-wheel-wrap", "spin-wheel-wrap"]) {
+  for (const id of WHEEL_WRAP_IDS) {
     const wrap = document.getElementById(id);
     if (!wrap || wrap.style.display === "none" || !wrap._wheelPool) continue;
     const canvas = wrap.querySelector(".wheel-canvas");

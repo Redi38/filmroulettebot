@@ -99,6 +99,31 @@ function debounce(fn, wait) {
   };
 }
 
+function nextFrame() { return new Promise((r) => requestAnimationFrame(r)); }
+
+async function fadeOut(el) {
+  el.style.opacity = "0";
+  await nextFrame();
+  await new Promise((r) => setTimeout(r, 90));
+}
+function fadeIn(el) { requestAnimationFrame(() => { el.style.opacity = "1"; }); }
+
+// Optimistically removes a row from the DOM while the delete request is
+// in flight, then offers an inline "Undo" that re-adds it server-side.
+// Shared by list-items.js, upcoming-list.js, and showcase-row.js.
+function removeRowOptimistically(row, deleteRequest, onRemoved) {
+  row.style.transition = "opacity .15s ease, transform .15s ease";
+  row.style.opacity = "0";
+  row.style.transform = "translateX(10px)";
+  setTimeout(() => {
+    row.remove();
+    if (onRemoved) onRemoved();
+  }, 150);
+  deleteRequest().catch((e) => {
+    showToast(e.message || "Не удалось удалить");
+  });
+}
+
 const TRASH_ICON_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>`;
 
 const PENCIL_ICON_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path><path d="M15 5l4 4"></path></svg>`;

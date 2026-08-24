@@ -39,14 +39,20 @@ async function doWheelSpin(cat, isRandom) {
     wrap.innerHTML = prevWrapHtml;
     wrap.style.display = prevWrapDisplay;
     updateWheelScrollLock();
-    if (e.status === 429) {
-      result.innerHTML = prevResultHtml;
-      const m = e.message.match(/[\d.]+/);
-      applySpinCooldown(m ? parseFloat(m[0]) : SPIN_COOLDOWN_SECONDS);
-      showToast(e.message);
-    } else {
-      result.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
-    }
+    handleSpinError(e, result, prevResultHtml);
+  }
+}
+
+// Shared by every spin flow (classic + wheel): on a 429 cooldown, restore
+// the previous result and re-arm the cooldown timer; otherwise show the error.
+function handleSpinError(e, result, prevHtml) {
+  if (e.status === 429) {
+    result.innerHTML = prevHtml;
+    const m = e.message.match(/[\d.]+/);
+    applySpinCooldown(m ? parseFloat(m[0]) : SPIN_COOLDOWN_SECONDS);
+    showToast(e.message);
+  } else {
+    result.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
   }
 }
 
@@ -79,50 +85,32 @@ function resultEl() {
   return document.getElementById(currentView === "random" ? "random-spin-result" : "spin-result");
 }
 
-async function doSpin(cat) {
-  if (spinMode === "wheel") return doWheelSpin(cat, false);
+// Classic (non-wheel) spin, shared by the per-category and random flows.
+// isRandom picks the endpoint and, since a random spin only ever happens
+// from the random-spin view, the result element directly (rather than via
+// resultEl(), which is also used for classic-mode rerolls from either view).
+async function doClassicSpin(cat, isRandom) {
   if (spinCooldownUntil > Date.now()) return;
-  const result = resultEl();
+  const result = isRandom ? document.getElementById("random-spin-result") : resultEl();
   const prevHtml = result.innerHTML;
   result.innerHTML = '<div class="spinner">🌀 Крутим…</div>';
   applySpinCooldown(SPIN_COOLDOWN_SECONDS);
   try {
-    const data = await api(`/api/${cat}/spin`, {method: "POST"});
+    const endpoint = isRandom ? "/api/random-spin" : `/api/${cat}/spin`;
+    const data = await api(endpoint, {method: "POST"});
     currentCardData = data;
     result.innerHTML = renderCard(data);
   } catch (e) {
-    if (e.status === 429) {
-      result.innerHTML = prevHtml;
-      const m = e.message.match(/[\d.]+/);
-      applySpinCooldown(m ? parseFloat(m[0]) : SPIN_COOLDOWN_SECONDS);
-      showToast(e.message);
-    } else {
-      result.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
-    }
+    handleSpinError(e, result, prevHtml);
   }
 }
 
-async function doRandomSpin() {
-  if (spinMode === "wheel") return doWheelSpin(null, true);
-  if (spinCooldownUntil > Date.now()) return;
-  const result = document.getElementById("random-spin-result");
-  const prevHtml = result.innerHTML;
-  result.innerHTML = '<div class="spinner">🌀 Крутим…</div>';
-  applySpinCooldown(SPIN_COOLDOWN_SECONDS);
-  try {
-    const data = await api("/api/random-spin", {method: "POST"});
-    currentCardData = data;
-    result.innerHTML = renderCard(data);
-  } catch (e) {
-    if (e.status === 429) {
-      result.innerHTML = prevHtml;
-      const m = e.message.match(/[\d.]+/);
-      applySpinCooldown(m ? parseFloat(m[0]) : SPIN_COOLDOWN_SECONDS);
-      showToast(e.message);
-    } else {
-      result.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
-    }
-  }
+function doSpin(cat) {
+  return spinMode === "wheel" ? doWheelSpin(cat, false) : doClassicSpin(cat, false);
+}
+
+function doRandomSpin() {
+  return spinMode === "wheel" ? doWheelSpin(null, true) : doClassicSpin(null, true);
 }
 
 document.getElementById("spin-btn").onclick = () => doSpin(currentCat);

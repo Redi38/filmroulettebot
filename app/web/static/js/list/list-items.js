@@ -4,15 +4,6 @@ let currentListPage = 1;
 let currentListCat = null;
 let currentListQuery = "";
 
-function nextFrame() { return new Promise((r) => requestAnimationFrame(r)); }
-
-async function fadeOut(el) {
-  el.style.opacity = "0";
-  await nextFrame();
-  await new Promise((r) => setTimeout(r, 90));
-}
-function fadeIn(el) { requestAnimationFrame(() => { el.style.opacity = "1"; }); }
-
 async function loadList(page) {
   if (page) currentListPage = page;
   else currentListPage = 1;
@@ -72,61 +63,23 @@ async function loadList(page) {
     if (countEl) countEl.textContent = `Всего: ${data.total_count}`;
     container.innerHTML = "";
     for (const title of data.items) {
-      const row = document.createElement("div");
-      row.className = "list-row";
-      const span = document.createElement("span");
-      span.className = "copy-title";
-      span.textContent = title;
-      span.title = "Нажмите, чтобы скопировать";
-      span.onclick = () => copyToClipboard(title, span);
-      row.appendChild(span);
-      const edit = document.createElement("button");
-      edit.className = "edit-btn";
-      edit.innerHTML = PENCIL_ICON_SVG;
-      edit.setAttribute("aria-label", "Изменить название");
-      edit.onclick = (ev) => {
-        ev.stopPropagation();
-        const cat = currentCat;
-        openRenameModal(title, async (newTitle) => {
-          try {
-            await api(`/api/${cat}/rename`, {
-              method: "POST", headers: {"Content-Type": "application/json"},
-              body: JSON.stringify({old_title: title, new_title: newTitle}),
-            });
-            if (currentCat === cat) loadList(currentListPage);
-          } catch (e) {
-            showToast(e.message || "Не удалось изменить название");
-          }
-        });
-      };
-      row.appendChild(edit);
-      const del = document.createElement("button");
-      del.className = "del-btn";
-      del.innerHTML = TRASH_ICON_SVG;
-      del.setAttribute("aria-label", "Удалить");
-      del.onclick = (ev) => {
-        ev.stopPropagation();
-        const cat = currentCat;
-        const rowParent = row.parentNode;
-        const rowNext = row.nextSibling;
-        removeRowOptimistically(row, () => api(`/api/${cat}/delete`, {
+      const cat = currentCat;
+      const row = createEditableRow(title, {
+        onRename: (newTitle) => api(`/api/${cat}/rename`, {
+          method: "POST", headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({old_title: title, new_title: newTitle}),
+        }),
+        onDelete: () => api(`/api/${cat}/delete`, {
           method: "POST", headers: {"Content-Type": "application/json"},
           body: JSON.stringify({title}),
-        }), () => {
-          showInlineUndo(rowParent, rowNext, `«${title}» удалён`, "Отменить", async () => {
-            try {
-              await api(`/api/${cat}/add`, {
-                method: "POST", headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({title}),
-              });
-              if (currentCat === cat) loadList(currentListPage);
-            } catch (e) {
-              showToast("Не удалось восстановить");
-            }
-          }, () => checkListEmpty(container));
-        });
-      };
-      row.appendChild(del);
+        }),
+        onRestore: () => api(`/api/${cat}/add`, {
+          method: "POST", headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({title}),
+        }),
+        onReload: () => { if (currentCat === cat) loadList(currentListPage); },
+        onUndoSettled: () => checkListEmpty(container),
+      });
       container.appendChild(row);
     }
     if (data.total_pages > 1) container.appendChild(paginationRow(data.page, data.total_pages, (p) => loadList(p)));
@@ -143,19 +96,6 @@ function checkListEmpty(container) {
   container.innerHTML = q
     ? placeholderHtml(`Ничего не найдено по «${escapeHtml(q)}»`, "🔍")
     : placeholderHtml("Пока здесь пусто — добавь первый тайтл выше 🍿", "📭");
-}
-
-function removeRowOptimistically(row, deleteRequest, onRemoved) {
-  row.style.transition = "opacity .15s ease, transform .15s ease";
-  row.style.opacity = "0";
-  row.style.transform = "translateX(10px)";
-  setTimeout(() => {
-    row.remove();
-    if (onRemoved) onRemoved();
-  }, 150);
-  deleteRequest().catch((e) => {
-    showToast(e.message || "Не удалось удалить");
-  });
 }
 
 document.getElementById("search-input").addEventListener("input", debounce((ev) => {

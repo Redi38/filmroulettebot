@@ -59,7 +59,10 @@ async def get_series_info(title: str) -> dict[str, Any] | None:
 async def get_tv_next_episode(tv_id: int) -> dict[str, Any] | None:
     """Next unaired episode for a TV show, if TMDb has one scheduled — used
     to flag "new season coming" for shows already in the user's own list,
-    without them having to keep checking manually."""
+    without them having to keep checking manually. Also carries the show's
+    total episode count (already present in the same /tv/{id} response) so
+    get_series_releases can filter out long-running shows without an extra
+    API call."""
     cache_key = f"tv_next_episode:{tv_id}"
     cached = await get_tmdb_cache(cache_key, DISCOVER_CACHE_TTL)
     if cached is not None:
@@ -67,7 +70,12 @@ async def get_tv_next_episode(tv_id: int) -> dict[str, Any] | None:
     data = await _get(f"/tv/{tv_id}")
     nxt = (data or {}).get("next_episode_to_air") or {}
     out = (
-        {"season_number": nxt.get("season_number"), "episode_number": nxt.get("episode_number"), "air_date": nxt.get("air_date")}
+        {
+            "season_number": nxt.get("season_number"),
+            "episode_number": nxt.get("episode_number"),
+            "air_date": nxt.get("air_date"),
+            "number_of_episodes": (data or {}).get("number_of_episodes"),
+        }
         if nxt.get("air_date")
         else None
     )
@@ -91,11 +99,17 @@ async def get_season_finale_date(tv_id: int, season_number: int) -> str | None:
     return finale
 
 
+MAX_SERIES_EPISODES = 100
+
+
 async def get_series_releases(region: str = "UA", pages: int = 3) -> list[dict[str, Any]]:
     """Popular TV shows with an episode airing soon — new seasons of
     returning shows AND freshly debuting series, global TMDb discovery,
     independent of the user's own tracked list (unlike the old per-title
-    check this replaces)."""
+    check this replaces). Long-running shows (100+ total episodes — soaps,
+    daily procedurals, etc.) are excluded: they always have "a new episode
+    soon" by nature and would otherwise crowd out shows actually worth
+    noticing here."""
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     horizon = (datetime.now(timezone.utc) + timedelta(days=45)).strftime("%Y-%m-%d")
     raw: list[dict[str, Any]] = []
@@ -126,7 +140,14 @@ async def get_series_releases(region: str = "UA", pages: int = 3) -> list[dict[s
         unique.append(r)
 
     next_eps = await asyncio.gather(*(get_tv_next_episode(r["id"]) for r in unique))
-    pairs = [(r, nxt) for r, nxt in zip(unique, next_eps) if nxt and nxt.get("air_date")]
+    pairs = [
+        (r, nxt) for r, nxt in zip(unique, next_eps)
+        if nxt and nxt.get("air_date")
+        and not (
+            isinstance(nxt.get("number_of_episodes"), int)
+            and nxt["number_of_episodes"] > MAX_SERIES_EPISODES
+        )
+    ]
 
     finales = await asyncio.gather(*(
         get_season_finale_date(r["id"], nxt["season_number"])

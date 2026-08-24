@@ -27,6 +27,7 @@ async function showIdleWheel(cat) {
     if (!wrap.isConnected || document.getElementById("spin-wheel-wrap") !== wrap) return;
     buildWheel("spin-wheel-wrap", pool);
     document.getElementById("spin-result").innerHTML = "";
+    if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
   } catch (e) {
   }
 }
@@ -75,6 +76,12 @@ function computeWheelSize(availableWidth, availableHeight) {
   );
 }
 
+function getWheelBottomGap(wrap) {
+  const mainEl = wrap.closest("main");
+  const paddingBottom = mainEl ? parseFloat(getComputedStyle(mainEl).paddingBottom) || 0 : 0;
+  return Math.max(16, paddingBottom);
+}
+
 function computeDockClearance(wrap, dock) {
   if (!dock) return 0;
   const dockPos = getComputedStyle(dock).position;
@@ -85,7 +92,7 @@ function computeDockClearance(wrap, dock) {
   if (dockRect.bottom <= wrapTop) return 0;
   const availableWidth = wrap.clientWidth;
   const viewportHeight = document.documentElement.clientHeight || window.innerHeight;
-  const provisionalHeight = viewportHeight - wrapTop - 16;
+  const provisionalHeight = viewportHeight - wrapTop - getWheelBottomGap(wrap);
   const provisionalSize = computeWheelSize(availableWidth, provisionalHeight);
   const contentCenterX = wrapRect.left + wrapRect.width / 2;
   const contentRight = contentCenterX + provisionalSize / 2;
@@ -107,7 +114,7 @@ function buildWheel(wrapId, items) {
   wrap.style.paddingTop = dockClearance + "px";
 
   const top = wrap.getBoundingClientRect().top;
-  const pageBottomGap = 16;
+  const pageBottomGap = getWheelBottomGap(wrap);
   const viewportHeight = document.documentElement.clientHeight || window.innerHeight;
   const availableHeight = viewportHeight - top - pageBottomGap - dockClearance;
   const availableWidth = wrap.clientWidth;
@@ -283,7 +290,7 @@ function predictWheelSize(wrap) {
   const dock = wrap.parentElement && wrap.parentElement.querySelector(".spin-controls-dock");
   const dockClearance = computeDockClearance(wrap, dock);
   const top = wrap.getBoundingClientRect().top - (parseFloat(wrap.style.paddingTop) || 0);
-  const pageBottomGap = 16;
+  const pageBottomGap = getWheelBottomGap(wrap);
   const viewportHeight = document.documentElement.clientHeight || window.innerHeight;
   const availableHeight = viewportHeight - top - pageBottomGap - dockClearance;
   const availableWidth = wrap.clientWidth;
@@ -386,11 +393,15 @@ function onRealResize(handler) {
   };
 }
 
-const debouncedSyncSpinResultClearance = typeof debounce === "function"
-  ? debounce(syncSpinResultClearance, 150)
-  : syncSpinResultClearance;
-window.addEventListener("resize", onRealResize(debouncedSyncSpinResultClearance));
-window.addEventListener("orientationchange", debouncedSyncSpinResultClearance);
+function refreshWheelLayout() {
+  rebuildVisibleWheels();
+  syncSpinResultClearance();
+}
+const debouncedRefreshWheelLayout = typeof debounce === "function"
+  ? debounce(refreshWheelLayout, 150)
+  : refreshWheelLayout;
+window.addEventListener("resize", onRealResize(debouncedRefreshWheelLayout));
+window.addEventListener("orientationchange", debouncedRefreshWheelLayout);
 
 let dockRevealToken = 0;
 let dockRevealed = false;
@@ -401,27 +412,23 @@ function scheduleDockReveal() {
     if (myToken !== dockRevealToken || dockRevealed) return;
     dockRevealed = true;
     document.body.classList.add("dock-ready");
-    syncSpinResultClearance();
-    rebuildVisibleWheels();
+    refreshWheelLayout();
   });
 }
 window.addEventListener("resize", onRealResize(scheduleDockReveal));
 window.addEventListener("orientationchange", scheduleDockReveal);
 scheduleDockReveal();
 
-const debouncedRebuildVisibleWheels = typeof debounce === "function"
-  ? debounce(rebuildVisibleWheels, 150)
-  : rebuildVisibleWheels;
-window.addEventListener("resize", onRealResize(debouncedRebuildVisibleWheels));
-window.addEventListener("orientationchange", debouncedRebuildVisibleWheels);
-
 if (document.fonts && document.fonts.ready) {
   document.fonts.ready.then(redrawVisibleWheelCanvases).catch(() => {});
 }
 
 if (typeof ResizeObserver !== "undefined") {
+  const debouncedRefreshWheelLayoutForObserver = typeof debounce === "function"
+    ? debounce(refreshWheelLayout, 150)
+    : refreshWheelLayout;
   const wheelLayoutObserver = new ResizeObserver(() => {
-    debouncedRebuildVisibleWheels();
+    debouncedRefreshWheelLayoutForObserver();
   });
   for (const sectionId of ["random-spin-section", "spin-section"]) {
     const section = document.getElementById(sectionId);

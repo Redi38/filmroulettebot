@@ -135,6 +135,7 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
 .search-row input::placeholder { color: var(--muted); }
 .list-count {
   color: var(--muted); font-size: 0.82rem; margin: 0 2px 8px; letter-spacing: 0.01em;
+  min-height: 1.3em;
 }
 
 #list-container, #list-featured, #up-list-container { container-type: inline-size; }

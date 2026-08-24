@@ -39,8 +39,15 @@
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .showcase-date { color: var(--muted); font-size: 0.82rem; margin-top: 2px; }
-.showcase-action { flex-shrink: 0; }
+.showcase-action { flex-shrink: 0; display: flex; justify-content: flex-end; }
 .showcase-action-stack { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+
+@media (max-width: 480px) {
+  .showcase-item { flex-wrap: wrap; row-gap: 8px; }
+  .showcase-info-clickable { flex-basis: 100%; }
+  .showcase-action { flex-basis: 100%; }
+  .showcase-action .btn { padding: 9px 16px; font-size: 0.9rem; }
+}
 .btn-ghost {
   background: none; border: 1px solid var(--border); color: var(--muted); box-shadow: none;
 }

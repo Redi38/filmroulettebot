@@ -112,7 +112,8 @@ function buildWheel(wrapId, items) {
   const availableHeight = viewportHeight - top - pageBottomGap - dockClearance;
   const availableWidth = wrap.clientWidth;
   const cssSize = computeWheelSize(availableWidth, availableHeight);
-  wrap.style.minHeight = (cssSize + dockClearance + WHEEL_VERTICAL_RESERVE) + "px";
+  const heightBudget = Math.max(0, viewportHeight - top - pageBottomGap);
+  wrap.style.minHeight = Math.min(cssSize + dockClearance + WHEEL_VERTICAL_RESERVE, heightBudget) + "px";
   wrap._wheelBuiltSize = cssSize;
 
   const titleEl = document.createElement("div");
@@ -369,16 +370,16 @@ function syncSpinResultClearance() {
 const IS_TOUCH_PRIMARY = !!(window.matchMedia && window.matchMedia("(hover: none) and (pointer: coarse)").matches);
 const TOOLBAR_RESIZE_THRESHOLD = 150;
 
-let _wheelViewportWidth = window.innerWidth;
-let _wheelViewportHeight = window.innerHeight;
 function onRealResize(handler) {
+  let lastWidth = window.innerWidth;
+  let lastHeight = window.innerHeight;
   return () => {
     const w = window.innerWidth;
     const h = window.innerHeight;
-    const widthDelta = Math.abs(w - _wheelViewportWidth);
-    const heightDelta = Math.abs(h - _wheelViewportHeight);
-    _wheelViewportWidth = w;
-    _wheelViewportHeight = h;
+    const widthDelta = Math.abs(w - lastWidth);
+    const heightDelta = Math.abs(h - lastHeight);
+    lastWidth = w;
+    lastHeight = h;
     if (widthDelta < 1 && heightDelta < 1) return;
     if (IS_TOUCH_PRIMARY && widthDelta < 1 && heightDelta < TOOLBAR_RESIZE_THRESHOLD) return;
     handler();

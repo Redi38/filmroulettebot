@@ -59,6 +59,39 @@
   cursor: pointer; display: flex; align-items: center; justify-content: center;
 }
 
+#add-search-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(5,4,15,0.7); z-index: 30;
+  align-items: center; justify-content: center; padding: 20px;
+}
+#add-search-overlay.open { display: flex; }
+#add-search-box {
+  background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+  padding: 22px; max-width: 400px; width: 100%; max-height: 80vh;
+  display: flex; flex-direction: column; box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+}
+#add-search-box h3 { margin: 0 0 14px; font-size: 1.05rem; }
+#add-search-results { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; min-height: 40px; }
+.add-search-empty { padding: 4px 0; }
+.add-search-row {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 10px;
+  padding: 8px 10px; cursor: pointer; font-family: inherit; color: var(--text); font-size: 0.92rem;
+}
+.add-search-row:hover { background: rgba(139,124,246,0.14); border-color: rgba(139,124,246,0.4); }
+.add-search-poster {
+  width: 36px; height: 54px; object-fit: cover; border-radius: 6px; flex-shrink: 0; background: rgba(255,255,255,0.06);
+}
+.add-search-poster-empty { display: flex; }
+.add-search-row-title { line-height: 1.3; }
+.add-search-year { color: var(--muted); font-size: 0.85em; }
+#add-search-fallback {
+  margin-top: 14px; width: 100%; text-align: center; padding: 10px 16px; border-radius: 10px;
+}
+#add-search-cancel {
+  margin-top: 10px; width: 100%; background: none; border: 1px solid var(--border);
+  color: var(--muted); border-radius: 10px; padding: 10px; cursor: pointer; font-family: inherit; font-size: 0.9rem;
+}
+
 @media (min-width: 900px) {
   #burger-btn { display: none; }
   #overlay { display: none !important; }
@@ -83,6 +116,7 @@
   .toast { left: calc(50% + var(--sidebar-w) / 2); }
 
   #poster-info-overlay { left: var(--sidebar-w); }
+  #add-search-overlay { left: var(--sidebar-w); }
 
   main > #showcase-section.active { max-width: 900px; }
   #showcase-section #showcase-filters { margin-bottom: 20px; }

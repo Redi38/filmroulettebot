@@ -12,7 +12,7 @@ from app.db.database import (
     item_exists,
     rename_upcoming_movie,
 )
-from app.services.tmdb import check_upcoming_released
+from app.services.tmdb import check_upcoming_released, search_movie_suggestions
 
 from .shared import MoveBody, RenameBody, TitleBody, _check_category, _validate_rename
 
@@ -23,6 +23,12 @@ router = APIRouter()
 async def api_upcoming() -> dict:
     items = await get_upcoming_movies()
     return {"items": items}
+
+
+@router.get("/api/upcoming/search-suggest")
+async def api_upcoming_search_suggest(q: str = "") -> dict:
+    q = q.strip()
+    return {"results": (await search_movie_suggestions(q)) if q else []}
 
 
 @router.post("/api/upcoming/add")

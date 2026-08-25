@@ -21,6 +21,8 @@ from .movies import (
     get_now_playing,
     get_upcoming_theatrical,
     is_digitally_released,
+    search_movie_suggestions,
+    search_multi_suggestions,
 )
 from .series import (
     get_season_finale_date,
@@ -28,6 +30,7 @@ from .series import (
     get_series_releases,
     get_tracked_series_status,
     get_tv_next_episode,
+    search_series_suggestions,
 )
 from .studios import KIDS_GENRE_ID, TALK_GENRE_ID, discover_by_company
 
@@ -39,11 +42,14 @@ __all__ = [
     "get_now_playing",
     "get_upcoming_theatrical",
     "is_digitally_released",
+    "search_movie_suggestions",
+    "search_multi_suggestions",
     "get_season_finale_date",
     "get_series_info",
     "get_series_releases",
     "get_tracked_series_status",
     "get_tv_next_episode",
+    "search_series_suggestions",
     "discover_by_company",
     "TALK_GENRE_ID",
     "KIDS_GENRE_ID",

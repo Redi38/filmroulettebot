@@ -108,14 +108,20 @@ document.getElementById("tracked-series-add-btn").onclick = async () => {
   const input = document.getElementById("tracked-series-add-input");
   const title = input.value.trim();
   if (!title) return;
-  try {
-    await api("/api/tracked-series/add", {
-      method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({title}),
-    });
-    input.value = "";
-    loadTrackedSeries();
-  } catch (e) { showToast(e.message); }
+  const doAdd = async (finalTitle) => {
+    try {
+      await api("/api/tracked-series/add", {
+        method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({title: finalTitle}),
+      });
+      input.value = "";
+      loadTrackedSeries();
+    } catch (e) { showToast(e.message); }
+  };
+  openAddSearchModal("/api/tracked-series/search-suggest", title, {
+    onPick: doAdd,
+    onFallback: () => doAdd(title),
+  });
 };
 document.getElementById("tracked-series-add-input").addEventListener("keydown", (ev) => {
   if (ev.key === "Enter") document.getElementById("tracked-series-add-btn").click();

@@ -76,3 +76,31 @@ def format_movie_results(results: list[dict]) -> list[dict[str, Any]]:
             "is_series": False,
         })
     return out
+
+
+def format_search_suggestions(results: list[dict], is_series: bool) -> list[dict[str, Any]]:
+    """Lightweight normalization for search-as-you-add suggestions: just
+    enough to render a picker row (id, canonical title, year, poster) —
+    deliberately not the full format_movie_results/get_*_info shape, since
+    callers here don't need overview/genres/actors."""
+    title_field = "name" if is_series else "title"
+    date_field = "first_air_date" if is_series else "release_date"
+    seen: set[int] = set()
+    out: list[dict[str, Any]] = []
+    for r in results:
+        rid = r.get("id")
+        if rid is None or rid in seen:
+            continue
+        seen.add(rid)
+        title = r.get(title_field)
+        if not title:
+            continue
+        out.append({
+            "tmdb_id": rid,
+            "title": title,
+            "year": (r.get(date_field) or "")[:4],
+            "poster_url": poster(r),
+        })
+        if len(out) >= 6:
+            break
+    return out

@@ -5,7 +5,12 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 
 from app.db.database import add_item, delete_item, get_items, item_exists, rename_item
-from app.services.tmdb import get_tracked_series_status
+from app.services.tmdb import (
+    get_tracked_series_status,
+    search_movie_suggestions,
+    search_multi_suggestions,
+    search_series_suggestions,
+)
 from app.utils import paginate
 
 from .shared import CATEGORIES, LIST_PAGE_SIZE, RenameBody, TitleBody, _check_category, _validate_rename
@@ -21,6 +26,12 @@ async def api_tracked_series() -> dict:
     titles = await get_items("tracked_series")
     items = await get_tracked_series_status(titles) if titles else []
     return {"items": items}
+
+
+@router.get("/api/tracked-series/search-suggest")
+async def api_tracked_series_search_suggest(q: str = "") -> dict:
+    q = q.strip()
+    return {"results": (await search_series_suggestions(q)) if q else []}
 
 
 @router.post("/api/tracked-series/add")
@@ -49,6 +60,24 @@ async def api_items(cat: str, page: int = 1, q: str = "") -> dict:
         items = [i for i in items if q in i.lower()]
     page_items, page, total_pages = paginate(items, page, page_size=LIST_PAGE_SIZE)
     return {"items": page_items, "page": page, "total_pages": total_pages, "total_count": len(items)}
+
+
+@router.get("/api/{cat}/search-suggest")
+async def api_search_suggest(cat: str, q: str = "") -> dict:
+    """TMDb title suggestions for the add-a-title picker: 'series' searches
+    /search/tv, movies/cartoons search /search/movie, and dc/marvel search
+    both (they cover theatrical films AND streaming series like Loki)."""
+    _check_category(cat)
+    q = q.strip()
+    if not q:
+        return {"results": []}
+    if cat == "series":
+        results = await search_series_suggestions(q)
+    elif cat in ("dc", "marvel"):
+        results = await search_multi_suggestions(q)
+    else:
+        results = await search_movie_suggestions(q)
+    return {"results": results}
 
 
 @router.post("/api/{cat}/add")

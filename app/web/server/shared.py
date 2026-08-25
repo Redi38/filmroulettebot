@@ -109,7 +109,12 @@ def _next_sequel_title(item: str) -> str:
 
 
 async def _card_data(cat: str, title: str, history_timestamp: float | None = None) -> dict[str, Any]:
-    info = (await get_series_info(title)) if cat == "series" else (await get_movie_info(title))
+    if cat == "series":
+        info = await get_series_info(title)
+    elif cat in ("dc", "marvel"):
+        info = await get_movie_info(title) or await get_series_info(title)
+    else:
+        info = await get_movie_info(title)
     info = info or {}
     display_title = info.get("title", title)
     link = await find_watch_page_url(display_title) or build_watch_link(display_title)

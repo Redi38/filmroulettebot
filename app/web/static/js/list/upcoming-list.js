@@ -52,14 +52,20 @@ document.getElementById("up-add-btn").onclick = async () => {
   const input = document.getElementById("up-add-input");
   const title = input.value.trim();
   if (!title) return;
-  try {
-    await api("/api/upcoming/add", {
-      method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({title}),
-    });
-    input.value = "";
-    loadUpcoming();
-  } catch (e) { showToast(e.message); }
+  const doAdd = async (finalTitle) => {
+    try {
+      await api("/api/upcoming/add", {
+        method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({title: finalTitle}),
+      });
+      input.value = "";
+      loadUpcoming();
+    } catch (e) { showToast(e.message); }
+  };
+  openAddSearchModal("/api/upcoming/search-suggest", title, {
+    onPick: doAdd,
+    onFallback: () => doAdd(title),
+  });
 };
 
 document.getElementById("up-check-btn").onclick = async () => {

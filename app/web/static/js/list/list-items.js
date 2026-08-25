@@ -66,6 +66,7 @@ async function loadList(page) {
     for (const title of data.items) {
       const cat = currentCat;
       const row = createEditableRow(title, {
+        searchEndpoint: `/api/${cat}/search-suggest`,
         onRename: (newTitle) => api(`/api/${cat}/rename`, {
           method: "POST", headers: {"Content-Type": "application/json"},
           body: JSON.stringify({old_title: title, new_title: newTitle}),

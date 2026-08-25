@@ -117,6 +117,7 @@
 
   #poster-info-overlay { left: var(--sidebar-w); }
   #add-search-overlay { left: var(--sidebar-w); }
+  #rename-modal-overlay { left: var(--sidebar-w); }
 
   main > #showcase-section.active { max-width: 900px; }
   #showcase-section #showcase-filters { margin-bottom: 20px; }

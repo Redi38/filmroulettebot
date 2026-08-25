@@ -21,11 +21,21 @@ function createEditableRow(title, opts) {
   edit.onclick = (ev) => {
     ev.stopPropagation();
     openRenameModal(title, async (newTitle) => {
-      try {
-        await opts.onRename(newTitle);
-        opts.onReload();
-      } catch (e) {
-        showToast(e.message || "Не удалось изменить название");
+      const save = async (finalTitle) => {
+        try {
+          await opts.onRename(finalTitle);
+          opts.onReload();
+        } catch (e) {
+          showToast(e.message || "Не удалось изменить название");
+        }
+      };
+      if (opts.searchEndpoint) {
+        openAddSearchModal(opts.searchEndpoint, newTitle, {
+          onPick: save,
+          onFallback: () => save(newTitle),
+        });
+      } else {
+        save(newTitle);
       }
     });
   };

@@ -24,6 +24,7 @@ async function loadUpcoming() {
     container.innerHTML = "";
     for (const title of data.items) {
       const row = createEditableRow(title, {
+        searchEndpoint: "/api/upcoming/search-suggest",
         onRename: (newTitle) => api("/api/upcoming/rename", {
           method: "POST", headers: {"Content-Type": "application/json"},
           body: JSON.stringify({old_title: title, new_title: newTitle}),

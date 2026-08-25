@@ -93,7 +93,7 @@ async function doClassicSpin(cat, isRandom) {
   if (spinCooldownUntil > Date.now()) return;
   const result = isRandom ? document.getElementById("random-spin-result") : resultEl();
   const prevHtml = result.innerHTML;
-  result.innerHTML = '<div class="spinner">🌀 Крутим…</div>';
+  result.innerHTML = '<div class="spinner">Крутим…</div>';
   applySpinCooldown(SPIN_COOLDOWN_SECONDS);
   try {
     const endpoint = isRandom ? "/api/random-spin" : `/api/${cat}/spin`;

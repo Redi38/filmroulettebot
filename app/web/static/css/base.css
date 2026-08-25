@@ -1,10 +1,9 @@
 /* Design tokens, page reset, header, and side navigation menu. */
 
 :root {
-  /* "Ночная афиша" — night marquee palette */
-  --bg-a: #1c1108; --bg-b: #17081c; --bg-c: #0b0b0f;
+  --bg-a: #2a1a0e; --bg-b: #23102a; --bg-c: #141319;
   --card: #17151a; --text: #f5f0e6; --muted: #a39a8c;
-  --primary: #f2a93b; --primary-2: #ff3b81; --success: #ffb545; --danger: #ff4d6a;
+  --primary: #f2a93b; --primary-2: #ff3b81; --success: #34d399; --danger: #ff4d6a;
   --border: #2c2620; --glow: rgba(242, 169, 59, 0.32); --glow-2: rgba(255, 59, 129, 0.32);
   --sidebar-w: 260px; --header-h: 63px;
 }

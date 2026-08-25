@@ -42,6 +42,28 @@
 .showcase-action { flex-shrink: 0; display: flex; justify-content: flex-end; }
 .showcase-action-stack { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
 
+/* Tracked-series delete/edit buttons: match the size used in the regular
+   lists (.list-row) instead of the smaller default .del-btn/.edit-btn size. */
+#tracked-series-container { container-type: inline-size; }
+#tracked-series-container .showcase-action button.del-btn,
+#tracked-series-container .showcase-action button.edit-btn {
+  padding: 6px 13px;
+}
+#tracked-series-container .showcase-action button.del-btn svg,
+#tracked-series-container .showcase-action button.edit-btn svg {
+  width: 17px; height: 17px;
+}
+@container (min-width: 420px) {
+  #tracked-series-container .showcase-action button.del-btn,
+  #tracked-series-container .showcase-action button.edit-btn {
+    padding: 7px 15px;
+  }
+  #tracked-series-container .showcase-action button.del-btn svg,
+  #tracked-series-container .showcase-action button.edit-btn svg {
+    width: 19px; height: 19px;
+  }
+}
+
 @media (max-width: 480px) {
   .showcase-item { flex-wrap: wrap; row-gap: 8px; }
   .showcase-info-clickable { flex-basis: 100%; }
@@ -75,4 +97,4 @@
   background: linear-gradient(90deg, var(--primary), var(--primary-2));
   border-color: transparent; color: white;
 }
-.spinner { text-align: center; padding: 30px; color: var(--muted); width: 100%; }
+.spinner { text-align: center; padding: 30px; color: var(--muted); width: 100%; font-size: 1.15rem; font-weight: 600; }

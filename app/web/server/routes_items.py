@@ -51,6 +51,19 @@ async def api_tracked_series_delete(body: TitleBody) -> dict:
     return {"ok": True}
 
 
+@router.post("/api/tracked-series/rename")
+async def api_tracked_series_rename(body: RenameBody) -> dict:
+    old_title = body.old_title.strip()
+    new_title = body.new_title.strip()
+    if not await _validate_rename(
+        lambda t: item_exists("tracked_series", t), old_title, new_title, "",
+        conflict_msg=f"«{new_title}» уже отслеживается",
+    ):
+        return {"ok": True}
+    await rename_item("tracked_series", old_title, new_title)
+    return {"ok": True}
+
+
 @router.get("/api/{cat}/items")
 async def api_items(cat: str, page: int = 1, q: str = "") -> dict:
     _check_category(cat)

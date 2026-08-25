@@ -18,7 +18,6 @@ function openCategoryModal(titleText, onPick, allowedCats) {
 function closeModal() { document.getElementById("modal-overlay").classList.remove("open"); }
 document.getElementById("modal-cancel").onclick = closeModal;
 document.getElementById("modal-overlay").onclick = (ev) => { if (ev.target.id === "modal-overlay") closeModal(); };
-
 let _closeActiveRenameModal = null;
 
 function openRenameModal(currentTitle, onSave) {
@@ -74,3 +73,12 @@ document.getElementById("poster-info-close").onclick = closePosterInfoModal;
 document.getElementById("poster-info-overlay").onclick = (ev) => {
   if (ev.target.id === "poster-info-overlay") closePosterInfoModal();
 };
+
+// Esc closes whichever of these overlays is currently open. The rename
+// modal handles its own Escape key (it needs to coexist with Enter-to-save
+// on its input), so it isn't duplicated here.
+document.addEventListener("keydown", (ev) => {
+  if (ev.key !== "Escape") return;
+  if (document.getElementById("modal-overlay").classList.contains("open")) closeModal();
+  else if (document.getElementById("poster-info-overlay").classList.contains("open")) closePosterInfoModal();
+});

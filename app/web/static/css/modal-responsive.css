@@ -118,6 +118,7 @@
   #poster-info-overlay { left: var(--sidebar-w); }
   #add-search-overlay { left: var(--sidebar-w); }
   #rename-modal-overlay { left: var(--sidebar-w); }
+  #modal-overlay { left: var(--sidebar-w); }
 
   main > #showcase-section.active { max-width: 900px; }
   #showcase-section #showcase-filters { margin-bottom: 20px; }
@@ -144,4 +145,20 @@
   .showcase-poster-placeholder { font-size: 2rem; }
   .showcase-title { font-size: 1.15rem; white-space: normal; }
   .showcase-date { font-size: 0.92rem; margin-top: 5px; }
+
+  #add-search-box {
+    max-width: 560px; padding: 28px;
+  }
+  #add-search-box h3 { font-size: 1.25rem; margin-bottom: 18px; }
+  #add-search-results { gap: 10px; }
+  .add-search-row {
+    gap: 16px; padding: 12px 14px; border-radius: 12px; font-size: 1.05rem;
+  }
+  .add-search-poster {
+    width: 52px; height: 78px; border-radius: 8px;
+  }
+  .add-search-year { font-size: 0.88em; }
+  #add-search-fallback, #add-search-cancel {
+    padding: 12px 16px; font-size: 1rem;
+  }
 }

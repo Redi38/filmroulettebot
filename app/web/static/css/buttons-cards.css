@@ -15,9 +15,11 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
 .btn-danger { background: linear-gradient(135deg, var(--danger), #b9203f); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* Marquee CTA: bulbs chasing around the border, like a cinema-sign edge */
 .btn-success {
-  background: linear-gradient(135deg, var(--success), #d9861f); color: #1a1108;
+  background: linear-gradient(135deg, var(--success), #1a9e63); color: #10261c;
+}
+.btn-reroll {
+  background: linear-gradient(135deg, #4fd1e0, #1a7b8c); color: #0a2429;
 }
 .btn-sm { padding: 6px 14px; font-size: 0.82rem; border-radius: 9px; box-shadow: none; }
 .btn.page-nav-btn {

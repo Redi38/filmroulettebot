@@ -16,10 +16,13 @@ async function openAddSearchModal(searchEndpoint, query, {onPick, onFallback}) {
     overlay.classList.remove("open");
     fallbackBtn.onclick = null;
     overlay.onclick = null;
+    document.removeEventListener("keydown", onKeydown);
   };
+  const onKeydown = (ev) => { if (ev.key === "Escape") close(); };
   fallbackBtn.onclick = () => { close(); onFallback(); };
   overlay.onclick = (ev) => { if (ev.target === overlay) close(); };
   document.getElementById("add-search-cancel").onclick = close;
+  document.addEventListener("keydown", onKeydown);
 
   try {
     const data = await api(`${searchEndpoint}?q=${encodeURIComponent(query)}`);

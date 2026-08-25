@@ -67,9 +67,38 @@ function showcaseRow(item, cat, isNewSeasons, addMode, skipScope, onSkipSettled)
   const actionSlot = document.createElement("div");
   actionSlot.className = "showcase-action";
   if (addMode === "tracked-series") {
+    actionSlot.classList.add("showcase-action-stack");
+
+    const edit = document.createElement("button");
+    edit.className = "edit-btn";
+    edit.innerHTML = PENCIL_ICON_SVG;
+    edit.setAttribute("aria-label", "Изменить название");
+    edit.onclick = (ev) => {
+      ev.stopPropagation();
+      openRenameModal(item.title, async (newTitle) => {
+        const save = async (finalTitle) => {
+          try {
+            await api("/api/tracked-series/rename", {
+              method: "POST", headers: {"Content-Type": "application/json"},
+              body: JSON.stringify({old_title: item.title, new_title: finalTitle}),
+            });
+            loadTrackedSeries();
+          } catch (e) {
+            showToast(e.message || "Не удалось изменить название");
+          }
+        };
+        openAddSearchModal("/api/tracked-series/search-suggest", newTitle, {
+          onPick: save,
+          onFallback: () => save(newTitle),
+        });
+      });
+    };
+    actionSlot.appendChild(edit);
+
     const del = document.createElement("button");
     del.className = "del-btn";
     del.innerHTML = TRASH_ICON_SVG;
+    del.setAttribute("aria-label", "Удалить");
     del.onclick = (ev) => {
       ev.stopPropagation();
       const rowParent = wrap.parentNode;

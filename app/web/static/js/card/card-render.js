@@ -34,7 +34,7 @@ function renderCard(data, opts) {
   const actionsHtml = showActions ? `
       <div class="card-actions">
         <button class="btn btn-success btn" onclick="confirmPick()">Подтвердить</button>
-        <button class="btn btn-primary btn" onclick="rerollPick('${data.category}')">Перекрутить</button>
+        <button class="btn btn-reroll btn" onclick="rerollPick('${data.category}')">Перекрутить</button>
       </div>
       <div class="sequel-prompt" id="sequel-prompt" style="display:none"></div>` : "";
   return `

@@ -4,8 +4,24 @@
   --bg-a: #2a1a0e; --bg-b: #23102a; --bg-c: #141319;
   --card: #17151a; --text: #f5f0e6; --muted: #a39a8c;
   --primary: #f2a93b; --primary-2: #ff3b81; --success: #34d399; --danger: #ff4d6a;
-  --border: #2c2620; --glow: rgba(242, 169, 59, 0.32); --glow-2: rgba(255, 59, 129, 0.32);
+  --primary-rgb: 242, 169, 59; --primary-2-rgb: 255, 59, 129; --on-primary: #1a1108;
+  --border: #2c2620; --glow: rgba(var(--primary-rgb), 0.32); --glow-2: rgba(var(--primary-2-rgb), 0.32);
   --sidebar-w: 260px; --header-h: 63px;
+}
+
+/* Studio pages: Marvel reads warm red, DC reads cool blue — applied to
+   <body> via data-studio while browsing marvel/dc spin, list or showcase
+   views (see applyStudioTheme() in menu.js). Everything keyed off
+   --primary/--primary-2/--glow/--on-primary re-tints automatically. */
+body[data-studio="marvel"] {
+  --primary: #e8232c; --primary-2: #ff6b57; --primary-rgb: 232, 35, 44; --primary-2-rgb: 255, 107, 87;
+  --glow: rgba(var(--primary-rgb), 0.32); --glow-2: rgba(var(--primary-2-rgb), 0.32);
+  --on-primary: #ffffff;
+}
+body[data-studio="dc"] {
+  --primary: #1e7fe0; --primary-2: #5ec8ff; --primary-rgb: 30, 127, 224; --primary-2-rgb: 94, 200, 255;
+  --glow: rgba(var(--primary-rgb), 0.32); --glow-2: rgba(var(--primary-2-rgb), 0.32);
+  --on-primary: #ffffff;
 }
 * { box-sizing: border-box; }
 button {
@@ -31,7 +47,7 @@ body::before {
 header {
   display: flex; align-items: center; justify-content: space-between;
   height: var(--header-h); padding: 14px 16px; border-bottom: 1px solid var(--border);
-  background: linear-gradient(90deg, rgba(242,169,59,0.14), rgba(255,59,129,0.08));
+  background: linear-gradient(90deg, rgba(var(--primary-rgb), 0.14), rgba(var(--primary-2-rgb), 0.08));
 }
 header h1 { margin: 0; font-size: 1.15rem; font-weight: 800; }
 #burger-btn {
@@ -63,11 +79,11 @@ header .header-spacer { width: 34px; height: 34px; flex-shrink: 0; }
   box-sizing: border-box; margin: 0; border-radius: 0; border-left: 3px solid transparent;
 }
 #side-menu .menu-item svg { width: 19px; height: 19px; flex-shrink: 0; stroke: currentColor; }
-#side-menu .menu-item:hover { background: rgba(242,169,59,0.08); border-left-color: rgba(242,169,59,0.4); }
+#side-menu .menu-item:hover { background: rgba(var(--primary-rgb), 0.08); border-left-color: rgba(var(--primary-rgb), 0.4); }
 #side-menu .menu-item.active {
-  background: linear-gradient(90deg, rgba(242,169,59,0.16), rgba(255,59,129,0.05));
+  background: linear-gradient(90deg, rgba(var(--primary-rgb), 0.16), rgba(var(--primary-2-rgb), 0.05));
   color: var(--primary); font-weight: 700; border-left-color: var(--primary);
-  text-shadow: 0 0 12px rgba(242,169,59,0.5);
+  text-shadow: 0 0 12px rgba(var(--primary-rgb), 0.5);
 }
 #side-menu .menu-item.sub { padding-left: 46px; font-size: 0.9rem; color: var(--muted); }
 #side-menu .menu-item.sub.active { color: white; }

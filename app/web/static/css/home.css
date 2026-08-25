@@ -5,7 +5,7 @@
 .home-hero {
   display: flex; flex-direction: column; gap: 16px; align-items: flex-start;
   padding: 22px 20px; margin-bottom: 22px;
-  background: linear-gradient(135deg, rgba(242,169,59,0.16), rgba(255,59,129,0.07));
+  background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.16), rgba(var(--primary-2-rgb), 0.07));
   border: 1px solid var(--border); border-radius: 18px;
 }
 .home-hero-text h2 { margin: 0 0 8px; font-size: 1.3rem; font-weight: 800; }

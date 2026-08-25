@@ -49,7 +49,7 @@ function computeDockClearance(wrap, dock) {
 }
 
 function predictWheelSize(wrap) {
-  const dock = wrap.parentElement && wrap.parentElement.querySelector(".spin-controls-dock");
+  const dock = getDockFor(wrap);
   const dockClearance = computeDockClearance(wrap, dock);
   const top = wrap.getBoundingClientRect().top - (parseFloat(wrap.style.paddingTop) || 0);
   const pageBottomGap = getWheelBottomGap(wrap);

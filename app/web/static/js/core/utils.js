@@ -9,6 +9,34 @@ async function api(path, opts) {
   return resp.json();
 }
 
+async function performSequel(category, title) {
+  const r = await api(`/api/${category}/sequel`, {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({title}),
+  });
+  return r.new_title;
+}
+
+async function performDelete(category, title) {
+  await api(`/api/${category}/delete`, {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({title}),
+  });
+}
+
+function ensureFilterPanel(panelId, sectionId, beforeId) {
+  const section = document.getElementById(sectionId);
+  let panel = document.getElementById(panelId);
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.id = panelId;
+    panel.className = "filter-panel";
+    section.insertBefore(panel, document.getElementById(beforeId));
+  }
+  panel.innerHTML = "";
+  return panel;
+}
+
 function showToast(msg) {
   const t = document.getElementById("toast");
   t.textContent = msg;

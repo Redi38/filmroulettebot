@@ -222,10 +222,10 @@ function showcaseRow(item, cat, isNewSeasons, addMode, skipScope, onSkipSettled)
 }
 
 function renderShowcaseDetail(data, item) {
-  const rating = data.rating !== "—" ? `⭐️ ${data.rating}/10` : "⭐️ —";
+  const rating = data.rating !== "—" ? `${data.rating}/10` : "—";
   let extra = "";
-  if (data.runtime && data.runtime !== "—") extra += `<div class="meta">⏳ ${escapeHtml(String(data.runtime))} мин.</div>`;
-  if (data.seasons) extra += `<div class="meta">📚 Сезонов: ${escapeHtml(String(data.seasons))} · 🎥 Эпизодов: ${escapeHtml(String(data.episodes ?? "—"))}</div>`;
+  if (data.runtime && data.runtime !== "—") extra += metaLine("clock", `${escapeHtml(String(data.runtime))} мин.`);
+  if (data.seasons) extra += metaLine("layers", `Сезонов: ${escapeHtml(String(data.seasons))}`) + metaLine("film", `Эпизодов: ${escapeHtml(String(data.episodes ?? "—"))}`);
 
   const today = new Date().toISOString().slice(0, 10);
   const notReleasedYet = (item.release_date || "") > today;
@@ -240,10 +240,10 @@ function renderShowcaseDetail(data, item) {
 
   return `
     <div class="showcase-detail-body">
-      <div class="meta">${rating}</div>
+      ${metaLine("star", rating)}
       ${extra}
-      <div class="meta">🎭 ${escapeHtml(data.genres || "—")}</div>
-      <div class="meta">👥 ${escapeHtml(data.actors || "—")}</div>
+      ${metaLine("tag", escapeHtml(data.genres || "—"))}
+      ${metaLine("users", escapeHtml(data.actors || "—"))}
       <div class="overview">${escapeHtml(data.overview || "")}</div>
       ${actionBtn}
     </div>`;

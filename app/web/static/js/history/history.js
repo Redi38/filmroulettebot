@@ -226,16 +226,13 @@ async function histSequel(idx) {
   const div = actionsEl.closest(".hist-item");
   const {category, title, timestamp, key} = div.dataset;
   try {
-    const r = await api(`/api/${category}/sequel`, {
-      method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({title}),
-    });
-    showToast(`${title} → ${r.new_title}`);
-    markResolved(key, { type: "sequel", newTitle: r.new_title });
-    resolveOnServer(category, title, timestamp, "sequel", r.new_title);
+    const newTitle = await performSequel(category, title);
+    showToast(`${title} → ${newTitle}`);
+    markResolved(key, { type: "sequel", newTitle });
+    resolveOnServer(category, title, timestamp, "sequel", newTitle);
     div.classList.add("resolved");
     actionsEl.innerHTML = `
-      <span class="muted">${resolvedOutcomeLabel(title, { type: "sequel", newTitle: r.new_title })}</span>
+      <span class="muted">${resolvedOutcomeLabel(title, { type: "sequel", newTitle })}</span>
       <button class="btn btn-danger hist-clear-entry-btn" onclick="histClearEntry(${idx})" title="Удалить эту запись из истории">Очистить</button>`;
   } catch (e) { showToast(e.message); }
 }
@@ -245,10 +242,7 @@ async function histDelete(idx) {
   const div = actionsEl.closest(".hist-item");
   const {category, title, timestamp, key} = div.dataset;
   try {
-    await api(`/api/${category}/delete`, {
-      method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({title}),
-    });
+    await performDelete(category, title);
     showToast(`${title} удалён`);
     markResolved(key, { type: "delete" });
     resolveOnServer(category, title, timestamp, "delete", null);

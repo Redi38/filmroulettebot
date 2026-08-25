@@ -3,7 +3,7 @@
 async function doWheelSpin(cat, isRandom) {
   if (spinCooldownUntil > Date.now()) return;
   const prefix = isRandom ? "random" : "spin";
-  const result = document.getElementById(isRandom ? "random-spin-result" : "spin-result");
+  const result = isRandom ? document.getElementById("random-spin-result") : resultEl();
   const wheelWrapId = `${prefix}-wheel-wrap`;
   const prevResultHtml = result.innerHTML;
   const wrap = document.getElementById(wheelWrapId);

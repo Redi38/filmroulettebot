@@ -40,9 +40,11 @@ function createEditableRow(title, opts) {
     const rowParent = row.parentNode;
     const rowNext = row.nextSibling;
     removeRowOptimistically(row, opts.onDelete, () => {
+      if (opts.onCountChange) opts.onCountChange(-1);
       showInlineUndo(rowParent, rowNext, `«${title}» удалён`, "Отменить", async () => {
         try {
           await opts.onRestore();
+          if (opts.onCountChange) opts.onCountChange(1);
           opts.onReload();
         } catch (e) {
           showToast("Не удалось восстановить");

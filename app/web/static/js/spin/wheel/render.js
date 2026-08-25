@@ -11,6 +11,10 @@ const WHEEL_COLORS = [
 const WHEEL_HUB_GIF_URL = "";
 const WHEEL_WRAP_IDS = ["random-wheel-wrap", "spin-wheel-wrap"];
 
+function getDockFor(wrap) {
+  return wrap.parentElement && wrap.parentElement.querySelector(".spin-controls-dock");
+}
+
 function pluralizeTitles(n) {
   const mod10 = n % 10, mod100 = n % 100;
   let word;
@@ -63,7 +67,7 @@ function buildWheel(wrapId, items) {
   wrap.style.display = "flex";
   wrap._wheelPool = items;
 
-  const dock = wrap.parentElement && wrap.parentElement.querySelector(".spin-controls-dock");
+  const dock = getDockFor(wrap);
   const dockClearance = computeDockClearance(wrap, dock);
   wrap.style.paddingTop = dockClearance + "px";
 

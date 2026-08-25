@@ -61,6 +61,7 @@ async function loadList(page) {
       return;
     }
     if (countEl) countEl.textContent = `Всего: ${data.total_count}`;
+    let liveCount = data.total_count;
     container.innerHTML = "";
     for (const title of data.items) {
       const cat = currentCat;
@@ -79,6 +80,11 @@ async function loadList(page) {
         }),
         onReload: () => { if (currentCat === cat) loadList(currentListPage); },
         onUndoSettled: () => checkListEmpty(container),
+        onCountChange: (delta) => {
+          if (currentCat !== cat || !countEl) return;
+          liveCount += delta;
+          countEl.textContent = `Всего: ${liveCount}`;
+        },
       });
       container.appendChild(row);
     }

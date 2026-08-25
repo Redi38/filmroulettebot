@@ -9,15 +9,7 @@ const THEATERS_FILTER_KEY = "filmroulette_theaters_filter";
 let theatersAddedFilter = loadSimpleAddedFilter(THEATERS_FILTER_KEY);
 
 function renderTheatersFilters() {
-  const section = document.getElementById("theaters-section");
-  let panel = document.getElementById("theaters-filters");
-  if (!panel) {
-    panel = document.createElement("div");
-    panel.id = "theaters-filters";
-    panel.className = "filter-panel";
-    section.insertBefore(panel, document.getElementById("theaters-container"));
-  }
-  panel.innerHTML = "";
+  const panel = ensureFilterPanel("theaters-filters", "theaters-section", "theaters-container");
   panel.appendChild(simpleAddedFilterGroup(THEATERS_FILTER_KEY, theatersAddedFilter, (value) => {
     theatersAddedFilter = value;
     theatersNowPlayingPage = 1;
@@ -88,15 +80,7 @@ const SERIES_RELEASES_FILTER_KEY = "filmroulette_series_releases_filter";
 let seriesReleasesAddedFilter = loadSimpleAddedFilter(SERIES_RELEASES_FILTER_KEY);
 
 function renderSeriesReleasesFilters() {
-  const section = document.getElementById("series-releases-section");
-  let panel = document.getElementById("series-releases-filters");
-  if (!panel) {
-    panel = document.createElement("div");
-    panel.id = "series-releases-filters";
-    panel.className = "filter-panel";
-    section.insertBefore(panel, document.getElementById("series-releases-container"));
-  }
-  panel.innerHTML = "";
+  const panel = ensureFilterPanel("series-releases-filters", "series-releases-section", "series-releases-container");
   panel.appendChild(simpleAddedFilterGroup(SERIES_RELEASES_FILTER_KEY, seriesReleasesAddedFilter, (value) => {
     seriesReleasesAddedFilter = value;
     seriesReleasesPage = 1;

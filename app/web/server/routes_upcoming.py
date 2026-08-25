@@ -14,7 +14,7 @@ from app.db.database import (
 )
 from app.services.tmdb import check_upcoming_released
 
-from .shared import MoveBody, RenameBody, TitleBody, _check_category
+from .shared import MoveBody, RenameBody, TitleBody, _check_category, _validate_rename
 
 router = APIRouter()
 
@@ -46,14 +46,11 @@ async def api_upcoming_delete(body: TitleBody) -> dict:
 async def api_upcoming_rename(body: RenameBody) -> dict:
     old_title = body.old_title.strip()
     new_title = body.new_title.strip()
-    if not new_title:
-        raise HTTPException(400, "Title can't be empty")
-    if new_title == old_title:
+    if not await _validate_rename(
+        lambda t: item_exists("upcoming_movies", t), old_title, new_title, "",
+        conflict_msg=f"«{new_title}» уже в списке ожидаемых",
+    ):
         return {"ok": True}
-    if not await item_exists("upcoming_movies", old_title):
-        raise HTTPException(404, f"«{old_title}» не найден(а)")
-    if await item_exists("upcoming_movies", new_title):
-        raise HTTPException(409, f"«{new_title}» уже в списке ожидаемых")
     await rename_upcoming_movie(old_title, new_title)
     return {"ok": True}
 

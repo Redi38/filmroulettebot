@@ -44,6 +44,24 @@ def _check_category(cat: str) -> None:
         raise HTTPException(404, f"Unknown category: {cat}")
 
 
+async def _validate_rename(
+    exists_fn, old_title: str, new_title: str, category_label: str,
+    conflict_msg: str | None = None,
+) -> bool:
+    """Shared rename validation: empty check, no-op check, existence and
+    conflict checks. Returns True if the caller should proceed with the
+    rename, False if it's a no-op (old_title == new_title)."""
+    if not new_title:
+        raise HTTPException(400, "Title can't be empty")
+    if new_title == old_title:
+        return False
+    if not await exists_fn(old_title):
+        raise HTTPException(404, f"«{old_title}» не найден(а)")
+    if await exists_fn(new_title):
+        raise HTTPException(409, conflict_msg or f"«{new_title}» уже добавлен(а) в «{category_label}»")
+    return True
+
+
 def _check_spin_cooldown(client_ip: str) -> None:
     now = time.monotonic()
     elapsed = now - _last_spin_at.get(client_ip, 0.0)

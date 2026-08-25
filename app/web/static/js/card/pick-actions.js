@@ -27,13 +27,10 @@ function markCurrentPickResolved(outcome) {
 async function sequelYes() {
   if (!currentCardData) return;
   try {
-    const r = await api(`/api/${currentCardData.category}/sequel`, {
-      method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({title: currentCardData.original_title}),
-    });
-    markCurrentPickResolved({ type: "sequel", newTitle: r.new_title });
+    const newTitle = await performSequel(currentCardData.category, currentCardData.original_title);
+    markCurrentPickResolved({ type: "sequel", newTitle });
     resultEl().innerHTML =
-      `<div class="card"><div class="title">🔄 ${escapeHtml(currentCardData.original_title)} → ${escapeHtml(r.new_title)}</div></div>`;
+      `<div class="card"><div class="title">🔄 ${escapeHtml(currentCardData.original_title)} → ${escapeHtml(newTitle)}</div></div>`;
     currentCardData = null;
   } catch (e) { showToast(e.message); }
 }
@@ -41,10 +38,7 @@ async function sequelYes() {
 async function sequelNo() {
   if (!currentCardData) return;
   try {
-    await api(`/api/${currentCardData.category}/delete`, {
-      method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({title: currentCardData.original_title}),
-    });
+    await performDelete(currentCardData.category, currentCardData.original_title);
     markCurrentPickResolved({ type: "delete" });
     resultEl().innerHTML =
       `<div class="card"><div class="title">❌ ${escapeHtml(currentCardData.original_title)} удалён</div></div>`;

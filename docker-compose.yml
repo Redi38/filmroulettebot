@@ -21,6 +21,12 @@ services:
       - ./data:/app/data
     environment:
       DB_PATH: /app/data/bot_data.db
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
 
   autoheal:
     image: willfarrell/autoheal

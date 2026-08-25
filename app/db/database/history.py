@@ -155,17 +155,3 @@ async def delete_history_entry(category: str, title: str, timestamp: float) -> b
         )
         await db.commit()
         return cur.rowcount > 0
-
-
-async def get_stats(user_id: int) -> dict[str, int]:
-    cats = ("movies", "cartoons", "series")
-    result = {c: 0 for c in cats}
-    async with conn() as db:
-        async with db.execute(
-            "SELECT category, COUNT(*) FROM history "
-            "WHERE user_id = ? AND category IN (?,?,?) GROUP BY category",
-            (user_id, *cats),
-        ) as cur:
-            async for cat, cnt in cur:
-                result[cat] = cnt
-    return result

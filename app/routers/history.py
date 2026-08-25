@@ -7,7 +7,7 @@ from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 
-from app.db.database import load_history, clear_user_history, get_stats
+from app.db.database import load_history, clear_user_history
 from app.utils import esc
 
 router = Router()
@@ -37,13 +37,11 @@ async def history_cmd(msg: Message) -> None:
         dt = datetime.fromtimestamp(h["timestamp"]).strftime("%d.%m.%Y %H:%M")
         cat_ru = CAT_MAP.get(cat_code, cat_code)
 
-        # Строка строго по твоему шаблону
         line = f"{esc(title)} [{cat_ru}] — {dt}"
 
         if cat_code == "series":
             series_list.append(line)
         else:
-            # Фильмы, мульты, dc и marvel идут в общую первую категорию
             films_list.append(line)
 
     parts = []
@@ -63,14 +61,3 @@ async def history_cmd(msg: Message) -> None:
 async def clear_history_cmd(msg: Message) -> None:
     await clear_user_history(msg.from_user.id)  # type: ignore[union-attr]
     await msg.answer("🧹 Ваша история очищена.")
-
-
-@router.message(Command("stats"))
-async def stats_cmd(msg: Message) -> None:
-    d = await get_stats(msg.from_user.id)  # type: ignore[union-attr]
-    await msg.answer(
-        f"📈 Статистика просмотра:\n"
-        f"• Фильмы: {d['movies']}\n"
-        f"• Мульты: {d['cartoons']}\n"
-        f"• Сериалы: {d['series']}"
-    )

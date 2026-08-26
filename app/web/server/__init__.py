@@ -11,6 +11,8 @@ single FastAPI app, so `uvicorn app.web.server:app` keeps working unchanged.
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -32,12 +34,14 @@ from .shared import STATIC_DIR
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Filmroulette Web")
 
-
-@app.on_event("startup")
-async def _startup() -> None:
+@asynccontextmanager
+async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
     await init_db()
+    yield
+
+
+app = FastAPI(title="Filmroulette Web", lifespan=_lifespan)
 
 
 for _router_module in (

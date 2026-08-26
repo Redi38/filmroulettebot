@@ -3,8 +3,8 @@ FROM python:3.14-slim
 WORKDIR /app
 
 # Install deps
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements/base.txt requirements/base.txt
+RUN pip install --no-cache-dir -r requirements/base.txt
 
 # Copy source
 COPY . .

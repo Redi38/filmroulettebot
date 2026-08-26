@@ -6,3 +6,5 @@ __pycache__/
 data/
 .idea/
 data/
+.pytest_cache/
+pytest-report.xml

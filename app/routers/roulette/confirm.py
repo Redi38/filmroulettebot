@@ -1,15 +1,22 @@
 """Confirm-pick flow: "✅ Подтвердить" and the sequel yes/no follow-up."""
 from __future__ import annotations
 
-from aiogram.types import Message, CallbackQuery
 from aiogram.exceptions import TelegramBadRequest
+from aiogram.types import CallbackQuery, Message
 
 from app.db.database import add_item, delete_item
-from app.keyboards import sequel_kb, ConfirmCB, SequelYesCB, SequelNoCB, CODE_TO_CAT, CAT_RU
+from app.keyboards import (
+    CAT_RU,
+    CODE_TO_CAT,
+    ConfirmCB,
+    SequelNoCB,
+    SequelYesCB,
+    sequel_kb,
+)
 from app.services.titles import next_sequel_title
-from app.utils import esc, safe_edit_text, safe_edit_caption
+from app.utils import esc, safe_edit_caption, safe_edit_text
 
-from .common import router, logger, _full_title_cache, _resolve_title
+from .common import _full_title_cache, _resolve_title, logger, router
 
 
 @router.callback_query(ConfirmCB.filter())

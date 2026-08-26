@@ -34,11 +34,17 @@ async def api_theaters(now_playing_page: int = 1, upcoming_page: int = 1, added:
     """TMDb's own "now playing" / "upcoming" theatrical calendars — global,
     not tied to any studio, unlike /api/showcase/{studio}. Movies and
     cartoons only; series live on their own /api/series-releases tab."""
-    now_playing, upcoming, own_movies, own_cartoons, own_upcoming, skipped_now, skipped_upcoming = await asyncio.gather(
-        get_now_playing(), get_upcoming_theatrical(),
-        get_items("movies"), get_items("cartoons"),
-        get_upcoming_movies(),
-        get_skipped("theaters_now_playing"), get_skipped("theaters_upcoming"),
+    (now_playing, upcoming), (own_movies, own_cartoons, own_upcoming, skipped_now, skipped_upcoming) = (
+        await asyncio.gather(
+            asyncio.gather(get_now_playing(), get_upcoming_theatrical()),
+            asyncio.gather(
+                get_items("movies"),
+                get_items("cartoons"),
+                get_upcoming_movies(),
+                get_skipped("theaters_now_playing"),
+                get_skipped("theaters_upcoming"),
+            ),
+        )
     )
 
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")

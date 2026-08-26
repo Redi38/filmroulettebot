@@ -5,7 +5,6 @@ from fastapi import APIRouter
 from fastapi.responses import FileResponse
 
 from app.db.database import add_item, delete_item, get_items
-
 from app.services.titles import next_sequel_title
 
 from .shared import CATEGORIES, STATIC_DIR, SequelBody, _check_category

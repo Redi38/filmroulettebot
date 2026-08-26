@@ -2,17 +2,23 @@
 from __future__ import annotations
 
 from aiogram import F
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import CallbackQuery, Message
 
-from app.db.database import get_upcoming_movies, add_item, delete_upcoming_movie
+from app.db.database import add_item, delete_upcoming_movie, get_upcoming_movies
 from app.keyboards import (
-    upcoming_menu_kb, upcoming_list_kb, upcoming_targets_kb, BackMainCB,
-    UpcomingMoveCB, UpcomingSelectCB, UpcomingMoveTargetCB,
-    CODE_TO_CAT, CAT_RU,
+    CAT_RU,
+    CODE_TO_CAT,
+    BackMainCB,
+    UpcomingMoveCB,
+    UpcomingMoveTargetCB,
+    UpcomingSelectCB,
+    upcoming_list_kb,
+    upcoming_menu_kb,
+    upcoming_targets_kb,
 )
 from app.utils import esc, safe_edit_text
 
-from .common import router, _up_sel_title
+from .common import _up_sel_title, router
 
 
 @router.callback_query(UpcomingMoveCB.filter(F.action == "move"))

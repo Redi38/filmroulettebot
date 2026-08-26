@@ -4,20 +4,30 @@
 from __future__ import annotations
 
 from aiogram import F
-from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery
 from aiogram.exceptions import TelegramBadRequest
+from aiogram.fsm.context import FSMContext
+from aiogram.types import CallbackQuery, Message
 
-from app.db.database import get_items, add_item, item_exists
-from app.states import AddItemStates
+from app.db.database import add_item, get_items, item_exists
 from app.keyboards import (
-    main_kb, spin_kb, edit_menu_kb, cancel_add_kb, DELETE_PAGE_SIZE,
-    EditMenuCB, AddItemCB, CancelAddCB, BackMainCB, PageCB,
-    pagination_row, CODE_TO_CAT, CAT_RU,
+    CAT_RU,
+    CODE_TO_CAT,
+    DELETE_PAGE_SIZE,
+    AddItemCB,
+    BackMainCB,
+    CancelAddCB,
+    EditMenuCB,
+    PageCB,
+    cancel_add_kb,
+    edit_menu_kb,
+    main_kb,
+    pagination_row,
+    spin_kb,
 )
-from app.utils import esc, safe_edit_text, safe_edit_caption, render_paginated_list
+from app.states import AddItemStates
+from app.utils import esc, render_paginated_list, safe_edit_caption, safe_edit_text
 
-from .common import router, logger
+from .common import logger, router
 
 
 async def _render_edit_menu(cat: str, page: int) -> tuple[str, int]:
@@ -125,7 +135,7 @@ async def handle_pending_add(msg: Message, state: FSMContext) -> None:
     if not cat:
         return
 
-    if prompt_msg_id and prompt_chat_id:
+    if prompt_msg_id and prompt_chat_id and msg.bot:
         try:
             await msg.bot.delete_message(prompt_chat_id, prompt_msg_id)
         except TelegramBadRequest as e:

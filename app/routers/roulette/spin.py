@@ -5,15 +5,30 @@ import asyncio
 import random
 
 from aiogram import F
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery
-from aiogram.exceptions import TelegramBadRequest
+from aiogram.types import CallbackQuery, Message
 
 from app.db.database import get_items, save_history
-from app.keyboards import main_kb, spin_kb, after_roll_kb, SpinCB, RerollCB, CODE_TO_CAT, CAT_RU
+from app.keyboards import (
+    CAT_RU,
+    CODE_TO_CAT,
+    RerollCB,
+    SpinCB,
+    after_roll_kb,
+    main_kb,
+    spin_kb,
+)
 
-from .common import router, logger, _roll_on_cooldown, _full_title_cache, _build_card, _pick_for_user
+from .common import (
+    _build_card,
+    _full_title_cache,
+    _pick_for_user,
+    _roll_on_cooldown,
+    logger,
+    router,
+)
 
 
 @router.message(CommandStart())
@@ -123,6 +138,7 @@ async def _spin_edit(msg: Message, category: str, choice: str | None = None) -> 
     caption, caption_short, poster = await _build_card(category, choice)
     kb = after_roll_kb(category, choice)
     chat_id = msg.chat.id
+    final_msg: Message | bool
     try:
         if poster:
             await msg.delete()

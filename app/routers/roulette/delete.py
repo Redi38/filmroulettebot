@@ -2,10 +2,18 @@
 from __future__ import annotations
 
 from aiogram import F
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import CallbackQuery, Message
 
-from app.db.database import get_items, delete_item
-from app.keyboards import edit_menu_kb, delete_list_kb, DeleteMenuCB, DeleteItemCB, PageCB, CODE_TO_CAT, CAT_RU
+from app.db.database import delete_item, get_items
+from app.keyboards import (
+    CAT_RU,
+    CODE_TO_CAT,
+    DeleteItemCB,
+    DeleteMenuCB,
+    PageCB,
+    delete_list_kb,
+    edit_menu_kb,
+)
 from app.utils import esc, safe_edit_text
 
 from .common import router

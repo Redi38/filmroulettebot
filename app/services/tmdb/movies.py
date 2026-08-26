@@ -11,7 +11,14 @@ from app.db.database import get_tmdb_cache, set_tmdb_cache
 
 from .cache_ttl import DISCOVER_CACHE_TTL, INFO_CACHE_TTL, SEARCH_CACHE_TTL
 from .client import _get
-from .helpers import actors, best_match, format_movie_results, format_search_suggestions, genres, poster
+from .helpers import (
+    actors,
+    best_match,
+    format_movie_results,
+    format_search_suggestions,
+    genres,
+    poster,
+)
 
 
 async def _search_movie_cached(title: str) -> dict[str, Any] | None:
@@ -143,7 +150,9 @@ async def check_upcoming_released(titles: list[str]) -> dict[str, list]:
     """
     now = datetime.now(timezone.utc)
     current_year = now.year
-    released, not_yet, no_info = [], [], []
+    released: list[dict] = []
+    not_yet: list[dict] = []
+    no_info: list[str] = []
     for title in titles:
         data = await _search_movie_cached(title)
         if not data or not data.get("results"):

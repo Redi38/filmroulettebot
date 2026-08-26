@@ -4,7 +4,11 @@ main.py only needs `upcoming.router`, same as before the split.
 """
 from __future__ import annotations
 
+from . import (  # noqa: F401 — import side effect: registers handlers
+    check,
+    listing,
+    move,
+)
 from .common import router
-from . import listing, move, check  # noqa: F401 — import side effect: registers handlers
 
 __all__ = ["router"]

@@ -4,9 +4,14 @@ from __future__ import annotations
 from typing import Literal
 
 from aiogram.filters.callback_data import CallbackData
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardMarkup,
+)
 
-from app.utils import paginate, DEFAULT_PAGE_SIZE
+from app.utils import paginate
 
 # ─── Constants ─────────────────────────────────────────────────────────────────
 CAT_TO_CODE: dict[str, str] = {"movies": "m", "cartoons": "c", "series": "s", "dc": "dc", "marvel": "mv"}

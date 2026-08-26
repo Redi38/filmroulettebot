@@ -2,20 +2,34 @@
 from __future__ import annotations
 
 from aiogram import F
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery
-from aiogram.exceptions import TelegramBadRequest
+from aiogram.types import CallbackQuery, Message
 
-from app.db.database import get_upcoming_movies, add_upcoming_movie, delete_upcoming_movie, item_exists
-from app.states import UpcomingStates
-from app.keyboards import (
-    upcoming_menu_kb, upcoming_delete_kb, cancel_add_kb, BackMainCB, pagination_row, PageCB,
-    UpcomingMoveCB, UpcomingDeleteOneCB, UpcomingAddCB, CancelAddCB, DELETE_PAGE_SIZE,
+from app.db.database import (
+    add_upcoming_movie,
+    delete_upcoming_movie,
+    get_upcoming_movies,
+    item_exists,
 )
+from app.keyboards import (
+    DELETE_PAGE_SIZE,
+    BackMainCB,
+    CancelAddCB,
+    PageCB,
+    UpcomingAddCB,
+    UpcomingDeleteOneCB,
+    UpcomingMoveCB,
+    cancel_add_kb,
+    pagination_row,
+    upcoming_delete_kb,
+    upcoming_menu_kb,
+)
+from app.states import UpcomingStates
 from app.utils import esc, render_paginated_list, safe_edit_text
 
-from .common import router, logger
+from .common import logger, router
 
 
 @router.message(Command("upcoming"))
@@ -147,7 +161,7 @@ async def handle_pending_upcoming_add(msg: Message, state: FSMContext) -> None:
     prompt_chat_id = data.get("prompt_chat_id")
     await state.clear()
 
-    if prompt_msg_id and prompt_chat_id:
+    if prompt_msg_id and prompt_chat_id and msg.bot:
         try:
             await msg.bot.delete_message(prompt_chat_id, prompt_msg_id)
         except TelegramBadRequest as e:

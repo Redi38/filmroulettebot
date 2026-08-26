@@ -7,7 +7,7 @@ from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 
-from app.db.database import load_history, clear_user_history
+from app.db.database import clear_user_history, load_history
 from app.services.categories import CATEGORY_LABELS
 from app.utils import esc
 

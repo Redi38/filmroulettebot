@@ -13,7 +13,14 @@ from app.services.tmdb import (
 )
 from app.utils import paginate
 
-from .shared import CATEGORIES, LIST_PAGE_SIZE, RenameBody, TitleBody, _check_category, _validate_rename
+from .shared import (
+    CATEGORIES,
+    LIST_PAGE_SIZE,
+    RenameBody,
+    TitleBody,
+    _check_category,
+    _validate_rename,
+)
 
 router = APIRouter()
 

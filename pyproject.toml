@@ -1,0 +1,23 @@
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+# E/W: pycodestyle, F: pyflakes, I: isort (import sorting).
+select = ["E", "F", "W", "I"]
+ignore = [
+    "E501", # line-too-long: project has long decorative comments / URLs; not worth enforcing strictly
+    "E701", # multiple-statements-on-one-line-colon: used intentionally for compact CallbackData classes
+    "E702", # multiple-statements-on-one-line-semicolon: same as above
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["app", "main.py"]
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+check_untyped_defs = true

@@ -7,18 +7,29 @@ import time
 from typing import Any
 
 from aiogram import F
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 
-from app.db.database import get_upcoming_movies, add_item, delete_upcoming_movie
+from app.db.database import add_item, delete_upcoming_movie, get_upcoming_movies
 from app.keyboards import (
-    upcoming_menu_kb, released_check_kb, released_move_to_kb,
-    UpcomingMoveCB, UpcomingCheckMoveCB, UpcomingCheckMoveToCB,
     CODE_TO_CAT,
+    UpcomingCheckMoveCB,
+    UpcomingCheckMoveToCB,
+    UpcomingMoveCB,
+    released_check_kb,
+    released_move_to_kb,
+    upcoming_menu_kb,
 )
 from app.services.tmdb import check_upcoming_released
 from app.utils import esc, safe_edit_text
 
-from .common import router, _check_cache, _last_check_at, CHECK_COOLDOWN, _fmt_date, _days_label
+from .common import (
+    CHECK_COOLDOWN,
+    _check_cache,
+    _days_label,
+    _fmt_date,
+    _last_check_at,
+    router,
+)
 
 
 async def _check_text_and_kb(chat_id: int) -> tuple[str, InlineKeyboardMarkup]:

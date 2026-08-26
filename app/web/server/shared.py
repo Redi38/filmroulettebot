@@ -14,7 +14,11 @@ from pydantic import BaseModel
 
 from app.services.card_data import resolve_card_data
 from app.services.categories import CATEGORY_LABELS
-from app.services.titles import next_sequel_title, pick_title, pick_title_weighted, title_weights
+from app.services.titles import (
+    pick_title,
+    pick_title_weighted,
+    title_weights,
+)
 
 LIST_PAGE_SIZE = 30
 THEATERS_PAGE_SIZE = 10

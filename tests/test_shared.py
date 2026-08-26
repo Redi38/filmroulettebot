@@ -20,7 +20,6 @@ from app.web.server.shared import (
     _pick_title,
 )
 
-
 # --- _BoundedDict ------------------------------------------------------
 
 def test_bounded_dict_evicts_oldest_entry_beyond_capacity():

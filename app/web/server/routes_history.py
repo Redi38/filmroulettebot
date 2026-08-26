@@ -3,7 +3,12 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from app.db.database import clear_history_category, delete_history_entry, get_recent_history, resolve_history_entry
+from app.db.database import (
+    clear_history_category,
+    delete_history_entry,
+    get_recent_history,
+    resolve_history_entry,
+)
 
 from .shared import DeleteHistoryEntryBody, ResolveBody, _check_category
 

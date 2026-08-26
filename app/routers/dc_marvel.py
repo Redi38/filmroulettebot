@@ -1,12 +1,12 @@
 """DC and Marvel franchise list commands (paginated, /dc /marvel)."""
 from __future__ import annotations
 
-from aiogram import Router, F
+from aiogram import F, Router
 from aiogram.filters import Command
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import CallbackQuery, Message
 
 from app.db.database import get_items
-from app.keyboards import edit_menu_kb, pagination_row, PageCB, NoopCB
+from app.keyboards import NoopCB, PageCB, edit_menu_kb, pagination_row
 from app.utils import render_paginated_list, safe_edit_text
 
 router = Router()

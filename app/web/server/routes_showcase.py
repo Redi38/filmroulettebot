@@ -8,7 +8,11 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 
 from app.db.database import get_items
-from app.services.tmdb import discover_by_company, get_season_finale_date, get_tv_next_episode
+from app.services.tmdb import (
+    discover_by_company,
+    get_season_finale_date,
+    get_tv_next_episode,
+)
 
 router = APIRouter()
 

@@ -42,8 +42,6 @@
 .showcase-action { flex-shrink: 0; display: flex; justify-content: flex-end; }
 .showcase-action-stack { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
 
-/* Tracked-series delete/edit buttons: match the size used in the regular
-   lists (.list-row) instead of the smaller default .del-btn/.edit-btn size. */
 #tracked-series-container { container-type: inline-size; }
 #tracked-series-container .showcase-action button.del-btn,
 #tracked-series-container .showcase-action button.edit-btn {
@@ -95,6 +93,6 @@
 .showcase-filter-btn:hover { border-color: var(--primary); }
 .showcase-filter-btn.active {
   background: linear-gradient(90deg, var(--primary), var(--primary-2));
-  border-color: transparent; color: white;
+  border-width: 0; color: white;
 }
 .spinner { text-align: center; padding: 30px; color: var(--muted); width: 100%; font-size: 1.15rem; font-weight: 600; }

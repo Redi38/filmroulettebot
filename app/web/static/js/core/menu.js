@@ -88,7 +88,15 @@ const SECTION_IDS = {
   tracked_series: "tracked-series-section",
 };
 
+function applyStudioTheme() {
+  const studio = (currentCat === "marvel" || currentCat === "dc") && VIEWS_WITH_CAT.includes(currentView)
+    ? currentCat
+    : "";
+  document.body.dataset.studio = studio;
+}
+
 function showSection() {
+  applyStudioTheme();
   if (typeof closePosterInfoModal === "function") closePosterInfoModal();
   if (typeof closeModal === "function") closeModal();
   if (typeof closeRenameModal === "function") closeRenameModal();

@@ -4,7 +4,6 @@ modules can import from here without triggering app/router setup."""
 from __future__ import annotations
 
 import random
-import re
 import time
 from pathlib import Path
 from typing import Any
@@ -12,18 +11,15 @@ from typing import Any
 from fastapi import HTTPException, Request
 from pydantic import BaseModel
 
-from app.services.tmdb import get_movie_info, get_series_info
-from app.services.watch_link import find_watch_page_url
-from app.utils import build_watch_link
+from app.services.card_data import resolve_card_data
+from app.services.categories import CATEGORY_LABELS
+from app.services.titles import next_sequel_title, pick_title
 
 LIST_PAGE_SIZE = 30
 THEATERS_PAGE_SIZE = 10
 NOW_PLAYING_MAX_AGE_DAYS = 90
 
-CATEGORIES = {
-    "movies": "Фильмы", "cartoons": "Мультфильмы", "series": "Сериалы",
-    "dc": "DC", "marvel": "Marvel",
-}
+CATEGORIES = CATEGORY_LABELS
 ROULETTE_CATEGORIES = ("movies", "cartoons", "series")
 
 WEB_USER_ID = 0
@@ -77,8 +73,7 @@ def _client_ip(request: Request) -> str:
 
 def _pick_title(client_key: str, cat: str, items: list[str]) -> str:
     last = _last_spin_title.get((client_key, cat))
-    candidates = [i for i in items if i != last] or items
-    title = random.choice(candidates)
+    title = pick_title(items, last)
     _last_spin_title[(client_key, cat)] = title
     return title
 
@@ -102,22 +97,11 @@ def _build_wheel_pool(items: list[str], winner: str, size: int = WHEEL_POOL_SIZE
     return pool
 
 
-def _next_sequel_title(item: str) -> str:
-    """Same rule the bot uses: "Movie 2" -> "Movie 3", "Movie" -> "Movie 2"."""
-    m = re.search(r"(.+?)\s(\d+)$", item)
-    return f"{m.group(1)} {int(m.group(2)) + 1}" if m else f"{item} 2"
-
-
 async def _card_data(cat: str, title: str, history_timestamp: float | None = None) -> dict[str, Any]:
-    if cat == "series":
-        info = await get_series_info(title)
-    elif cat in ("dc", "marvel"):
-        info = await get_movie_info(title) or await get_series_info(title)
-    else:
-        info = await get_movie_info(title)
-    info = info or {}
-    display_title = info.get("title", title)
-    link = await find_watch_page_url(display_title) or build_watch_link(display_title)
+    data = await resolve_card_data(cat, title)
+    info = data["info"]
+    display_title = data["title"]
+    link = data["watch_link"]
 
     rating = info.get("rating", "—")
     if isinstance(rating, (int, float)):

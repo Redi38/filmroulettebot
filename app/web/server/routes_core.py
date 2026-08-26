@@ -6,7 +6,9 @@ from fastapi.responses import FileResponse
 
 from app.db.database import add_item, delete_item, get_items
 
-from .shared import CATEGORIES, STATIC_DIR, SequelBody, _check_category, _next_sequel_title
+from app.services.titles import next_sequel_title
+
+from .shared import CATEGORIES, STATIC_DIR, SequelBody, _check_category
 
 router = APIRouter()
 
@@ -31,7 +33,7 @@ async def api_sequel(cat: str, body: SequelBody) -> dict:
     same rule the bot's "✅ Да, сиквел" button uses."""
     _check_category(cat)
     item = body.title
-    new_item = _next_sequel_title(item)
+    new_item = next_sequel_title(item)
     await delete_item(cat, item)
     await add_item(cat, new_item)
     return {"ok": True, "new_title": new_item}

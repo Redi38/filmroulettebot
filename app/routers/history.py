@@ -8,17 +8,10 @@ from aiogram.filters import Command
 from aiogram.types import Message
 
 from app.db.database import load_history, clear_user_history
+from app.services.categories import CATEGORY_LABELS
 from app.utils import esc
 
 router = Router()
-
-CAT_MAP = {
-    "movies": "Фильмы",
-    "cartoons": "Мультфильмы",
-    "series": "Сериалы",
-    "dc": "DC",
-    "marvel": "Marvel"
-}
 
 
 @router.message(Command("history"))
@@ -35,7 +28,7 @@ async def history_cmd(msg: Message) -> None:
         cat_code = h["category"]
         title = h["title"]
         dt = datetime.fromtimestamp(h["timestamp"]).strftime("%d.%m.%Y %H:%M")
-        cat_ru = CAT_MAP.get(cat_code, cat_code)
+        cat_ru = CATEGORY_LABELS.get(cat_code, cat_code)
 
         line = f"{esc(title)} [{cat_ru}] — {dt}"
 

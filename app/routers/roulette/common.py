@@ -5,26 +5,25 @@ still just does `dp.include_routers(roulette.router, ...)` unchanged.
 """
 from __future__ import annotations
 
-import asyncio
 import logging
 import re
 import time
 
 from aiogram import Router
 
-from app.services.tmdb import get_movie_info, get_series_info
-from app.services.watch_link import find_watch_page_url
-from app.utils import esc, build_watch_link
+from app.services.card_data import resolve_card_data
+from app.services.titles import pick_title
+from app.utils import esc
 
 logger = logging.getLogger(__name__)
 router = Router()
 
 _full_title_cache: dict[tuple[int, int], str] = {}
 
-TMDB_TIMEOUT = 6  # seconds
-
 _last_roll_at: dict[int, float] = {}
 ROLL_COOLDOWN = 1.5  # seconds
+
+_last_roll_title: dict[tuple[int, str], str] = {}
 
 
 def _roll_on_cooldown(user_id: int) -> float:
@@ -46,14 +45,13 @@ def _resolve_title(chat_id: int, message_id: int, short_title: str) -> str:
     return cached if cached else short_title
 
 
-async def _fetch_tmdb_info(category: str, title: str) -> dict:
-    try:
-        if category == "series":
-            return await asyncio.wait_for(get_series_info(title), timeout=TMDB_TIMEOUT) or {}
-        return await asyncio.wait_for(get_movie_info(title), timeout=TMDB_TIMEOUT) or {}
-    except asyncio.TimeoutError:
-        logger.warning("_build_card: TMDB timeout for %r (%s)", title, category)
-        return {}
+def _pick_for_user(user_id: int, category: str, items: list[str]) -> str:
+    """Same no-immediate-repeat rule the web frontend uses, keyed per user
+    instead of per client IP."""
+    key = (user_id, category)
+    title = pick_title(items, _last_roll_title.get(key))
+    _last_roll_title[key] = title
+    return title
 
 
 def _star_bar(rating) -> str:
@@ -65,18 +63,10 @@ def _star_bar(rating) -> str:
 
 
 async def _build_card(category: str, title: str) -> tuple[str, str, str | None]:
-    tmdb_task = asyncio.create_task(_fetch_tmdb_info(category, title))
-    kinogo_task = asyncio.create_task(find_watch_page_url(title))
-    info, direct_link = await asyncio.gather(tmdb_task, kinogo_task)
-
-    display_title = info.get("title", title)
-    if direct_link:
-        link = direct_link
-    elif display_title != title:
-        # Не нашли по исходному title — пробуем ещё раз уже по TMDB-названию.
-        link = await find_watch_page_url(display_title) or build_watch_link(display_title)
-    else:
-        link = build_watch_link(display_title)
+    data = await resolve_card_data(category, title)
+    info = data["info"]
+    display_title = data["title"]
+    link = data["watch_link"]
     link_block = f'\n\n▶️ <a href="{esc(link)}">Смотреть онлайн</a>' if link else ""
 
     rating = info.get("rating", "—")

@@ -9,10 +9,6 @@
   --sidebar-w: 260px; --header-h: 63px;
 }
 
-/* Studio pages: Marvel reads warm red, DC reads cool blue — applied to
-   <body> via data-studio while browsing marvel/dc spin, list or showcase
-   views (see applyStudioTheme() in menu.js). Everything keyed off
-   --primary/--primary-2/--glow/--on-primary re-tints automatically. */
 body[data-studio="marvel"] {
   --primary: #e8232c; --primary-2: #ff6b57; --primary-rgb: 232, 35, 44; --primary-2-rgb: 255, 107, 87;
   --glow: rgba(var(--primary-rgb), 0.32); --glow-2: rgba(var(--primary-2-rgb), 0.32);

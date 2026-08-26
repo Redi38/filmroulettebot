@@ -14,7 +14,7 @@ async function doWheelSpin(cat, isRandom) {
   result.innerHTML = "";
   wrap.classList.remove("wheel-done");
   wrap.style.display = "flex";
-  wrap.innerHTML = '<div class="spinner">🌀 Готовим колесо…</div>';
+  wrap.innerHTML = '<div class="spinner">Готовим колесо…</div>';
 
   try {
     const endpoint = isRandom ? "/api/random-spin" : `/api/${cat}/spin`;

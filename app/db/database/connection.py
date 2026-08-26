@@ -46,6 +46,8 @@ def retry_on_lock(func: _F) -> _F:
 async def conn() -> AsyncIterator[aiosqlite.Connection]:
     async with aiosqlite.connect(settings.DB_PATH) as db:
         db.row_factory = aiosqlite.Row
+        await db.execute("PRAGMA journal_mode=WAL")
+        await db.execute("PRAGMA busy_timeout=5000")
         yield db
 
 

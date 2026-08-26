@@ -13,7 +13,7 @@ from aiogram.exceptions import TelegramBadRequest
 from app.db.database import get_items, save_history
 from app.keyboards import main_kb, spin_kb, after_roll_kb, SpinCB, RerollCB, CODE_TO_CAT, CAT_RU
 
-from .common import router, logger, _roll_on_cooldown, _full_title_cache, _build_card
+from .common import router, logger, _roll_on_cooldown, _full_title_cache, _build_card, _pick_for_user
 
 
 @router.message(CommandStart())
@@ -101,8 +101,8 @@ async def _spin(msg: Message, category: str) -> None:
     if not items:
         await msg.answer("❌ Список пуст.")
         return
-    choice = random.choice(items)
     user_id = msg.from_user.id if msg.from_user else msg.chat.id
+    choice = _pick_for_user(user_id, category, items)
     await save_history(user_id, category, choice)
 
     temp_msg = await msg.answer("🌀 Крутим рулетку…")
@@ -116,8 +116,8 @@ async def _spin_edit(msg: Message, category: str, choice: str | None = None) -> 
         if not items:
             await msg.edit_text("❌ Список пуст.", reply_markup=spin_kb(category))
             return
-        choice = random.choice(items)
         user_id = msg.from_user.id if msg.from_user else msg.chat.id
+        choice = _pick_for_user(user_id, category, items)
         await save_history(user_id, category, choice)
 
     caption, caption_short, poster = await _build_card(category, choice)

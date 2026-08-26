@@ -1,13 +1,12 @@
 """Confirm-pick flow: "✅ Подтвердить" and the sequel yes/no follow-up."""
 from __future__ import annotations
 
-import re
-
 from aiogram.types import Message, CallbackQuery
 from aiogram.exceptions import TelegramBadRequest
 
 from app.db.database import add_item, delete_item
 from app.keyboards import sequel_kb, ConfirmCB, SequelYesCB, SequelNoCB, CODE_TO_CAT, CAT_RU
+from app.services.titles import next_sequel_title
 from app.utils import esc, safe_edit_text, safe_edit_caption
 
 from .common import router, logger, _full_title_cache, _resolve_title
@@ -54,8 +53,7 @@ async def sequel_yes(call: CallbackQuery, callback_data: SequelYesCB) -> None:
     chat_id = call.message.chat.id
     item = _resolve_title(chat_id, call.message.message_id, callback_data.title)
 
-    m = re.search(r"(.+?)\s(\d+)$", item)
-    new_item = f"{m.group(1)} {int(m.group(2)) + 1}" if m else f"{item} 2"
+    new_item = next_sequel_title(item)
 
     await delete_item(cat, item)
     await add_item(cat, new_item)

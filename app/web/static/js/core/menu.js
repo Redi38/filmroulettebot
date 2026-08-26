@@ -53,8 +53,8 @@ function renderMenu() {
 
   addGroup("Подборки");
   for (const [code, label] of Object.entries(REF_MENU_LABELS)) {
-    addItem(code, label, () => switchCat(code, "list"), currentView === "list" && currentCat === code);
-    addItem("upcoming", "Скоро", () => switchCat(code, "showcase"), currentView === "showcase" && currentCat === code, true);
+    addItem(code, label, () => switchCat(code, "showcase"), currentView === "showcase" && currentCat === code);
+    addItem("list", "Список", () => switchCat(code, "list"), currentView === "list" && currentCat === code, true);
   }
 
   addGroup("Прочее");

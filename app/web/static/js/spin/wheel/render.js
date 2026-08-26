@@ -175,11 +175,6 @@ function drawWheel(canvas, items, dpr, weights) {
   const boundaries = computeWheelBoundaries(n, weights);
   canvas._wheelBoundaries = boundaries;
 
-  const minSegDeg = Math.min(...boundaries.map((b) => b.end - b.start));
-  const minArcLen = (minSegDeg * Math.PI / 180) * r;
-  const fontSize = Math.max(8, Math.min(22, minArcLen * 0.55));
-  const maxChars = Math.max(4, Math.min(28, Math.floor((r * 0.66) / (fontSize * 0.56))));
-
   for (let i = 0; i < n; i++) {
     const start = -Math.PI / 2 + boundaries[i].start * Math.PI / 180;
     const end = -Math.PI / 2 + boundaries[i].end * Math.PI / 180;
@@ -192,6 +187,11 @@ function drawWheel(canvas, items, dpr, weights) {
     ctx.strokeStyle = "rgba(9,12,22,0.55)";
     ctx.lineWidth = n > 40 ? 1 : 2;
     ctx.stroke();
+
+    const segDeg = boundaries[i].end - boundaries[i].start;
+    const arcLen = (segDeg * Math.PI / 180) * r;
+    const fontSize = Math.max(8, Math.min(22, arcLen * 0.55));
+    const maxChars = Math.max(4, Math.min(28, Math.floor((r * 0.66) / (fontSize * 0.56))));
 
     ctx.save();
     ctx.translate(cx, cy);

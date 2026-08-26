@@ -5,8 +5,9 @@ from __future__ import annotations
 
 import random
 import time
+from collections import OrderedDict
 from pathlib import Path
-from typing import Any
+from typing import Any, Hashable, TypeVar
 
 from fastapi import HTTPException, Request
 from pydantic import BaseModel
@@ -30,9 +31,42 @@ SPIN_COOLDOWN = 1.5  # seconds
 WHEEL_POOL_SIZE = 120  # safety cap on wheel segments (perf/readability), winner included
 FEATURED_CACHE_TTL = 600  # 10 min
 
-_last_spin_at: dict[str, float] = {}
-_last_spin_title: dict[tuple[str, str], str] = {}
-_featured_cache: dict[str, tuple[dict, float]] = {}
+# _last_spin_at / _last_spin_title stay in plain process memory on purpose:
+# they're cheap, ephemeral, per-client bookkeeping (cooldown timestamp, last
+# picked title to avoid immediate repeats) that's harmless to lose on a
+# uvicorn restart — a fresh process just means everyone's cooldown resets.
+# What *isn't* harmless is unbounded growth: every distinct client IP adds an
+# entry that (for _last_spin_title, one per category) never naturally
+# expires, so a long-running process talking to many unique IPs would leak
+# memory forever. _BoundedDict below caps that by evicting the
+# least-recently-used entry once the map passes _SPIN_STATE_MAX_ENTRIES —
+# well above any realistic concurrent-client count for this project, so in
+# practice it never evicts anything that's still "live", it just guarantees
+# the maps can't grow past a fixed ceiling.
+_SPIN_STATE_MAX_ENTRIES = 5000
+
+_KT = TypeVar("_KT", bound=Hashable)
+_VT = TypeVar("_VT")
+
+
+class _BoundedDict(OrderedDict[_KT, _VT]):
+    """OrderedDict that evicts the oldest entry once it exceeds max_entries.
+    Used instead of a plain dict for per-client in-memory state so it can't
+    grow without bound over the lifetime of a long-running process."""
+
+    def __init__(self, max_entries: int = _SPIN_STATE_MAX_ENTRIES) -> None:
+        super().__init__()
+        self._max_entries = max_entries
+
+    def __setitem__(self, key: _KT, value: _VT) -> None:
+        super().__setitem__(key, value)
+        self.move_to_end(key)
+        while len(self) > self._max_entries:
+            self.popitem(last=False)
+
+
+_last_spin_at: _BoundedDict[str, float] = _BoundedDict()
+_last_spin_title: _BoundedDict[tuple[str, str], str] = _BoundedDict()
 
 
 def _check_category(cat: str) -> None:

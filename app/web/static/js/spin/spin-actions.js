@@ -1,10 +1,22 @@
 // Spin flow orchestration: classic + wheel spins, cooldown, button wiring.
 
+let dockLocked = false;
+
 function setDockLocked(locked) {
+  dockLocked = locked;
   for (const dockId of ["random-spin-section", "spin-section"]) {
     const dock = document.querySelector(`#${dockId} .spin-controls-dock`);
     if (!dock) continue;
     dock.querySelectorAll("button, input").forEach((el) => { el.disabled = locked; });
+  }
+  applySpinButtonLockState();
+}
+
+function applySpinButtonLockState() {
+  const cooldownActive = spinCooldownUntil > Date.now();
+  const disabled = dockLocked || cooldownActive;
+  for (const btn of [document.getElementById("random-spin-btn"), document.getElementById("spin-btn")]) {
+    if (btn) btn.disabled = disabled;
   }
 }
 
@@ -89,9 +101,9 @@ function startSpinCooldownAnim(seconds) {
   }
   spinCooldownTimer = setTimeout(() => {
     for (const btn of [randomBtn, spinBtn]) {
-      btn.disabled = false;
       btn.classList.remove("wipe");
     }
+    applySpinButtonLockState();
   }, seconds * 1000);
 }
 function resultEl() {
@@ -104,6 +116,7 @@ async function doClassicSpin(cat, isRandom) {
   const prevHtml = result.innerHTML;
   result.innerHTML = '<div class="spinner">Крутим…</div>';
   applySpinCooldown(SPIN_COOLDOWN_SECONDS);
+  setDockLocked(true);
   try {
     const endpoint = isRandom ? "/api/random-spin" : `/api/${cat}/spin`;
     const data = await api(endpoint, {
@@ -114,6 +127,8 @@ async function doClassicSpin(cat, isRandom) {
     result.innerHTML = renderCard(data);
   } catch (e) {
     handleSpinError(e, result, prevHtml);
+  } finally {
+    setDockLocked(false);
   }
 }
 

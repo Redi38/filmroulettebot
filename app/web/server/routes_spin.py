@@ -1,13 +1,20 @@
 """Spin endpoints: random spin across movies/cartoons/series, per-category
-spin, and the cached "featured" card shown before any spin."""
+spin, and the cached "featured" card shown before any spin.
+
+The featured card is cached in the `tmdb_cache` SQLite table (the same
+persistent cache TMDB lookups and posters use — see app/db/database/cache.py)
+rather than an in-process dict. Unlike the cooldown/last-title bookkeeping in
+shared.py, this cache is expensive to rebuild (it triggers TMDb lookups), so
+losing it on every uvicorn restart (deploy, healthcheck-restart) is worth
+avoiding — persisting it means a redeploy doesn't force a fresh TMDb round
+trip for the first visitor after every restart."""
 from __future__ import annotations
 
 import random
-import time
 
 from fastapi import APIRouter, HTTPException, Request
 
-from app.db.database import get_items, save_history
+from app.db.database import get_items, get_tmdb_cache, save_history, set_tmdb_cache
 
 from .shared import (
     FEATURED_CACHE_TTL,
@@ -19,7 +26,6 @@ from .shared import (
     _check_category,
     _check_spin_cooldown,
     _client_ip,
-    _featured_cache,
     _pick_title,
 )
 
@@ -81,14 +87,11 @@ async def api_featured(cat: str) -> dict:
         raise HTTPException(404, "List is empty")
     first = items[0]
 
-    cache_key = f"{cat}:{first}"
-    cached = _featured_cache.get(cache_key)
+    cache_key = f"featured:{cat}:{first}"
+    cached = await get_tmdb_cache(cache_key, FEATURED_CACHE_TTL)
     if cached is not None:
-        data, expires_at = cached
-        if time.monotonic() < expires_at:
-            return data
-        del _featured_cache[cache_key]
+        return cached
 
     data = await _card_data(cat, first)
-    _featured_cache[cache_key] = (data, time.monotonic() + FEATURED_CACHE_TTL)
+    await set_tmdb_cache(cache_key, data)
     return data

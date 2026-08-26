@@ -1,5 +1,38 @@
+const API_TIMEOUT_MS = 15000;
+
+// Fetches with a hard timeout so a stalled connection can't hang forever.
+// Without this, a network stall left the caller's `await api(...)` never
+// resolving/rejecting, so any "Крутим…"/"Загрузка…" spinner (and buttons
+// disabled until the caller's `finally`) stayed stuck indefinitely — `finally`
+// only runs once the promise settles, and a bare fetch() with no
+// AbortController never settles on its own if the network just goes quiet.
 async function api(path, opts) {
-  const resp = await fetch(path, opts);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+
+  // Let a caller pass its own signal (e.g. to cancel on navigation) without
+  // losing the timeout — abort on either one firing.
+  const callerSignal = opts && opts.signal;
+  if (callerSignal) {
+    if (callerSignal.aborted) controller.abort();
+    else callerSignal.addEventListener("abort", () => controller.abort());
+  }
+
+  let resp;
+  try {
+    resp = await fetch(path, {...opts, signal: controller.signal});
+  } catch (e) {
+    if (e.name === "AbortError") {
+      const timeoutErr = new Error("Сервер не отвечает. Проверь соединение и попробуй ещё раз.");
+      timeoutErr.status = 0;
+      timeoutErr.isTimeout = true;
+      throw timeoutErr;
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({detail: resp.statusText}));
     const e = new Error(err.detail || "Ошибка запроса");

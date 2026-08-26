@@ -3,9 +3,11 @@
 function spinWheelTo(canvas, n, winnerIndex, durationMs) {
   wheelSpinActive = true;
   return new Promise((resolve) => {
-    const segDeg = 360 / n;
-    const centerDeg = winnerIndex * segDeg + segDeg / 2;
-    const jitter = (Math.random() - 0.5) * (segDeg * 0.5);
+    const boundaries = canvas._wheelBoundaries || Array.from({length: n}, (_, i) => ({start: i * (360 / n), end: (i + 1) * (360 / n)}));
+    const seg = boundaries[winnerIndex];
+    const segSpan = seg.end - seg.start;
+    const centerDeg = seg.start + segSpan / 2;
+    const jitter = (Math.random() - 0.5) * (segSpan * 0.5);
     const finalMod = ((360 - centerDeg - jitter) % 360 + 360) % 360;
     const extraSpins = 6;
     const totalDeg = extraSpins * 360 + finalMod;
@@ -45,7 +47,7 @@ function rebuildVisibleWheels() {
     if (!wrap || wrap.style.display === "none" || !wrap._wheelPool) continue;
     const predicted = predictWheelSize(wrap);
     if (Math.abs(predicted - (wrap._wheelBuiltSize || 0)) < 3) continue;
-    buildWheel(id, wrap._wheelPool);
+    buildWheel(id, wrap._wheelPool, wrap._wheelWeights);
   }
 }
 
@@ -54,7 +56,7 @@ function forceRebuildVisibleWheels() {
   for (const id of WHEEL_WRAP_IDS) {
     const wrap = document.getElementById(id);
     if (!wrap || wrap.style.display === "none" || !wrap._wheelPool) continue;
-    buildWheel(id, wrap._wheelPool);
+    buildWheel(id, wrap._wheelPool, wrap._wheelWeights);
   }
 }
 
@@ -66,6 +68,6 @@ function redrawVisibleWheelCanvases() {
     if (!wrap || wrap.style.display === "none" || !wrap._wheelPool) continue;
     const canvas = wrap.querySelector(".wheel-canvas");
     if (!canvas) continue;
-    drawWheel(canvas, wrap._wheelPool, dpr);
+    drawWheel(canvas, wrap._wheelPool, dpr, wrap._wheelWeights);
   }
 }

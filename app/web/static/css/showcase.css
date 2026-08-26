@@ -91,6 +91,7 @@
   padding: 6px 12px; border-radius: 999px; white-space: nowrap; transition: background 0.15s, border-color 0.15s;
 }
 .showcase-filter-btn:hover { border-color: var(--primary); }
+.showcase-filter-btn:disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
 .showcase-filter-btn.active {
   background: linear-gradient(90deg, var(--primary), var(--primary-2));
   border-width: 0; color: white;

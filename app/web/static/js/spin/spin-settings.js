@@ -16,6 +16,16 @@ function saveSpinMode(mode) {
 }
 let spinMode = loadSpinMode();
 
+const WEIGHTED_MODE_KEY = "filmroulette_weighted_spin";
+function loadWeightedMode() {
+  try { return localStorage.getItem(WEIGHTED_MODE_KEY) === "1"; } catch { return false; }
+}
+function saveWeightedMode(v) {
+  try { localStorage.setItem(WEIGHTED_MODE_KEY, v ? "1" : "0"); } catch {}
+}
+let weightedMode = loadWeightedMode();
+function isWeightedMode() { return weightedMode; }
+
 const SPIN_SPEED_KEY = "filmroulette_spin_speed";
 const SPIN_SPEED_MIN = 1;
 const SPIN_SPEED_MAX = 60;
@@ -103,6 +113,8 @@ function renderSpinModeToggle(containerId) {
       saveSpinMode(value);
       renderSpinModeToggle("random-mode-toggle");
       renderSpinModeToggle("spin-mode-toggle");
+      renderWeightToggle("random-weight-toggle");
+      renderWeightToggle("spin-weight-toggle");
       renderSpinSpeedControl("random-spin-speed");
       renderSpinSpeedControl("spin-spin-speed");
       resetWheelWraps();
@@ -118,6 +130,40 @@ function renderSpinModeToggle(containerId) {
       } else if (currentView === "random") {
         document.getElementById("random-spin-result").innerHTML =
           placeholderHtml("Нажми «Крутить», и рулетка выберет фильм, сериал или мультфильм 🍿");
+      }
+    };
+    row.appendChild(btn);
+  }
+  outer.appendChild(row);
+  el.appendChild(outer);
+}
+
+function renderWeightToggle(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = "";
+  el.className = "spin-weight-wrap" + (spinMode === "wheel" ? " visible" : "");
+  const outer = document.createElement("div");
+  outer.className = "spin-mode-toggle-wrap";
+  const row = document.createElement("div");
+  row.className = "spin-mode-toggle";
+  for (const [value, label] of [[false, "🎲 Обычный"], [true, "⚖️ Весовой"]]) {
+    const btn = document.createElement("button");
+    btn.className = "showcase-filter-btn" + (weightedMode === value ? " active" : "");
+    btn.textContent = label;
+    btn.onclick = () => {
+      if (weightedMode === value) return;
+      weightedMode = value;
+      saveWeightedMode(value);
+      renderWeightToggle("random-weight-toggle");
+      renderWeightToggle("spin-weight-toggle");
+      resetWheelWraps();
+      if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
+
+      if (currentCardData) return;
+
+      if (spinMode === "wheel" && currentView === "spin") {
+        showIdleWheel(currentCat);
       }
     };
     row.appendChild(btn);

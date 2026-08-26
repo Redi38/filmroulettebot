@@ -1,5 +1,13 @@
 // Spin flow orchestration: classic + wheel spins, cooldown, button wiring.
 
+function setDockLocked(locked) {
+  for (const dockId of ["random-spin-section", "spin-section"]) {
+    const dock = document.querySelector(`#${dockId} .spin-controls-dock`);
+    if (!dock) continue;
+    dock.querySelectorAll("button, input").forEach((el) => { el.disabled = locked; });
+  }
+}
+
 async function doWheelSpin(cat, isRandom) {
   if (spinCooldownUntil > Date.now()) return;
   const prefix = isRandom ? "random" : "spin";
@@ -11,6 +19,7 @@ async function doWheelSpin(cat, isRandom) {
   const prevWrapDisplay = wrap.style.display;
 
   applySpinCooldown(SPIN_COOLDOWN_SECONDS);
+  setDockLocked(true);
   result.innerHTML = "";
   wrap.classList.remove("wheel-done");
   wrap.style.display = "flex";
@@ -18,13 +27,17 @@ async function doWheelSpin(cat, isRandom) {
 
   try {
     const endpoint = isRandom ? "/api/random-spin" : `/api/${cat}/spin`;
-    const data = await api(endpoint, { method: "POST" });
+    const data = await api(endpoint, {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({weighted: isWeightedMode()}),
+    });
     currentCardData = data;
     const pool = (data.wheel_pool && data.wheel_pool.length >= 2) ? data.wheel_pool : [data.original_title, data.original_title];
+    const weights = (data.wheel_pool && data.wheel_pool.length >= 2) ? data.wheel_weights : undefined;
     let winnerIndex = pool.indexOf(data.original_title);
     if (winnerIndex === -1) winnerIndex = 0;
 
-    const canvas = buildWheel(wheelWrapId, pool);
+    const canvas = buildWheel(wheelWrapId, pool, weights);
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
     await spinWheelTo(canvas, pool.length, winnerIndex, Math.round(spinSpeedSeconds * 1000));
 
@@ -40,11 +53,11 @@ async function doWheelSpin(cat, isRandom) {
     wrap.style.display = prevWrapDisplay;
     updateWheelScrollLock();
     handleSpinError(e, result, prevResultHtml);
+  } finally {
+    setDockLocked(false);
   }
 }
 
-// Shared by every spin flow (classic + wheel): on a 429 cooldown, restore
-// the previous result and re-arm the cooldown timer; otherwise show the error.
 function handleSpinError(e, result, prevHtml) {
   if (e.status === 429) {
     result.innerHTML = prevHtml;
@@ -85,10 +98,6 @@ function resultEl() {
   return document.getElementById(currentView === "random" ? "random-spin-result" : "spin-result");
 }
 
-// Classic (non-wheel) spin, shared by the per-category and random flows.
-// isRandom picks the endpoint and, since a random spin only ever happens
-// from the random-spin view, the result element directly (rather than via
-// resultEl(), which is also used for classic-mode rerolls from either view).
 async function doClassicSpin(cat, isRandom) {
   if (spinCooldownUntil > Date.now()) return;
   const result = isRandom ? document.getElementById("random-spin-result") : resultEl();
@@ -97,7 +106,10 @@ async function doClassicSpin(cat, isRandom) {
   applySpinCooldown(SPIN_COOLDOWN_SECONDS);
   try {
     const endpoint = isRandom ? "/api/random-spin" : `/api/${cat}/spin`;
-    const data = await api(endpoint, {method: "POST"});
+    const data = await api(endpoint, {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({weighted: isWeightedMode()}),
+    });
     currentCardData = data;
     result.innerHTML = renderCard(data);
   } catch (e) {

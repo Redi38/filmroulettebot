@@ -34,6 +34,7 @@ function resetWheelWraps() {
     wrap.style.minHeight = "";
     wrap.style.paddingTop = "";
     wrap._wheelPool = null;
+    wrap._wheelWeights = null;
   }
   updateWheelScrollLock();
 }
@@ -45,20 +46,21 @@ async function showIdleWheel(cat) {
   const wrap = document.getElementById("spin-wheel-wrap");
   if (!wrap) return;
   try {
-    const data = await api(`/api/${cat}/wheel-preview`);
+    const weighted = typeof isWeightedMode === "function" ? isWeightedMode() : false;
+    const data = await api(`/api/${cat}/wheel-preview?weighted=${weighted}`);
     const pool = data.wheel_pool;
     if (!pool || pool.length < 2) return;
     wrap.classList.remove("wheel-done");
     await nextSettledFrame();
     if (!wrap.isConnected || document.getElementById("spin-wheel-wrap") !== wrap) return;
-    buildWheel("spin-wheel-wrap", pool);
+    buildWheel("spin-wheel-wrap", pool, data.wheel_weights);
     document.getElementById("spin-result").innerHTML = "";
     if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
   } catch (e) {
   }
 }
 
-function buildWheel(wrapId, items) {
+function buildWheel(wrapId, items, weights) {
   const wrap = document.getElementById(wrapId);
   wrap.innerHTML = "";
   wrap.classList.remove("wheel-done");
@@ -66,6 +68,7 @@ function buildWheel(wrapId, items) {
   wrap.style.paddingTop = "";
   wrap.style.display = "flex";
   wrap._wheelPool = items;
+  wrap._wheelWeights = weights;
 
   const dock = getDockFor(wrap);
   const dockClearance = computeDockClearance(wrap, dock);
@@ -128,7 +131,7 @@ function buildWheel(wrapId, items) {
   countEl.textContent = pluralizeTitles(items.length);
   wrap.appendChild(countEl);
 
-  drawWheel(canvas, items, dpr);
+  drawWheel(canvas, items, dpr, weights);
   canvas._wheelItems = items;
   canvas._wheelTitleEl = titleEl;
   updatePointerTitle(canvas, 0);
@@ -150,34 +153,36 @@ function getCanvasRotationDeg(canvas) {
 
 function updatePointerTitle(canvas, rotationDeg) {
   const items = canvas._wheelItems;
+  const boundaries = canvas._wheelBoundaries;
   const titleEl = canvas._wheelTitleEl;
-  if (!items || !titleEl || !items.length) return;
-  const n = items.length;
-  const segDeg = 360 / n;
+  if (!items || !boundaries || !titleEl || !items.length) return;
   const angleAtPointer = ((360 - rotationDeg) % 360 + 360) % 360;
-  let idx = Math.floor(angleAtPointer / segDeg) % n;
-  if (idx < 0) idx += n;
+  let idx = boundaries.findIndex((b) => angleAtPointer >= b.start && angleAtPointer < b.end);
+  if (idx === -1) idx = angleAtPointer < boundaries[0].start ? 0 : boundaries.length - 1;
   const label = items[idx] || "";
   if (titleEl.textContent !== label) titleEl.textContent = label;
 }
 
-function drawWheel(canvas, items, dpr) {
+function drawWheel(canvas, items, dpr, weights) {
   const ctx = canvas.getContext("2d");
   const size = canvas.width;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, size, size);
   ctx.scale(dpr, dpr);
   const cssSize = size / dpr;
-  const cx = cssSize / 2, cy = cssSize / 2, r = cssSize / 2 - 3;  const n = items.length;
-  const seg = (Math.PI * 2) / n;
+  const cx = cssSize / 2, cy = cssSize / 2, r = cssSize / 2 - 3;
+  const n = items.length;
+  const boundaries = computeWheelBoundaries(n, weights);
+  canvas._wheelBoundaries = boundaries;
 
-  const arcLen = seg * r;
-  const fontSize = Math.max(8, Math.min(22, arcLen * 0.55));
+  const minSegDeg = Math.min(...boundaries.map((b) => b.end - b.start));
+  const minArcLen = (minSegDeg * Math.PI / 180) * r;
+  const fontSize = Math.max(8, Math.min(22, minArcLen * 0.55));
   const maxChars = Math.max(4, Math.min(28, Math.floor((r * 0.66) / (fontSize * 0.56))));
 
   for (let i = 0; i < n; i++) {
-    const start = -Math.PI / 2 + i * seg;
-    const end = start + seg;
+    const start = -Math.PI / 2 + boundaries[i].start * Math.PI / 180;
+    const end = -Math.PI / 2 + boundaries[i].end * Math.PI / 180;
     ctx.beginPath();
     ctx.moveTo(cx, cy);
     ctx.arc(cx, cy, r, start, end);
@@ -190,7 +195,7 @@ function drawWheel(canvas, items, dpr) {
 
     ctx.save();
     ctx.translate(cx, cy);
-    ctx.rotate(start + seg / 2);
+    ctx.rotate((start + end) / 2);
     ctx.textAlign = "right";
     ctx.fillStyle = "#fff";
     ctx.font = `700 ${fontSize}px Manrope, sans-serif`;

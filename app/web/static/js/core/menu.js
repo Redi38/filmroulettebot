@@ -130,6 +130,7 @@ function showSection() {
   if (currentView === "home") loadHome();
   if (currentView === "random") {
     renderSpinModeToggle("random-mode-toggle");
+    renderWeightToggle("random-weight-toggle");
     renderSpinSpeedControl("random-spin-speed");
     resetWheelWraps();
     document.getElementById("random-spin-result").innerHTML = placeholderHtml("Нажми «Крутить», и рулетка выберет фильм, сериал или мультфильм 🍿");
@@ -137,6 +138,7 @@ function showSection() {
   }
   if (currentView === "spin") {
     renderSpinModeToggle("spin-mode-toggle");
+    renderWeightToggle("spin-weight-toggle");
     renderSpinSpeedControl("spin-spin-speed");
     resetWheelWraps();
     document.getElementById("spin-result").innerHTML = placeholderHtml("Нажми «Крутить», чтобы узнать, что посмотреть 🎬");

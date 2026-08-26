@@ -24,6 +24,24 @@ function computeWheelSize(availableWidth, availableHeight) {
   );
 }
 
+// Cumulative segment boundaries in degrees (0..360, starting at the top),
+// sized proportionally to `weights`. Falls back to equal segments when
+// weights is missing or malformed, so a classic (non-weighted) wheel is
+// unchanged from equal division.
+function computeWheelBoundaries(n, weights) {
+  if (!weights || weights.length !== n || n === 0) {
+    const seg = 360 / n;
+    return Array.from({length: n}, (_, i) => ({start: i * seg, end: (i + 1) * seg}));
+  }
+  const total = weights.reduce((a, b) => a + b, 0) || n;
+  let acc = 0;
+  return weights.map((w) => {
+    const start = acc;
+    acc += (Math.max(w, 0) / total) * 360;
+    return {start, end: acc};
+  });
+}
+
 function getWheelBottomGap(wrap) {
   const mainEl = wrap.closest("main");
   const paddingBottom = mainEl ? parseFloat(getComputedStyle(mainEl).paddingBottom) || 0 : 0;

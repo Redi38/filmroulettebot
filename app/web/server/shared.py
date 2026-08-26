@@ -13,7 +13,7 @@ from pydantic import BaseModel
 
 from app.services.card_data import resolve_card_data
 from app.services.categories import CATEGORY_LABELS
-from app.services.titles import next_sequel_title, pick_title
+from app.services.titles import next_sequel_title, pick_title, pick_title_weighted, title_weights
 
 LIST_PAGE_SIZE = 30
 THEATERS_PAGE_SIZE = 10
@@ -71,19 +71,28 @@ def _client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-def _pick_title(client_key: str, cat: str, items: list[str]) -> str:
+def _pick_title(client_key: str, cat: str, items: list[str], weighted: bool = False) -> str:
     last = _last_spin_title.get((client_key, cat))
-    title = pick_title(items, last)
+    title = pick_title_weighted(items, last) if weighted else pick_title(items, last)
     _last_spin_title[(client_key, cat)] = title
     return title
 
 
-def _build_wheel_pool(items: list[str], winner: str, size: int = WHEEL_POOL_SIZE) -> list[str]:
-    """Build the list of titles shown as wheel segments for the front-end's
-    roulette-wheel spin animation. Shows the *entire* roulette (all titles,
-    winner included) as long as it fits under the safety cap; only samples
-    down when the list is unusually large. Keeps the winner's exact position
-    hidden from the client until it computes the index itself.
+def _build_wheel_pool(
+    items: list[str], winner: str, weighted: bool = False, size: int = WHEEL_POOL_SIZE
+) -> tuple[list[str], list[int]]:
+    """Build the list of titles (and their relative weights) shown as wheel
+    segments for the front-end's roulette-wheel spin animation. Shows the
+    *entire* roulette (all titles, winner included) as long as it fits under
+    the safety cap; only samples down when the list is unusually large.
+    Keeps the winner's exact position hidden from the client until it
+    computes the index itself.
+
+    Weights use the same rank rule as pick_title_weighted() (earlier entries
+    in the *original* `items` order count for more), so a weighted wheel's
+    segment sizes accurately reflect the odds that produced the winner. In
+    non-weighted mode every segment gets equal weight, same as before this
+    was added.
     """
     if len(items) <= size:
         pool = list(items)
@@ -94,7 +103,13 @@ def _build_wheel_pool(items: list[str], winner: str, size: int = WHEEL_POOL_SIZE
         random.shuffle(others)
         pool = others[: max(size - 1, 0)] + [winner]
     random.shuffle(pool)
-    return pool
+
+    if weighted:
+        weight_map = title_weights(items)
+        weights = [weight_map.get(t, 1) for t in pool]
+    else:
+        weights = [1] * len(pool)
+    return pool, weights
 
 
 async def _card_data(cat: str, title: str, history_timestamp: float | None = None) -> dict[str, Any]:
@@ -141,6 +156,10 @@ class MoveBody(BaseModel):
 
 class SequelBody(BaseModel):
     title: str
+
+
+class SpinBody(BaseModel):
+    weighted: bool = False
 
 
 class SkipBody(BaseModel):

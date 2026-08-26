@@ -19,3 +19,23 @@ def pick_title(items: list[str], last: str | None) -> str:
     `last` when the list has other options to offer."""
     candidates = [i for i in items if i != last] or items
     return random.choice(candidates)
+
+
+def pick_title_weighted(items: list[str], last: str | None) -> str:
+    """Same no-immediate-repeat rule as pick_title(), but earlier entries in
+    `items` get proportionally higher odds: weight = rank from the end of
+    the list, so the first title is `len(items)` times likelier to be
+    picked than the last one."""
+    n = len(items)
+    ranked = list(zip(items, range(n, 0, -1)))
+    candidates = [(t, w) for t, w in ranked if t != last] or ranked
+    titles, weights = zip(*candidates)
+    return random.choices(titles, weights=weights, k=1)[0]
+
+
+def title_weights(items: list[str]) -> dict[str, int]:
+    """Same rank weighting pick_title_weighted() uses, exposed separately so
+    callers (e.g. wheel-segment sizing) can size things by weight without
+    re-picking a winner."""
+    n = len(items)
+    return {title: n - i for i, title in enumerate(items)}

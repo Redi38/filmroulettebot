@@ -80,6 +80,8 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
 
 .spin-speed-wrap { display: none; justify-content: center; margin: 0; }
 .spin-speed-wrap.visible { display: flex; }
+.spin-weight-wrap { display: none; justify-content: center; margin: 0; }
+.spin-weight-wrap.visible { display: flex; }
 .spin-speed-control {
   display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;
 }

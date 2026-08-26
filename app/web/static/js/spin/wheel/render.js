@@ -11,6 +11,11 @@ const WHEEL_COLORS = [
 const WHEEL_HUB_GIF_URL = "";
 const WHEEL_WRAP_IDS = ["random-wheel-wrap", "spin-wheel-wrap"];
 
+function getWheelDPR() {
+  const raw = window.devicePixelRatio || 1;
+  return Math.min(3, Math.max(2, raw));
+}
+
 function getDockFor(wrap) {
   return wrap.parentElement && wrap.parentElement.querySelector(".spin-controls-dock");
 }
@@ -96,7 +101,7 @@ function buildWheel(wrapId, items, weights) {
   canvasMask.className = "wheel-canvas-mask";
   const canvas = document.createElement("canvas");
   canvas.className = "wheel-canvas";
-  const dpr = window.devicePixelRatio || 1;
+  const dpr = getWheelDPR();
   holder.style.width = cssSize + "px";
   holder.style.height = cssSize + "px";
   canvasMask.style.width = cssSize + "px";
@@ -168,6 +173,8 @@ function drawWheel(canvas, items, dpr, weights) {
   const size = canvas.width;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, size, size);
+  ctx.imageSmoothingEnabled = true;
+  if ("imageSmoothingQuality" in ctx) ctx.imageSmoothingQuality = "high";
   ctx.scale(dpr, dpr);
   const cssSize = size / dpr;
   const cx = cssSize / 2, cy = cssSize / 2, r = cssSize / 2 - 3;

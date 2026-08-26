@@ -50,7 +50,8 @@ function ensureHubUploadDom() {
       <div class="wheel-hub-emote-grid">
         ${HUB_EMOTE_PRESETS.map((e) => `<button type="button" class="wheel-hub-emote-btn" data-url="${hubEmoteFullUrl(e.id)}" title="${e.name}"><img src="${hubEmoteThumbUrl(e.id)}" alt="${e.name}" loading="lazy"></button>`).join("")}
       </div>
-      <button type="button" id="wheel-hub-open-modal">Добавить изображение</button>`;
+      <button type="button" id="wheel-hub-open-modal">Добавить изображение</button>
+      <button type="button" id="wheel-hub-remove" class="wheel-hub-remove-btn">Убрать изображение</button>`;
     document.body.appendChild(hubPopoverEl);
     hubPopoverEl.querySelectorAll(".wheel-hub-emote-btn").forEach((btn) => {
       btn.onclick = () => { setWheelHubImage(btn.dataset.url); closeHubPopover(); };
@@ -59,6 +60,21 @@ function ensureHubUploadDom() {
       closeHubPopover();
       openHubModal();
     };
+    const removeBtnEl = hubPopoverEl.querySelector("#wheel-hub-remove");
+    removeBtnEl.onclick = () => {
+      setWheelHubImage("");
+      closeHubPopover();
+    };
+    const addBtnEl = hubPopoverEl.querySelector("#wheel-hub-open-modal");
+    const addBtnStyles = getComputedStyle(addBtnEl);
+    ["display", "width", "boxSizing", "padding", "margin", "border", "borderRadius",
+      "font", "fontSize", "fontWeight", "fontFamily", "lineHeight", "textAlign",
+      "cursor", "boxShadow"].forEach((prop) => {
+      removeBtnEl.style[prop] = addBtnStyles[prop];
+    });
+    removeBtnEl.style.background = "#e5484d";
+    removeBtnEl.style.color = "#fff";
+    removeBtnEl.style.marginTop = "8px";
   }
   if (!hubModalEl) {
     hubModalEl = document.createElement("div");
@@ -112,6 +128,8 @@ function readHubFile(file) {
 }
 function openHubPopover(anchorEl) {
   ensureHubUploadDom();
+  const removeBtn = hubPopoverEl.querySelector("#wheel-hub-remove");
+  if (removeBtn) removeBtn.style.display = getWheelHubImage() ? "" : "none";
   const rect = anchorEl.getBoundingClientRect();
   hubPopoverEl.classList.add("open");
   const popRect = hubPopoverEl.getBoundingClientRect();

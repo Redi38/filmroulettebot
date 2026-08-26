@@ -62,7 +62,7 @@ function forceRebuildVisibleWheels() {
 
 function redrawVisibleWheelCanvases() {
   if (wheelSpinActive) return;
-  const dpr = window.devicePixelRatio || 1;
+  const dpr = getWheelDPR();
   for (const id of WHEEL_WRAP_IDS) {
     const wrap = document.getElementById(id);
     if (!wrap || wrap.style.display === "none" || !wrap._wheelPool) continue;

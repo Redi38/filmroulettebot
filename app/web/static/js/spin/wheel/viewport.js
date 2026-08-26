@@ -94,6 +94,18 @@ if (document.fonts && document.fonts.ready) {
   document.fonts.ready.then(redrawVisibleWheelCanvases).catch(() => {});
 }
 
+function watchWheelDPR() {
+  if (!window.matchMedia) return;
+  const mq = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+  const onChange = () => {
+    forceRebuildVisibleWheels();
+    watchWheelDPR();
+  };
+  if (mq.addEventListener) mq.addEventListener("change", onChange, { once: true });
+  else if (mq.addListener) mq.addListener(onChange);
+}
+watchWheelDPR();
+
 if (typeof ResizeObserver !== "undefined") {
   const debouncedRefreshWheelLayoutForObserver = typeof debounce === "function"
     ? debounce(refreshWheelLayout, 150)

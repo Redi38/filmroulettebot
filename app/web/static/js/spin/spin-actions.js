@@ -22,6 +22,7 @@ function applySpinButtonLockState() {
 
 async function doWheelSpin(cat, isRandom) {
   if (spinCooldownUntil > Date.now()) return;
+  primeWheelAudio();
   const prefix = isRandom ? "random" : "spin";
   const result = isRandom ? document.getElementById("random-spin-result") : resultEl();
   const wheelWrapId = `${prefix}-wheel-wrap`;

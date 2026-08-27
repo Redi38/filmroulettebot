@@ -156,7 +156,7 @@ function getCanvasRotationDeg(canvas) {
   return deg;
 }
 
-function updatePointerTitle(canvas, rotationDeg) {
+function updatePointerTitle(canvas, rotationDeg, playTick) {
   const items = canvas._wheelItems;
   const boundaries = canvas._wheelBoundaries;
   const titleEl = canvas._wheelTitleEl;
@@ -164,6 +164,10 @@ function updatePointerTitle(canvas, rotationDeg) {
   const angleAtPointer = ((360 - rotationDeg) % 360 + 360) % 360;
   let idx = boundaries.findIndex((b) => angleAtPointer >= b.start && angleAtPointer < b.end);
   if (idx === -1) idx = angleAtPointer < boundaries[0].start ? 0 : boundaries.length - 1;
+  if (playTick && canvas._wheelPointerIdx !== undefined && canvas._wheelPointerIdx !== idx) {
+    playWheelTick();
+  }
+  canvas._wheelPointerIdx = idx;
   const label = items[idx] || "";
   if (titleEl.textContent !== label) titleEl.textContent = label;
 }

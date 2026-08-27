@@ -24,7 +24,7 @@ function spinWheelTo(canvas, n, winnerIndex, durationMs) {
     const startTime = performance.now();
     const tick = () => {
       const rotDeg = getCanvasRotationDeg(canvas);
-      updatePointerTitle(canvas, rotDeg);
+      updatePointerTitle(canvas, rotDeg, true);
       if (performance.now() - startTime < durationMs) {
         rafId = requestAnimationFrame(tick);
       }
@@ -33,8 +33,9 @@ function spinWheelTo(canvas, n, winnerIndex, durationMs) {
 
     setTimeout(() => {
       cancelAnimationFrame(rafId);
-      updatePointerTitle(canvas, ((totalDeg % 360) + 360) % 360);
+      updatePointerTitle(canvas, ((totalDeg % 360) + 360) % 360, true);
       wheelSpinActive = false;
+      playWheelStop();
       resolve();
     }, durationMs);
   });

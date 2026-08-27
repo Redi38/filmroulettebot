@@ -11,12 +11,17 @@ from aiogram.types import (
     ReplyKeyboardMarkup,
 )
 
+from app.services.categories import CATEGORY_SHORT_LABELS
 from app.utils import paginate
 
 # ─── Constants ─────────────────────────────────────────────────────────────────
 CAT_TO_CODE: dict[str, str] = {"movies": "m", "cartoons": "c", "series": "s", "dc": "dc", "marvel": "mv"}
 CODE_TO_CAT = {v: k for k, v in CAT_TO_CODE.items()}
-CAT_RU: dict[str, str] = {"movies": "Фильмы 🎬", "cartoons": "Мульты 🎥", "series": "Сериалы 📺", "dc": "DC 🦇", "marvel": "Marvel 🕷"}
+CAT_EMOJI: dict[str, str] = {"movies": "🎬", "cartoons": "🎥", "series": "📺", "dc": "🦇", "marvel": "🕷"}
+# Bot button text = the same short label the web menu shows (CATEGORY_SHORT_LABELS,
+# also served over /api/categories) plus an emoji, since Telegram buttons want one
+# but the web menu already has an SVG icon instead.
+CAT_RU: dict[str, str] = {code: f"{CATEGORY_SHORT_LABELS[code]} {emoji}" for code, emoji in CAT_EMOJI.items()}
 
 # ─── CallbackData ──────────────────────────────────────────────────────────────
 class SpinCB(CallbackData, prefix="sp"): code: str

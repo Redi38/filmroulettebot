@@ -13,7 +13,7 @@ from fastapi import HTTPException, Request
 from pydantic import BaseModel
 
 from app.services.card_data import resolve_card_data
-from app.services.categories import CATEGORY_LABELS
+from app.services.categories import CATEGORY_LABELS, CATEGORY_SHORT_LABELS
 from app.services.titles import (
     pick_title,
     pick_title_weighted,
@@ -25,6 +25,7 @@ THEATERS_PAGE_SIZE = 10
 NOW_PLAYING_MAX_AGE_DAYS = 90
 
 CATEGORIES = CATEGORY_LABELS
+CATEGORY_SHORT = CATEGORY_SHORT_LABELS
 ROULETTE_CATEGORIES = ("movies", "cartoons", "series")
 
 WEB_USER_ID = 0

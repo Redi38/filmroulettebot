@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse
 from app.db.database import add_item, delete_item, get_items
 from app.services.titles import next_sequel_title
 
-from .shared import CATEGORIES, STATIC_DIR, SequelBody, _check_category
+from .shared import CATEGORIES, CATEGORY_SHORT, STATIC_DIR, SequelBody, _check_category
 
 router = APIRouter()
 
@@ -22,7 +22,7 @@ async def api_categories() -> dict:
     out = {}
     for code, ru in CATEGORIES.items():
         items = await get_items(code)
-        out[code] = {"label": ru, "count": len(items)}
+        out[code] = {"label": ru, "short_label": CATEGORY_SHORT.get(code, ru), "count": len(items)}
     return out
 
 

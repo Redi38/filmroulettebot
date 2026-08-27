@@ -21,6 +21,14 @@ _MAX_RETRIES = 3
 _BACKOFF_BASE = 1.0  # seconds
 _RETRYABLE_STATUSES = {429, 500, 502, 503, 504}
 
+# Cap how many TMDb requests can be in flight at once. Without this, a page
+# like showcase (routes_showcase.py) that asyncio.gathers several
+# discover_by_company() calls in parallel can burst well past what TMDb's
+# rate limit tolerates on a cold cache, tripping a wave of 429s instead of
+# a few isolated ones the retry/backoff above already handles fine.
+_MAX_CONCURRENT_REQUESTS = 8
+_semaphore = asyncio.Semaphore(_MAX_CONCURRENT_REQUESTS)
+
 _client: httpx.AsyncClient | None = None
 
 
@@ -47,7 +55,8 @@ async def _get(path: str, **params: Any) -> dict[str, Any] | None:
     client = _get_client()
     for attempt in range(1, _MAX_RETRIES + 1):
         try:
-            resp = await client.get(url, params=params)
+            async with _semaphore:
+                resp = await client.get(url, params=params)
 
             if resp.status_code in _RETRYABLE_STATUSES and attempt < _MAX_RETRIES:
                 retry_after = resp.headers.get("Retry-After")

@@ -2,8 +2,30 @@ const sideMenu = document.getElementById("side-menu");
 const sideMenuScroll = document.getElementById("side-menu-scroll");
 const overlay = document.getElementById("overlay");
 
+// Short labels default to these hardcoded values so the menu paints
+// instantly on first load, then get silently refreshed from /api/categories
+// (same source app.keyboards.CAT_RU derives from) below — that way this file
+// doesn't hold its own independent copy of the Russian text that could drift
+// from the bot's.
 const MENU_LABELS = {movies: "Фильмы", cartoons: "Мульты", series: "Сериалы"};
 const REF_MENU_LABELS = {marvel: "Marvel", dc: "DC"};
+
+(async () => {
+  let data;
+  try {
+    data = await api("/api/categories");
+  } catch (e) {
+    return; // offline/error: keep the hardcoded defaults above
+  }
+  let changed = false;
+  for (const labels of [MENU_LABELS, REF_MENU_LABELS]) {
+    for (const code of Object.keys(labels)) {
+      const label = data[code] && data[code].short_label;
+      if (label && labels[code] !== label) { labels[code] = label; changed = true; }
+    }
+  }
+  if (changed) renderMenu();
+})();
 
 const ICONS = {
   home: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"></path><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"></path></svg>`,

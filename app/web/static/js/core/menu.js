@@ -154,6 +154,7 @@ function showSection() {
     renderSpinModeToggle("random-mode-toggle");
     renderWeightToggle("random-weight-toggle");
     renderSpinSpeedControl("random-spin-speed");
+    renderWheelMuteToggle("random-mute-toggle");
     resetWheelWraps();
     document.getElementById("random-spin-result").innerHTML = placeholderHtml("Нажми «Крутить», и рулетка выберет фильм, сериал или мультфильм 🍿");
     currentCardData = null;
@@ -162,6 +163,7 @@ function showSection() {
     renderSpinModeToggle("spin-mode-toggle");
     renderWeightToggle("spin-weight-toggle");
     renderSpinSpeedControl("spin-spin-speed");
+    renderWheelMuteToggle("spin-mute-toggle");
     resetWheelWraps();
     document.getElementById("spin-result").innerHTML = placeholderHtml("Нажми «Крутить», чтобы узнать, что посмотреть 🎬");
     currentCardData = null;

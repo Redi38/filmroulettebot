@@ -117,6 +117,10 @@ function renderSpinModeToggle(containerId) {
       renderWeightToggle("spin-weight-toggle");
       renderSpinSpeedControl("random-spin-speed");
       renderSpinSpeedControl("spin-spin-speed");
+      if (typeof renderWheelMuteToggle === "function") {
+        renderWheelMuteToggle("random-mute-toggle");
+        renderWheelMuteToggle("spin-mute-toggle");
+      }
       resetWheelWraps();
       if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
 

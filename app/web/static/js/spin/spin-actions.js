@@ -7,7 +7,10 @@ function setDockLocked(locked) {
   for (const dockId of ["random-spin-section", "spin-section"]) {
     const dock = document.querySelector(`#${dockId} .spin-controls-dock`);
     if (!dock) continue;
-    dock.querySelectorAll("button, input").forEach((el) => { el.disabled = locked; });
+    dock.querySelectorAll("button, input").forEach((el) => {
+      if (el.classList.contains("wheel-mute-btn")) return; // stays usable mid-spin, while ticks are playing
+      el.disabled = locked;
+    });
   }
   applySpinButtonLockState();
 }

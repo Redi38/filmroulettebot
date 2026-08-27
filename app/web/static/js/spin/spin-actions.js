@@ -8,7 +8,7 @@ function setDockLocked(locked) {
     const dock = document.querySelector(`#${dockId} .spin-controls-dock`);
     if (!dock) continue;
     dock.querySelectorAll("button, input").forEach((el) => {
-      if (el.classList.contains("wheel-mute-btn")) return; // stays usable mid-spin, while ticks are playing
+      if (el.classList.contains("wheel-mute-btn")) return;
       el.disabled = locked;
     });
   }
@@ -21,6 +21,20 @@ function applySpinButtonLockState() {
   for (const btn of [document.getElementById("random-spin-btn"), document.getElementById("spin-btn")]) {
     if (btn) btn.disabled = disabled;
   }
+}
+
+const RANDOM_CATEGORY_ORDER = ["movies", "cartoons", "series"];
+
+async function spinCategoryWheel(wheelWrapId, category) {
+  const labels = RANDOM_CATEGORY_ORDER.map((c) => (typeof CATS !== "undefined" && CATS[c]) || c);
+  let winnerIndex = RANDOM_CATEGORY_ORDER.indexOf(category);
+  if (winnerIndex === -1) winnerIndex = 0;
+
+  const canvas = buildWheel(wheelWrapId, labels);
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  const categorySpinMs = Math.max(1200, Math.round(spinSpeedSeconds * 1000 * 0.6));
+  await spinWheelTo(canvas, labels.length, winnerIndex, categorySpinMs);
+  await new Promise((r) => setTimeout(r, 550));
 }
 
 async function doWheelSpin(cat, isRandom) {
@@ -48,6 +62,11 @@ async function doWheelSpin(cat, isRandom) {
       body: JSON.stringify({weighted: isWeightedMode()}),
     });
     currentCardData = data;
+
+    if (isRandom) {
+      await spinCategoryWheel(wheelWrapId, data.category);
+    }
+
     const pool = (data.wheel_pool && data.wheel_pool.length >= 2) ? data.wheel_pool : [data.original_title, data.original_title];
     const weights = (data.wheel_pool && data.wheel_pool.length >= 2) ? data.wheel_weights : undefined;
     let winnerIndex = pool.indexOf(data.original_title);
@@ -56,6 +75,7 @@ async function doWheelSpin(cat, isRandom) {
     const canvas = buildWheel(wheelWrapId, pool, weights);
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
     await spinWheelTo(canvas, pool.length, winnerIndex, Math.round(spinSpeedSeconds * 1000));
+    if (typeof fireWheelConfetti === "function") fireWheelConfetti(wheelWrapId);
 
     wrap.classList.add("wheel-done");
     await new Promise((r) => setTimeout(r, 450));

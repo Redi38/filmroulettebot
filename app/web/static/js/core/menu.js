@@ -2,11 +2,6 @@ const sideMenu = document.getElementById("side-menu");
 const sideMenuScroll = document.getElementById("side-menu-scroll");
 const overlay = document.getElementById("overlay");
 
-// Short labels default to these hardcoded values so the menu paints
-// instantly on first load, then get silently refreshed from /api/categories
-// (same source app.keyboards.CAT_RU derives from) below — that way this file
-// doesn't hold its own independent copy of the Russian text that could drift
-// from the bot's.
 const MENU_LABELS = {movies: "Фильмы", cartoons: "Мульты", series: "Сериалы"};
 const REF_MENU_LABELS = {marvel: "Marvel", dc: "DC"};
 
@@ -15,7 +10,7 @@ const REF_MENU_LABELS = {marvel: "Marvel", dc: "DC"};
   try {
     data = await api("/api/categories");
   } catch (e) {
-    return; // offline/error: keep the hardcoded defaults above
+    return;
   }
   let changed = false;
   for (const labels of [MENU_LABELS, REF_MENU_LABELS]) {
@@ -155,6 +150,7 @@ function showSection() {
     renderWeightToggle("random-weight-toggle");
     renderSpinSpeedControl("random-spin-speed");
     renderWheelMuteToggle("random-mute-toggle");
+    renderSoundThemeToggle("random-sound-theme-toggle");
     resetWheelWraps();
     document.getElementById("random-spin-result").innerHTML = placeholderHtml("Нажми «Крутить», и рулетка выберет фильм, сериал или мультфильм 🍿");
     currentCardData = null;
@@ -164,6 +160,7 @@ function showSection() {
     renderWeightToggle("spin-weight-toggle");
     renderSpinSpeedControl("spin-spin-speed");
     renderWheelMuteToggle("spin-mute-toggle");
+    renderSoundThemeToggle("spin-sound-theme-toggle");
     resetWheelWraps();
     document.getElementById("spin-result").innerHTML = placeholderHtml("Нажми «Крутить», чтобы узнать, что посмотреть 🎬");
     currentCardData = null;

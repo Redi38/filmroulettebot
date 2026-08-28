@@ -80,6 +80,8 @@ make venv && source .venv/bin/activate
 make install-dev
 cp .env.example .env    # fill in TOKEN and TMDB_API_KEY
 
+make js-install && make js-build           # build the frontend JS bundle (once)
+
 uvicorn app.web.server:app --reload --port 8000   # the web app
 # and/or
 python main.py                                   # the Telegram bot
@@ -87,6 +89,25 @@ python main.py                                   # the Telegram bot
 
 `make help` lists the rest of the dev shortcuts (`make ci`, `make test`,
 `make lint`, `make typecheck` — the same checks CI runs).
+
+### Frontend JS build
+
+`app/web/static/js/` is plain, framework-free JS (no bundler-required
+import/export) — but the ~30 files under it are concatenated and minified
+into a single `dist/bundle.min.js` by [esbuild](https://esbuild.github.io/)
+so the page loads with one request instead of ~30. That's a build artifact
+(gitignored, built fresh in Docker), so if you're running the app directly
+with `python`/`uvicorn` rather than Docker, build it once after cloning and
+again after editing anything under `static/js`:
+
+```bash
+make js-install   # npm install (esbuild)
+make js-build     # one-off build
+make js-watch     # or: rebuild on every save
+```
+
+File order matters (plain scripts share globals, no module resolution) —
+it's defined once in `app/web/static/js/manifest.json`.
 
 ## Configuration (`.env`)
 

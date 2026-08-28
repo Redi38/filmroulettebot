@@ -10,7 +10,7 @@ DC ?= docker compose
 .DEFAULT_GOAL := help
 
 .PHONY: help venv install install-dev up web down logs ps \
-        ci compile lint typecheck test js-syntax clean
+        ci compile lint typecheck test js-syntax js-install js-build js-watch clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -65,7 +65,23 @@ test: ## CI stage: run the pytest suite
 	pytest -v
 
 js-syntax: ## CI stage: node --check every static JS file
-	find app/web/static/js -name "*.js" -print0 | xargs -0 -n1 node --check
+	find app/web/static/js -name "*.js" -not -path "*/dist/*" -print0 | xargs -0 -n1 node --check
+
+# --- Frontend JS bundle (esbuild, no framework) ------------------------
+# `python main.py` / `uvicorn` serve app/web/static/js/dist/bundle.min.js,
+# which is a build artifact (gitignored) — run js-build at least once
+# after cloning, and again after editing anything under static/js.
+# `make up`/`make web` (Docker) build it automatically; only needed here
+# for running the app directly with Python.
+
+js-install: ## Install JS build tooling (esbuild) via npm
+	npm install
+
+js-build: ## Bundle+minify app/web/static/js into dist/bundle.min.js
+	npm run build:js
+
+js-watch: ## Rebuild the JS bundle on every change (local dev)
+	npm run watch:js
 
 # --- Housekeeping -----------------------------------------------------
 

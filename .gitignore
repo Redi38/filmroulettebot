@@ -8,3 +8,5 @@ data/
 data/
 .pytest_cache/
 pytest-report.xml
+node_modules/
+app/web/static/js/dist/

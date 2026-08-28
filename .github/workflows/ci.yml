@@ -87,5 +87,11 @@ jobs:
       - name: Check every static JS file parses
         run: |
           set -e
-          find app/web/static/js -name "*.js" -print0 \
+          find app/web/static/js -name "*.js" -not -path "*/dist/*" -print0 \
             | xargs -0 -n1 node --check
+
+      - name: Bundle JS (esbuild) and check it parses
+        run: |
+          npm install
+          npm run build:js
+          node --check app/web/static/js/dist/bundle.min.js

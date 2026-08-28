@@ -1,17 +1,9 @@
 const API_TIMEOUT_MS = 15000;
 
-// Fetches with a hard timeout so a stalled connection can't hang forever.
-// Without this, a network stall left the caller's `await api(...)` never
-// resolving/rejecting, so any "Крутим…"/"Загрузка…" spinner (and buttons
-// disabled until the caller's `finally`) stayed stuck indefinitely — `finally`
-// only runs once the promise settles, and a bare fetch() with no
-// AbortController never settles on its own if the network just goes quiet.
 async function api(path, opts) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
 
-  // Let a caller pass its own signal (e.g. to cancel on navigation) without
-  // losing the timeout — abort on either one firing.
   const callerSignal = opts && opts.signal;
   if (callerSignal) {
     if (callerSignal.aborted) controller.abort();
@@ -146,7 +138,16 @@ function escapeHtml(s) {
   return d.innerHTML;
 }
 
-function escapeAttr(s) { return String(s).replace(/'/g, "\\'"); }
+function escapeAttr(s) {
+  return String(s)
+    .replace(/\\/g, "\\\\")
+    .replace(/'/g, "\\'")
+    .replace(/\n/g, "\\n")
+    .replace(/\r/g, "\\r")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
 
 function placeholderHtml(text, icon) {
   return `<div class="placeholder"><span class="big">${icon || "🎲"}</span>${text}</div>`;
@@ -169,9 +170,6 @@ async function fadeOut(el) {
 }
 function fadeIn(el) { requestAnimationFrame(() => { el.style.opacity = "1"; }); }
 
-// Optimistically removes a row from the DOM while the delete request is
-// in flight, then offers an inline "Undo" that re-adds it server-side.
-// Shared by list-items.js, upcoming-list.js, and showcase-row.js.
 function removeRowOptimistically(row, deleteRequest, onRemoved) {
   row.style.transition = "opacity .15s ease, transform .15s ease";
   row.style.opacity = "0";

@@ -148,6 +148,7 @@ function showSection() {
   if (currentView === "random") {
     renderSpinModeToggle("random-mode-toggle");
     renderWeightToggle("random-weight-toggle");
+    renderConfettiToggle("random-confetti-toggle");
     renderSpinSpeedControl("random-spin-speed");
     renderWheelMuteToggle("random-mute-toggle");
     renderSoundThemeToggle("random-sound-theme-toggle");
@@ -158,6 +159,7 @@ function showSection() {
   if (currentView === "spin") {
     renderSpinModeToggle("spin-mode-toggle");
     renderWeightToggle("spin-weight-toggle");
+    renderConfettiToggle("spin-confetti-toggle");
     renderSpinSpeedControl("spin-spin-speed");
     renderWheelMuteToggle("spin-mute-toggle");
     renderSoundThemeToggle("spin-sound-theme-toggle");

@@ -75,7 +75,9 @@ async function doWheelSpin(cat, isRandom) {
     const canvas = buildWheel(wheelWrapId, pool, weights);
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
     await spinWheelTo(canvas, pool.length, winnerIndex, Math.round(spinSpeedSeconds * 1000));
-    if (typeof fireWheelConfetti === "function") fireWheelConfetti(wheelWrapId);
+    if (typeof fireWheelConfetti === "function" && (typeof isConfettiEnabled !== "function" || isConfettiEnabled())) {
+      fireWheelConfetti(wheelWrapId);
+    }
 
     wrap.classList.add("wheel-done");
     await new Promise((r) => setTimeout(r, 450));

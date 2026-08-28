@@ -30,7 +30,7 @@ async function sequelYes() {
     const newTitle = await performSequel(currentCardData.category, currentCardData.original_title);
     markCurrentPickResolved({ type: "sequel", newTitle });
     resultEl().innerHTML =
-      `<div class="card"><div class="title">🔄 ${escapeHtml(currentCardData.original_title)} → ${escapeHtml(newTitle)}</div></div>`;
+      `<div class="card card-simple"><div class="title">🔄 ${escapeHtml(currentCardData.original_title)} → ${escapeHtml(newTitle)}</div></div>`;
     currentCardData = null;
   } catch (e) { showToast(e.message); }
 }
@@ -41,7 +41,7 @@ async function sequelNo() {
     await performDelete(currentCardData.category, currentCardData.original_title);
     markCurrentPickResolved({ type: "delete" });
     resultEl().innerHTML =
-      `<div class="card"><div class="title">❌ ${escapeHtml(currentCardData.original_title)} удалён</div></div>`;
+      `<div class="card card-simple"><div class="title">❌ ${escapeHtml(currentCardData.original_title)} удалён</div></div>`;
     currentCardData = null;
   } catch (e) { showToast(e.message); }
 }

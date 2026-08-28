@@ -10,7 +10,7 @@ DC ?= docker compose
 .DEFAULT_GOAL := help
 
 .PHONY: help venv install install-dev up web down logs ps \
-        ci ci-compile ci-lint ci-typecheck ci-test ci-js test lint typecheck compile js-syntax clean
+        ci compile lint typecheck test js-syntax clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -47,32 +47,25 @@ ps: ## Show status of the compose services
 
 # --- CI, runnable locally before you push -------------------------------
 # Same steps, same order, as .github/workflows/ci.yml's `test` and
-# `js-syntax` jobs -- run `make ci` for the full thing, or a `ci-*`
-# target to run just one stage.
+# `js-syntax` jobs -- run `make ci` for the full thing, or a target
+# below to run just one stage.
 
-ci: ci-compile ci-lint ci-typecheck ci-test ci-js ## Run every CI stage locally (compile + lint + typecheck + pytest + JS syntax)
+ci: compile lint typecheck test js-syntax ## Run every CI stage locally (compile + lint + typecheck + pytest + JS syntax)
 
-ci-compile: ## CI stage: byte-compile the whole project (fast syntax smoke test)
+compile: ## CI stage: byte-compile the whole project (fast syntax smoke test)
 	$(PYTHON) -m compileall -q app main.py
 
-ci-lint: ## CI stage: ruff lint (style, unused imports, import order)
+lint: ## CI stage: ruff lint (style, unused imports, import order)
 	ruff check app main.py tests
 
-ci-typecheck: ## CI stage: mypy static type checking
+typecheck: ## CI stage: mypy static type checking
 	mypy
 
-ci-test: ## CI stage: run the pytest suite
+test: ## CI stage: run the pytest suite
 	pytest -v
 
-ci-js: ## CI stage: node --check every static JS file
+js-syntax: ## CI stage: node --check every static JS file
 	find app/web/static/js -name "*.js" -print0 | xargs -0 -n1 node --check
-
-# Short aliases for the most-used ci-* stages
-test: ci-test ## Alias for ci-test
-lint: ci-lint ## Alias for ci-lint
-typecheck: ci-typecheck ## Alias for ci-typecheck
-compile: ci-compile ## Alias for ci-compile
-js-syntax: ci-js ## Alias for ci-js
 
 # --- Housekeeping -----------------------------------------------------
 

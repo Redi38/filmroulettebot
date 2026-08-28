@@ -27,7 +27,7 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
   gap: 10px; width: 100%;
   margin: 0 auto 16px;
 }
-.spin-dock-row .wheel-mute-wrap {
+.spin-dock-row .wheel-audio-controls {
   grid-column: 1; justify-self: end;
 }
 .spin-dock-row .spin-controls-dock {
@@ -56,8 +56,10 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
   .spin-dock-row ~ .spin-result { padding-top: 0; }
 
   .spin-controls-dock .showcase-filter-btn {
-    padding: 11px 22px; font-size: 1.05rem; border-radius: 999px;
+    padding: 11px 8px; font-size: 1.05rem; border-radius: 999px;
+    width: 176px;
   }
+  .confetti-toggle-wrap { width: 358px; }
   .spin-controls-dock .spin-speed-control { gap: 10px; }
   .spin-controls-dock .spin-speed-control label,
   .spin-controls-dock .spin-speed-control .spin-speed-unit { font-size: 1rem; }
@@ -94,21 +96,32 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
 
 .spin-mode-toggle-wrap { display: flex; justify-content: center; margin: 0; }
 .spin-mode-toggle { display: inline-flex; gap: 6px; }
+.spin-controls-dock .showcase-filter-btn {
+  width: 128px; text-align: center;
+  padding-left: 6px; padding-right: 6px;
+  overflow: hidden; text-overflow: ellipsis;
+}
 
 .spin-speed-wrap { display: none; justify-content: center; margin: 0; }
 .spin-speed-wrap.visible { display: flex; }
 .spin-weight-wrap { display: none; justify-content: center; margin: 0; }
 .spin-weight-wrap.visible { display: flex; }
-.spin-sound-theme-wrap { display: none; justify-content: center; margin: 0; }
-.spin-sound-theme-wrap.visible { display: flex; }
 
-.wheel-mute-wrap {
-  display: none; justify-content: center; margin: 0;
+.confetti-toggle-wrap {
+  display: none; justify-content: flex-start; margin: 0 auto;
+  width: 262px;
+}
+.confetti-toggle-wrap.visible { display: flex; }
+
+.wheel-audio-controls {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
   flex-shrink: 0;
   opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
 }
+body.dock-ready .wheel-audio-controls { opacity: 1; pointer-events: auto; }
+
+.wheel-mute-wrap { display: none; justify-content: center; margin: 0; }
 .wheel-mute-wrap.visible { display: flex; }
-body.dock-ready .wheel-mute-wrap { opacity: 1; pointer-events: auto; }
 .wheel-mute-btn {
   display: flex; align-items: center; justify-content: center;
   width: 40px; height: 40px; padding: 0;
@@ -120,8 +133,44 @@ body.dock-ready .wheel-mute-wrap { opacity: 1; pointer-events: auto; }
 .wheel-mute-btn:hover { border-color: var(--primary); }
 .wheel-mute-btn.muted { color: var(--muted); }
 .wheel-mute-btn:disabled { opacity: 0.5; cursor: default; }
+
+.sound-theme-wrap { display: none; justify-content: center; margin: 0; position: relative; }
+.sound-theme-wrap.visible { display: flex; }
+.sound-theme-dropdown { position: relative; }
+.sound-theme-btn {
+  display: flex; align-items: center; justify-content: center; gap: 0;
+  width: 40px; height: 40px; padding: 0;
+  background: var(--bg-c); border: 1px solid var(--border); border-radius: 999px;
+  color: var(--text); cursor: pointer; font-family: inherit; font-size: 0.85rem; font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.sound-theme-btn-label { display: none; }
+.sound-theme-btn:hover { border-color: var(--primary); }
+.sound-theme-chevron { display: flex; align-items: center; transition: transform 0.15s ease; }
+.sound-theme-chevron svg { width: 14px; height: 14px; display: block; }
+.sound-theme-dropdown.open .sound-theme-chevron { transform: rotate(180deg); }
+.sound-theme-dropdown.open .sound-theme-btn { border-color: var(--primary); }
+.sound-theme-menu {
+  display: none; flex-direction: column;
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 10;
+  min-width: 140px; padding: 6px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+}
+.sound-theme-dropdown.open .sound-theme-menu { display: flex; }
+.sound-theme-item {
+  display: block; width: 100%; text-align: left;
+  padding: 8px 10px; border-radius: 8px; border: none;
+  background: transparent; color: var(--text); cursor: pointer;
+  font-family: inherit; font-size: 0.85rem; font-weight: 600; white-space: nowrap;
+}
+.sound-theme-item:hover { background: var(--bg-c); }
+.sound-theme-item.active { color: var(--primary); }
+
 @media (min-width: 900px) {
-  .wheel-mute-wrap {
+  .wheel-audio-controls {
+    flex-direction: row;
     position: fixed;
     top: calc(var(--header-h) + 14px); left: calc(var(--sidebar-w) + 16px);
     margin: 0;
@@ -132,6 +181,11 @@ body.dock-ready .wheel-mute-wrap { opacity: 1; pointer-events: auto; }
     width: 46px; height: 46px;
   }
   .wheel-mute-btn svg { width: 23px; height: 23px; }
+  .sound-theme-btn {
+    width: auto; height: 46px; font-size: 1.05rem; padding: 0 16px; gap: 6px;
+  }
+  .sound-theme-btn-label { display: inline; }
+  .sound-theme-item { font-size: 1.05rem; padding: 10px 14px; }
 }
 .spin-speed-control {
   display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;

@@ -67,6 +67,8 @@ function renderSpinModeToggle(containerId) {
       renderSpinModeToggle("spin-mode-toggle");
       renderWeightToggle("random-weight-toggle");
       renderWeightToggle("spin-weight-toggle");
+      renderConfettiToggle("random-confetti-toggle");
+      renderConfettiToggle("spin-confetti-toggle");
       renderSpinSpeedControl("random-spin-speed");
       renderSpinSpeedControl("spin-spin-speed");
       renderWheelMuteToggle("random-mute-toggle");
@@ -120,6 +122,48 @@ function renderWeightToggle(containerId) {
       if (spinMode === "wheel" && currentView === "spin") showIdleWheel(currentCat);
     },
   });
+}
+
+// ---- confetti effect ---------------------------------------------------
+const CONFETTI_ENABLED_KEY = "filmroulette_confetti_enabled";
+function loadConfettiEnabled() {
+  try {
+    const v = localStorage.getItem(CONFETTI_ENABLED_KEY);
+    return v === null ? true : v === "1";
+  } catch { return true; }
+}
+function saveConfettiEnabled(v) {
+  try { localStorage.setItem(CONFETTI_ENABLED_KEY, v ? "1" : "0"); } catch {}
+}
+let confettiEnabled = loadConfettiEnabled();
+function isConfettiEnabled() { return confettiEnabled; }
+
+function renderConfettiToggle(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = "";
+  el.className = "confetti-toggle-wrap" + (spinMode === "wheel" ? " visible" : "");
+
+  const outer = document.createElement("div");
+  outer.className = "spin-mode-toggle-wrap";
+  const row = document.createElement("div");
+  row.className = "spin-mode-toggle";
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "showcase-filter-btn" + (confettiEnabled ? " active" : "");
+  btn.textContent = "🎊 Конфетти";
+  btn.setAttribute("aria-pressed", confettiEnabled ? "true" : "false");
+  btn.onclick = () => {
+    confettiEnabled = !confettiEnabled;
+    saveConfettiEnabled(confettiEnabled);
+    renderConfettiToggle("random-confetti-toggle");
+    renderConfettiToggle("spin-confetti-toggle");
+  };
+
+  row.appendChild(btn);
+  outer.appendChild(row);
+  el.appendChild(outer);
 }
 
 // ---- wheel sound mute -------------------------------------------------------
@@ -187,19 +231,83 @@ function saveWheelSoundTheme(v) {
 let wheelSoundTheme = loadWheelSoundTheme();
 function getWheelSoundTheme() { return wheelSoundTheme; }
 
-function renderSoundThemeToggle(containerId) {
-  renderChoiceToggle(containerId, {
-    options: WHEEL_SOUND_THEME_OPTIONS,
-    value: wheelSoundTheme,
-    containerClass: "spin-sound-theme-wrap",
-    visible: spinMode === "wheel",
-    onChange: (value) => {
-      wheelSoundTheme = value;
-      saveWheelSoundTheme(value);
-      renderSoundThemeToggle("random-sound-theme-toggle");
-      renderSoundThemeToggle("spin-sound-theme-toggle");
-    },
+const SOUND_THEME_CHEVRON_SVG =
+  '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">' +
+  '<polyline points="6 9 12 15 18 9"></polyline>' +
+  "</svg>";
+
+function closeSoundThemeMenus(exceptWrap) {
+  document.querySelectorAll(".sound-theme-dropdown.open").forEach((wrap) => {
+    if (wrap === exceptWrap) return;
+    wrap.classList.remove("open");
+    const btn = wrap.querySelector(".sound-theme-btn");
+    if (btn) btn.setAttribute("aria-expanded", "false");
   });
+}
+document.addEventListener("click", () => closeSoundThemeMenus());
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeSoundThemeMenus();
+});
+
+function renderSoundThemeToggle(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = "";
+  el.className = "sound-theme-wrap" + (spinMode === "wheel" ? " visible" : "");
+
+  const current =
+    WHEEL_SOUND_THEME_OPTIONS.find(([val]) => val === wheelSoundTheme) ||
+    WHEEL_SOUND_THEME_OPTIONS[0];
+
+  const wrap = document.createElement("div");
+  wrap.className = "sound-theme-dropdown";
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "sound-theme-btn";
+  btn.setAttribute("aria-haspopup", "listbox");
+  btn.setAttribute("aria-expanded", "false");
+  btn.title = "Тема звука колеса";
+  btn.innerHTML =
+    `<span class="sound-theme-btn-label">${current[1]}</span>` +
+    `<span class="sound-theme-chevron">${SOUND_THEME_CHEVRON_SVG}</span>`;
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    const isOpen = wrap.classList.contains("open");
+    closeSoundThemeMenus();
+    if (!isOpen) {
+      wrap.classList.add("open");
+      btn.setAttribute("aria-expanded", "true");
+    }
+  };
+
+  const menu = document.createElement("div");
+  menu.className = "sound-theme-menu";
+  menu.setAttribute("role", "listbox");
+  menu.onclick = (e) => e.stopPropagation();
+
+  for (const [val, label] of WHEEL_SOUND_THEME_OPTIONS) {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "sound-theme-item" + (val === wheelSoundTheme ? " active" : "");
+    item.textContent = label;
+    item.setAttribute("role", "option");
+    item.setAttribute("aria-selected", val === wheelSoundTheme ? "true" : "false");
+    item.onclick = () => {
+      closeSoundThemeMenus();
+      if (wheelSoundTheme !== val) {
+        wheelSoundTheme = val;
+        saveWheelSoundTheme(val);
+        renderSoundThemeToggle("random-sound-theme-toggle");
+        renderSoundThemeToggle("spin-sound-theme-toggle");
+      }
+    };
+    menu.appendChild(item);
+  }
+
+  wrap.appendChild(btn);
+  wrap.appendChild(menu);
+  el.appendChild(wrap);
 }
 
 // ---- spin speed --------------------------------------------------------------
@@ -207,6 +315,7 @@ const SPIN_SPEED_KEY = "filmroulette_spin_speed";
 const SPIN_SPEED_MIN = 1;
 const SPIN_SPEED_MAX = 60;
 const SPIN_SPEED_DEFAULT = 4;
+const SPIN_SPEED_STEP = 0.1;
 function loadSpinSpeed() {
   try {
     const v = parseFloat(localStorage.getItem(SPIN_SPEED_KEY));
@@ -219,6 +328,14 @@ function saveSpinSpeed(v) {
 }
 let spinSpeedSeconds = loadSpinSpeed();
 
+function clampSpinSpeed(v) {
+  if (!Number.isFinite(v)) return spinSpeedSeconds;
+  return Math.min(SPIN_SPEED_MAX, Math.max(SPIN_SPEED_MIN, v));
+}
+function formatSpinSpeed(v) {
+  return String(Math.round(v * 10) / 10);
+}
+
 function renderSpinSpeedControl(containerId) {
   const el = document.getElementById(containerId);
   if (!el) return;
@@ -228,36 +345,35 @@ function renderSpinSpeedControl(containerId) {
   const control = document.createElement("div");
   control.className = "spin-speed-control";
 
-  const label = document.createElement("span");
-  label.className = "spin-speed-label";
-  label.textContent = "⏱️";
-  control.appendChild(label);
+  const label = document.createElement("label");
+  label.textContent = "⏱ Скорость колеса";
 
   const input = document.createElement("input");
-  input.type = "range";
+  input.type = "number";
+  input.inputMode = "decimal";
   input.min = String(SPIN_SPEED_MIN);
   input.max = String(SPIN_SPEED_MAX);
-  input.step = "0.5";
-  input.value = String(spinSpeedSeconds);
-  input.className = "spin-speed-slider";
-
-  const value = document.createElement("span");
-  value.className = "spin-speed-value";
-  value.textContent = `${spinSpeedSeconds}с`;
-
-  input.oninput = () => {
-    spinSpeedSeconds = parseFloat(input.value);
-    value.textContent = `${spinSpeedSeconds}с`;
-  };
-  input.onchange = () => {
-    saveSpinSpeed(spinSpeedSeconds);
-  };
-
-  control.appendChild(input);
-  control.appendChild(value);
+  input.step = String(SPIN_SPEED_STEP);
+  input.value = formatSpinSpeed(spinSpeedSeconds);
 
   const unit = document.createElement("span");
   unit.className = "spin-speed-unit";
+  unit.textContent = "сек";
+
+  const commit = () => {
+    const v = clampSpinSpeed(parseFloat(input.value.replace(",", ".")));
+    spinSpeedSeconds = v;
+    input.value = formatSpinSpeed(v);
+    saveSpinSpeed(v);
+  };
+  input.onchange = commit;
+  input.onblur = commit;
+  input.onkeydown = (e) => {
+    if (e.key === "Enter") { commit(); input.blur(); }
+  };
+
+  control.appendChild(label);
+  control.appendChild(input);
   control.appendChild(unit);
   el.appendChild(control);
 }

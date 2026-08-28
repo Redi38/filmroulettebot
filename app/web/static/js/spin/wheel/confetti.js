@@ -15,30 +15,37 @@ function fireWheelConfetti(wrapId) {
 
   const canvas = document.createElement("canvas");
   canvas.className = "wheel-confetti-canvas";
+  canvas.style.position = "fixed";
+  canvas.style.left = `${rect.left}px`;
+  canvas.style.top = `${rect.top}px`;
+  canvas.style.width = `${rect.width}px`;
+  canvas.style.height = `${rect.height}px`;
+  canvas.style.pointerEvents = "none";
+  canvas.style.zIndex = "9999";
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   canvas.width = rect.width * dpr;
   canvas.height = rect.height * dpr;
-  wrap.appendChild(canvas);
+  document.body.appendChild(canvas);
 
   const ctx = canvas.getContext("2d");
   ctx.scale(dpr, dpr);
 
   const cx = rect.width / 2;
   const cy = rect.height * 0.42;
-  const count = Math.round(Math.min(220, Math.max(110, rect.width / 2.2)));
-  const gravity = 0.12;
-  const duration = 3200;
-  const fadeFrom = duration * 0.62;
+  const count = Math.round(Math.min(280, Math.max(150, rect.width / 1.8)));
+  const gravity = 0.1;
+  const duration = 5200;
+  const fadeFrom = duration * 0.72;
 
   const particles = Array.from({ length: count }, () => {
     const angle = Math.random() * Math.PI * 2;
-    const speed = 4 + Math.random() * 8;
+    const speed = 4 + Math.random() * 9;
     return {
       x: cx, y: cy,
       vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed - 3,
+      vy: Math.sin(angle) * speed - 3.5,
       drag: 0.985 + Math.random() * 0.01,
-      size: 5 + Math.random() * 7,
+      size: 6 + Math.random() * 8,
       color: WHEEL_CONFETTI_COLORS[Math.floor(Math.random() * WHEEL_CONFETTI_COLORS.length)],
       rot: Math.random() * Math.PI * 2,
       vr: (Math.random() - 0.5) * 0.5,

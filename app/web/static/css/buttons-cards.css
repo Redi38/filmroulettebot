@@ -59,8 +59,11 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
 .sequel-prompt { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); text-align: center; }
 .sequel-prompt p { margin: 0 0 10px; color: var(--muted); }
 
+.card-simple { display: block !important; }
+.card-simple .title { grid-column: unset; }
+
 @container (min-width: 560px) {
-  #random-spin-result .card, #spin-result .card, #list-featured .card, #poster-info-content .card {
+  #random-spin-result .card:has(.poster), #spin-result .card:has(.poster), #list-featured .card:has(.poster), #poster-info-content .card:has(.poster) {
     display: grid; grid-template-columns: 220px 1fr; column-gap: clamp(16px, 2.6vh, 26px);
     align-items: start; padding: clamp(16px, 2.6vh, 30px);
   }

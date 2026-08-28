@@ -6,6 +6,22 @@ const SPIN_COOLDOWN_SECONDS = 1.5;
 let spinCooldownUntil = 0;
 let spinCooldownTimer = null;
 
+// ---- shared dock render helpers ------------------------------------------
+const DOCK_PREFIXES = ["random", "spin"];
+
+function renderAllDockControls(prefix) {
+  renderSpinModeToggle(`${prefix}-mode-toggle`);
+  renderWeightToggle(`${prefix}-weight-toggle`);
+  renderConfettiToggle(`${prefix}-confetti-toggle`);
+  renderSpinSpeedControl(`${prefix}-spin-speed`);
+  renderWheelMuteToggle(`${prefix}-mute-toggle`);
+  renderSoundThemeToggle(`${prefix}-sound-theme-toggle`);
+}
+
+function renderControlOnAllDocks(renderFn, suffix) {
+  for (const prefix of DOCK_PREFIXES) renderFn(`${prefix}-${suffix}`);
+}
+
 // ---- generic toggle renderers -------------------------------------------
 function renderChoiceToggle(containerId, { options, value, onChange, containerClass, visible }) {
   const el = document.getElementById(containerId);
@@ -46,13 +62,11 @@ function renderIconToggle(containerId, { containerClass, visible, active, btnCla
 // ---- spin mode (classic / wheel) -----------------------------------------
 const SPIN_MODE_KEY = "filmroulette_spin_mode";
 function loadSpinMode() {
-  try {
-    const v = localStorage.getItem(SPIN_MODE_KEY);
-    return v === "wheel" ? "wheel" : "classic";
-  } catch { return "classic"; }
+  const v = getLS(SPIN_MODE_KEY);
+  return v === "wheel" ? "wheel" : "classic";
 }
 function saveSpinMode(mode) {
-  try { localStorage.setItem(SPIN_MODE_KEY, mode); } catch {}
+  setLS(SPIN_MODE_KEY, mode);
 }
 let spinMode = loadSpinMode();
 
@@ -63,18 +77,7 @@ function renderSpinModeToggle(containerId) {
     onChange: (value) => {
       spinMode = value;
       saveSpinMode(value);
-      renderSpinModeToggle("random-mode-toggle");
-      renderSpinModeToggle("spin-mode-toggle");
-      renderWeightToggle("random-weight-toggle");
-      renderWeightToggle("spin-weight-toggle");
-      renderConfettiToggle("random-confetti-toggle");
-      renderConfettiToggle("spin-confetti-toggle");
-      renderSpinSpeedControl("random-spin-speed");
-      renderSpinSpeedControl("spin-spin-speed");
-      renderWheelMuteToggle("random-mute-toggle");
-      renderWheelMuteToggle("spin-mute-toggle");
-      renderSoundThemeToggle("random-sound-theme-toggle");
-      renderSoundThemeToggle("spin-sound-theme-toggle");
+      for (const prefix of DOCK_PREFIXES) renderAllDockControls(prefix);
       resetWheelWraps();
       if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
 
@@ -96,10 +99,10 @@ function renderSpinModeToggle(containerId) {
 // ---- weighted mode ---------------------------------------------------------
 const WEIGHTED_MODE_KEY = "filmroulette_weighted_spin";
 function loadWeightedMode() {
-  try { return localStorage.getItem(WEIGHTED_MODE_KEY) === "1"; } catch { return false; }
+  return getLS(WEIGHTED_MODE_KEY) === "1";
 }
 function saveWeightedMode(v) {
-  try { localStorage.setItem(WEIGHTED_MODE_KEY, v ? "1" : "0"); } catch {}
+  setLS(WEIGHTED_MODE_KEY, v ? "1" : "0");
 }
 let weightedMode = loadWeightedMode();
 function isWeightedMode() { return weightedMode; }
@@ -113,8 +116,7 @@ function renderWeightToggle(containerId) {
     onChange: (value) => {
       weightedMode = value;
       saveWeightedMode(value);
-      renderWeightToggle("random-weight-toggle");
-      renderWeightToggle("spin-weight-toggle");
+      renderControlOnAllDocks(renderWeightToggle, "weight-toggle");
       resetWheelWraps();
       if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
 
@@ -127,13 +129,11 @@ function renderWeightToggle(containerId) {
 // ---- confetti effect ---------------------------------------------------
 const CONFETTI_ENABLED_KEY = "filmroulette_confetti_enabled";
 function loadConfettiEnabled() {
-  try {
-    const v = localStorage.getItem(CONFETTI_ENABLED_KEY);
-    return v === null ? true : v === "1";
-  } catch { return true; }
+  const v = getLS(CONFETTI_ENABLED_KEY);
+  return v === null ? true : v === "1";
 }
 function saveConfettiEnabled(v) {
-  try { localStorage.setItem(CONFETTI_ENABLED_KEY, v ? "1" : "0"); } catch {}
+  setLS(CONFETTI_ENABLED_KEY, v ? "1" : "0");
 }
 let confettiEnabled = loadConfettiEnabled();
 function isConfettiEnabled() { return confettiEnabled; }
@@ -157,8 +157,7 @@ function renderConfettiToggle(containerId) {
   btn.onclick = () => {
     confettiEnabled = !confettiEnabled;
     saveConfettiEnabled(confettiEnabled);
-    renderConfettiToggle("random-confetti-toggle");
-    renderConfettiToggle("spin-confetti-toggle");
+    renderControlOnAllDocks(renderConfettiToggle, "confetti-toggle");
   };
 
   row.appendChild(btn);
@@ -169,18 +168,17 @@ function renderConfettiToggle(containerId) {
 // ---- wheel sound mute -------------------------------------------------------
 const WHEEL_MUTED_KEY = "filmroulette_wheel_muted";
 function loadWheelMuted() {
-  try { return localStorage.getItem(WHEEL_MUTED_KEY) === "1"; } catch { return false; }
+  return getLS(WHEEL_MUTED_KEY) === "1";
 }
 function saveWheelMuted(v) {
-  try { localStorage.setItem(WHEEL_MUTED_KEY, v ? "1" : "0"); } catch {}
+  setLS(WHEEL_MUTED_KEY, v ? "1" : "0");
 }
 let wheelMuted = loadWheelMuted();
 function isWheelMuted() { return wheelMuted; }
 function setWheelMuted(v) {
   wheelMuted = v;
   saveWheelMuted(v);
-  renderWheelMuteToggle("random-mute-toggle");
-  renderWheelMuteToggle("spin-mute-toggle");
+  renderControlOnAllDocks(renderWheelMuteToggle, "mute-toggle");
 }
 function toggleWheelMuted() { setWheelMuted(!wheelMuted); }
 
@@ -220,13 +218,11 @@ const WHEEL_SOUND_THEME_OPTIONS = [
   ["quiet", "🤫 Тихо"],
 ];
 function loadWheelSoundTheme() {
-  try {
-    const v = localStorage.getItem(WHEEL_SOUND_THEME_KEY);
-    return WHEEL_SOUND_THEME_OPTIONS.some(([val]) => val === v) ? v : "classic";
-  } catch { return "classic"; }
+  const v = getLS(WHEEL_SOUND_THEME_KEY);
+  return WHEEL_SOUND_THEME_OPTIONS.some(([val]) => val === v) ? v : "classic";
 }
 function saveWheelSoundTheme(v) {
-  try { localStorage.setItem(WHEEL_SOUND_THEME_KEY, v); } catch {}
+  setLS(WHEEL_SOUND_THEME_KEY, v);
 }
 let wheelSoundTheme = loadWheelSoundTheme();
 function getWheelSoundTheme() { return wheelSoundTheme; }
@@ -298,8 +294,7 @@ function renderSoundThemeToggle(containerId) {
       if (wheelSoundTheme !== val) {
         wheelSoundTheme = val;
         saveWheelSoundTheme(val);
-        renderSoundThemeToggle("random-sound-theme-toggle");
-        renderSoundThemeToggle("spin-sound-theme-toggle");
+        renderControlOnAllDocks(renderSoundThemeToggle, "sound-theme-toggle");
       }
     };
     menu.appendChild(item);
@@ -317,14 +312,12 @@ const SPIN_SPEED_MAX = 60;
 const SPIN_SPEED_DEFAULT = 4;
 const SPIN_SPEED_STEP = 0.1;
 function loadSpinSpeed() {
-  try {
-    const v = parseFloat(localStorage.getItem(SPIN_SPEED_KEY));
-    if (Number.isFinite(v) && v >= SPIN_SPEED_MIN && v <= SPIN_SPEED_MAX) return v;
-  } catch {}
+  const v = parseFloat(getLS(SPIN_SPEED_KEY));
+  if (Number.isFinite(v) && v >= SPIN_SPEED_MIN && v <= SPIN_SPEED_MAX) return v;
   return SPIN_SPEED_DEFAULT;
 }
 function saveSpinSpeed(v) {
-  try { localStorage.setItem(SPIN_SPEED_KEY, String(v)); } catch {}
+  setLS(SPIN_SPEED_KEY, String(v));
 }
 let spinSpeedSeconds = loadSpinSpeed();
 

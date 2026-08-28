@@ -6,15 +6,12 @@ const STATE_KEY = "filmroulette_state";
 const RESOLVED_HIST_KEY = "filmroulette_resolved_history";
 
 function loadState() {
-  try {
-    const raw = localStorage.getItem(STATE_KEY);
-    if (!raw) return {cat: "movies", view: "home"};
-    const s = JSON.parse(raw);
-    return {cat: s.cat || "movies", view: s.view || "home"};
-  } catch { return {cat: "movies", view: "home"}; }
+  const s = getLSJSON(STATE_KEY, null);
+  if (!s) return {cat: "movies", view: "home"};
+  return {cat: s.cat || "movies", view: s.view || "home"};
 }
 function saveState() {
-  try { localStorage.setItem(STATE_KEY, JSON.stringify({cat: currentCat, view: currentView})); } catch {}
+  setLSJSON(STATE_KEY, {cat: currentCat, view: currentView});
 }
 
 const initial = loadState();

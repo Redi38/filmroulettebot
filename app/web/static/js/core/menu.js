@@ -146,23 +146,13 @@ function showSection() {
 
   if (currentView === "home") loadHome();
   if (currentView === "random") {
-    renderSpinModeToggle("random-mode-toggle");
-    renderWeightToggle("random-weight-toggle");
-    renderConfettiToggle("random-confetti-toggle");
-    renderSpinSpeedControl("random-spin-speed");
-    renderWheelMuteToggle("random-mute-toggle");
-    renderSoundThemeToggle("random-sound-theme-toggle");
+    renderAllDockControls("random");
     resetWheelWraps();
     document.getElementById("random-spin-result").innerHTML = placeholderHtml("Нажми «Крутить», и рулетка выберет фильм, сериал или мультфильм 🍿");
     currentCardData = null;
   }
   if (currentView === "spin") {
-    renderSpinModeToggle("spin-mode-toggle");
-    renderWeightToggle("spin-weight-toggle");
-    renderConfettiToggle("spin-confetti-toggle");
-    renderSpinSpeedControl("spin-spin-speed");
-    renderWheelMuteToggle("spin-mute-toggle");
-    renderSoundThemeToggle("spin-sound-theme-toggle");
+    renderAllDockControls("spin");
     resetWheelWraps();
     document.getElementById("spin-result").innerHTML = placeholderHtml("Нажми «Крутить», чтобы узнать, что посмотреть 🎬");
     currentCardData = null;

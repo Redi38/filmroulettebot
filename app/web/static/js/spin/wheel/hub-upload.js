@@ -2,17 +2,10 @@
 // Stored client-side (localStorage) — no server upload endpoint needed.
 const WHEEL_HUB_STORAGE_KEY = "wheelHubImage";
 function getWheelHubImage() {
-  try {
-    return localStorage.getItem(WHEEL_HUB_STORAGE_KEY) || WHEEL_HUB_GIF_URL || "";
-  } catch (e) {
-    return WHEEL_HUB_GIF_URL || "";
-  }
+  return getLS(WHEEL_HUB_STORAGE_KEY, "") || WHEEL_HUB_GIF_URL || "";
 }
 function setWheelHubImage(url) {
-  try {
-    if (url) localStorage.setItem(WHEEL_HUB_STORAGE_KEY, url);
-    else localStorage.removeItem(WHEEL_HUB_STORAGE_KEY);
-  } catch (e) { }
+  setLS(WHEEL_HUB_STORAGE_KEY, url || null);
   document.querySelectorAll(".wheel-hub-media").forEach((hub) => {
     hub.classList.remove("wheel-hub-empty");
     hub.querySelector("img")?.remove();

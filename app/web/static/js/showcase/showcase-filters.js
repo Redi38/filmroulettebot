@@ -4,15 +4,12 @@
 
 const SHOWCASE_FILTER_KEY = "filmroulette_showcase_filters";
 function loadShowcaseFilters() {
-  try {
-    const raw = localStorage.getItem(SHOWCASE_FILTER_KEY);
-    if (!raw) return {type: "all", added: "all"};
-    const f = JSON.parse(raw);
-    return {type: f.type || "all", added: f.added || "all"};
-  } catch { return {type: "all", added: "all"}; }
+  const f = getLSJSON(SHOWCASE_FILTER_KEY, null);
+  if (!f) return {type: "all", added: "all"};
+  return {type: f.type || "all", added: f.added || "all"};
 }
 function saveShowcaseFilters() {
-  try { localStorage.setItem(SHOWCASE_FILTER_KEY, JSON.stringify(showcaseFilters)); } catch {}
+  setLSJSON(SHOWCASE_FILTER_KEY, showcaseFilters);
 }
 let showcaseFilters = loadShowcaseFilters();
 
@@ -64,7 +61,7 @@ function simpleAddedFilterGroup(storageKey, currentValue, onChange) {
     btn.className = "showcase-filter-btn" + (currentValue === value ? " active" : "");
     btn.textContent = label;
     btn.onclick = () => {
-      try { localStorage.setItem(storageKey, value); } catch {}
+      setLS(storageKey, value);
       onChange(value);
     };
     row.appendChild(btn);
@@ -73,5 +70,5 @@ function simpleAddedFilterGroup(storageKey, currentValue, onChange) {
   return wrap;
 }
 function loadSimpleAddedFilter(storageKey) {
-  try { return localStorage.getItem(storageKey) || "all"; } catch { return "all"; }
+  return getLS(storageKey, "all");
 }

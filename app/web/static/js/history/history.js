@@ -1,12 +1,10 @@
 function loadResolvedMap() {
-  try {
-    const raw = JSON.parse(localStorage.getItem(RESOLVED_HIST_KEY) || "{}");
-    if (Array.isArray(raw)) return {};
-    return raw && typeof raw === "object" ? raw : {};
-  } catch { return {}; }
+  const raw = getLSJSON(RESOLVED_HIST_KEY, {});
+  if (Array.isArray(raw)) return {};
+  return raw && typeof raw === "object" ? raw : {};
 }
 function saveResolvedMap(map) {
-  try { localStorage.setItem(RESOLVED_HIST_KEY, JSON.stringify(map)); } catch {}
+  setLSJSON(RESOLVED_HIST_KEY, map);
 }
 function histKey(e) { return `${e.category}|${e.title}|${e.timestamp}`; }
 

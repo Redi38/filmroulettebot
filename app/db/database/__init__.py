@@ -31,6 +31,7 @@ from .items import (
     rename_item_by_id,
 )
 from .schema import init_db
+from .settings import get_all_settings, get_bool_setting, get_setting, set_setting
 from .skipped import SKIP_SCOPES, add_skipped, get_skipped, remove_skipped
 from .upcoming import (
     add_upcoming_movie,
@@ -77,4 +78,8 @@ __all__ = [
     "get_skipped",
     "add_skipped",
     "remove_skipped",
+    "get_setting",
+    "set_setting",
+    "get_bool_setting",
+    "get_all_settings",
 ]

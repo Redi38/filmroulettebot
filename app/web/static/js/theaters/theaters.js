@@ -8,15 +8,58 @@ let theatersUpcomingPage = 1;
 const THEATERS_FILTER_KEY = "filmroulette_theaters_filter";
 let theatersAddedFilter = loadSimpleAddedFilter(THEATERS_FILTER_KEY);
 
+let theatersHideLocalOnly = null;
+
+function appendGlobalOnlyToggle(row) {
+  const btn = document.createElement("button");
+  btn.className = "showcase-filter-btn" + (theatersHideLocalOnly ? " active" : "");
+  btn.textContent = "Только мировой прокат";
+  btn.disabled = theatersHideLocalOnly === null;
+  btn.onclick = async () => {
+    const next = !theatersHideLocalOnly;
+    theatersHideLocalOnly = next;
+    renderTheatersFilters();
+    try {
+      await api("/api/settings/hide_local_only_afisha", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ value: next }),
+      });
+    } catch (e) {
+      theatersHideLocalOnly = !next;
+      renderTheatersFilters();
+      return;
+    }
+    theatersNowPlayingPage = 1;
+    theatersUpcomingPage = 1;
+    loadTheaters();
+  };
+  row.appendChild(btn);
+}
+
+async function ensureTheatersSettingsLoaded() {
+  if (theatersHideLocalOnly !== null) return;
+  try {
+    const data = await api("/api/settings");
+    theatersHideLocalOnly = !!(data.hide_local_only_afisha === "1");
+  } catch (e) {
+    theatersHideLocalOnly = false;
+  }
+  renderTheatersFilters();
+}
+
 function renderTheatersFilters() {
   const panel = ensureFilterPanel("theaters-filters", "theaters-section", "theaters-container");
-  panel.appendChild(simpleAddedFilterGroup(THEATERS_FILTER_KEY, theatersAddedFilter, (value) => {
+  const addedGroup = simpleAddedFilterGroup(THEATERS_FILTER_KEY, theatersAddedFilter, (value) => {
     theatersAddedFilter = value;
     theatersNowPlayingPage = 1;
     theatersUpcomingPage = 1;
     renderTheatersFilters();
     loadTheaters();
-  }));
+  });
+  appendGlobalOnlyToggle(addedGroup.querySelector(".showcase-filter-options"));
+  panel.appendChild(addedGroup);
+  if (theatersHideLocalOnly === null) ensureTheatersSettingsLoaded();
 }
 
 async function loadTheaters() {

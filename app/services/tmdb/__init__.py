@@ -17,6 +17,7 @@ from .client import close_client
 from .details import get_details_by_id
 from .movies import (
     check_upcoming_released,
+    filter_globally_released,
     get_movie_info,
     get_now_playing,
     get_upcoming_theatrical,
@@ -38,6 +39,7 @@ __all__ = [
     "close_client",
     "get_details_by_id",
     "check_upcoming_released",
+    "filter_globally_released",
     "get_movie_info",
     "get_now_playing",
     "get_upcoming_theatrical",

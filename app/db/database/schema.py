@@ -115,6 +115,11 @@ async def init_db() -> None:
                 title TEXT NOT NULL COLLATE NOCASE,
                 PRIMARY KEY (scope, title)
             );
+
+            CREATE TABLE IF NOT EXISTS app_settings (
+                key   TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            );
             """
         )
         await db.commit()

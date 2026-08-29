@@ -239,6 +239,10 @@ class SkipBody(BaseModel):
     title: str
 
 
+class SettingBody(BaseModel):
+    value: bool
+
+
 class ResolveBody(BaseModel):
     category: str
     title: str

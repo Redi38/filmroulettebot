@@ -1,5 +1,5 @@
-const CATS = {movies: "🎬 Фильмы", cartoons: "🎥 Мульты", series: "📺 Сериалы"};
-const REF_CATS = {marvel: "🕷 Marvel", dc: "🦇 DC"};
+const CATS = {movies: "Фильмы", cartoons: "Мульты", series: "Сериалы"};
+const REF_CATS = {marvel: "Marvel", dc: "DC"};
 const ALL_CATS = {...CATS, ...REF_CATS};
 
 const STATE_KEY = "filmroulette_state";

@@ -138,10 +138,10 @@ function showSection() {
     });
   }
 
-  const titles = {home: "🎬 Афиша", random: "🔄 Наугад", spin: `${ALL_CATS[currentCat] || ""}`, list: `${ALL_CATS[currentCat] || ""}`,
-                   upcoming: "🕐 Ожидаемые", history: "📜 История", showcase: `${ALL_CATS[currentCat] || ""} — скоро`,
-                   theaters: "🎟 В прокате", series_releases: "📺 Премьеры сериалов",
-                   tracked_series: "🔔 Отслеживание сериалов"};
+  const titles = {home: "Афиша", random: "Наугад", spin: `${ALL_CATS[currentCat] || ""}`, list: `${ALL_CATS[currentCat] || ""}`,
+                   upcoming: "Ожидаемые", history: "История", showcase: `${ALL_CATS[currentCat] || ""} — скоро`,
+                   theaters: "В прокате", series_releases: "Премьеры сериалов",
+                   tracked_series: "Отслеживание сериалов"};
   document.getElementById("page-title").textContent = titles[currentView] || "";
 
   if (currentView === "home") loadHome();

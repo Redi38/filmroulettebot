@@ -11,12 +11,17 @@ from fastapi import APIRouter, HTTPException
 from app.db.database import (
     SKIP_SCOPES,
     add_skipped,
+    get_all_settings,
+    get_bool_setting,
     get_items,
     get_skipped,
     get_upcoming_movies,
     remove_skipped,
+    set_setting,
 )
+from app.db.database.settings import DEFAULTS
 from app.services.tmdb import (
+    filter_globally_released,
     get_now_playing,
     get_series_releases,
     get_upcoming_theatrical,
@@ -24,7 +29,7 @@ from app.services.tmdb import (
 )
 from app.utils import paginate
 
-from .shared import NOW_PLAYING_MAX_AGE_DAYS, THEATERS_PAGE_SIZE, SkipBody
+from .shared import NOW_PLAYING_MAX_AGE_DAYS, THEATERS_PAGE_SIZE, SettingBody, SkipBody
 
 router = APIRouter()
 
@@ -56,6 +61,11 @@ async def api_theaters(now_playing_page: int = 1, upcoming_page: int = 1, added:
     skipped_upcoming_set = {t.lower() for t in skipped_upcoming}
     now_playing = [m for m in now_playing if m["title"].lower() not in skipped_now_set]
     upcoming = [m for m in upcoming if m["title"].lower() not in skipped_upcoming_set]
+
+    if await get_bool_setting("hide_local_only_afisha"):
+        now_playing, upcoming = await asyncio.gather(
+            filter_globally_released(now_playing), filter_globally_released(upcoming)
+        )
 
     own_all = {t.lower() for t in (*own_movies, *own_cartoons)}
     own_upcoming_set = {t.lower() for t in own_upcoming}
@@ -132,4 +142,20 @@ async def api_unskip(body: SkipBody) -> dict:
     if body.scope not in SKIP_SCOPES:
         raise HTTPException(400, f"Unknown skip scope: {body.scope!r}")
     await remove_skipped(body.scope, body.title)
+    return {"ok": True}
+
+
+@router.get("/api/settings")
+async def api_get_settings() -> dict:
+    """Shared app-wide settings (not per-browser like the localStorage UI
+    prefs) — currently just the Афиша local-only filter, but a home for any
+    future setting that should apply to both of you at once."""
+    return await get_all_settings()
+
+
+@router.post("/api/settings/{key}")
+async def api_set_setting(key: str, body: SettingBody) -> dict:
+    if key not in DEFAULTS:
+        raise HTTPException(400, f"Unknown setting: {key!r}")
+    await set_setting(key, "1" if body.value else "0")
     return {"ok": True}

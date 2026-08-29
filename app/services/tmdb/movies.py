@@ -209,6 +209,44 @@ async def is_digitally_released(movie_id: int, release_date: str) -> bool:
     return days_ago >= 0 if digital_date_str else days_ago >= 45
 
 
+GLOBAL_RELEASE_MIN_COUNTRIES = 5
+"""Threshold for the "hide local-only Афиша titles" setting: TMDb has no
+explicit "global release" flag, so we approximate it by counting how many
+countries carry a release_dates entry for the movie. Below this, we treat
+it as a local/regional-only release. This is a heuristic, not a fact — a
+small festival title can legitimately have few countries listed even
+though it's not "local" in the sense the setting is meant to catch."""
+
+
+async def _release_country_count(movie_id: int) -> int:
+    """Number of distinct countries with a release_dates entry for this
+    movie. Reuses the same endpoint/cache-key-prefix approach as
+    _get_digital_release_date, but caches the *count* separately since it's
+    a different derived value with effectively-permanent TTL (a movie's
+    historical release footprint doesn't change once cached data is a bit
+    stale — reuses SEARCH_CACHE_TTL rather than inventing a new one)."""
+    cache_key = f"release_country_count:{movie_id}"
+    cached = await get_tmdb_cache(cache_key, SEARCH_CACHE_TTL)
+    if cached is not None:
+        return cached["count"]
+    data = await _get(f"/movie/{movie_id}/release_dates")
+    count = len(data.get("results", [])) if data else 0
+    await set_tmdb_cache(cache_key, {"count": count})
+    return count
+
+
+async def filter_globally_released(movies: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Drop movies that only released in a handful of countries (see
+    GLOBAL_RELEASE_MIN_COUNTRIES). Movies without a TMDb id are kept as-is —
+    there's nothing to check them against, better to show than to guess."""
+    with_id = [m for m in movies if m.get("id")]
+    counts = await asyncio.gather(*(_release_country_count(m["id"]) for m in with_id))
+    local_ids = {
+        m["id"] for m, count in zip(with_id, counts) if count < GLOBAL_RELEASE_MIN_COUNTRIES
+    }
+    return [m for m in movies if m.get("id") not in local_ids]
+
+
 async def get_now_playing(region: str = "UA", pages: int = 3) -> list[dict[str, Any]]:
     """Movies currently in theaters, per TMDb's own now_playing endpoint.
 

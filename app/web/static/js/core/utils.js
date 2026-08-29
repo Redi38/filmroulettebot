@@ -1,53 +1,6 @@
-const API_TIMEOUT_MS = 15000;
-
-async function api(path, opts) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
-
-  const callerSignal = opts && opts.signal;
-  if (callerSignal) {
-    if (callerSignal.aborted) controller.abort();
-    else callerSignal.addEventListener("abort", () => controller.abort());
-  }
-
-  let resp;
-  try {
-    resp = await fetch(path, {...opts, signal: controller.signal});
-  } catch (e) {
-    if (e.name === "AbortError") {
-      const timeoutErr = new Error("Сервер не отвечает. Проверь соединение и попробуй ещё раз.");
-      timeoutErr.status = 0;
-      timeoutErr.isTimeout = true;
-      throw timeoutErr;
-    }
-    throw e;
-  } finally {
-    clearTimeout(timer);
-  }
-
-  if (!resp.ok) {
-    const err = await resp.json().catch(() => ({detail: resp.statusText}));
-    const e = new Error(err.detail || "Ошибка запроса");
-    e.status = resp.status;
-    throw e;
-  }
-  return resp.json();
-}
-
-async function performSequel(category, title) {
-  const r = await api(`/api/${category}/sequel`, {
-    method: "POST", headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({title}),
-  });
-  return r.new_title;
-}
-
-async function performDelete(category, title) {
-  await api(`/api/${category}/delete-by-title`, {
-    method: "POST", headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({title}),
-  });
-}
+// api(), performSequel(), performDelete() moved to core/api.js (typed
+// against the backend's OpenAPI schema — see that file's header comment).
+// This file keeps the untyped DOM/UI helpers that don't touch the network.
 
 function ensureFilterPanel(panelId, sectionId, beforeId) {
   const section = document.getElementById(sectionId);

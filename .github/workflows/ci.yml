@@ -95,3 +95,52 @@ jobs:
           npm install
           npm run build:js
           node --check app/web/static/js/dist/bundle.min.js
+
+  js-types:
+    name: JS type check (tsc)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Type-check JSDoc-typed files against the committed API types
+        run: npm run check:js
+
+  api-types-freshness:
+    name: API types match the backend schema
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: requirements/base.txt
+
+      - name: Install backend dependencies
+        run: pip install -r requirements/base.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install JS dependencies
+        run: npm install
+
+      - name: Regenerate app/web/static/js/types/api.d.ts from the live OpenAPI schema
+        run: npm run generate:types
+
+      - name: Fail if the committed types are stale (forgot to run generate:types)
+        run: |
+          git diff --exit-code -- app/web/static/js/types/api.d.ts || {
+            echo "::error::app/web/static/js/types/api.d.ts is out of date. Run 'npm run generate:types' and commit the result.";
+            exit 1;
+          }

@@ -1,6 +1,7 @@
 {
   "//": "Load order for the plain global-scope scripts (no import/export). This is the ONLY place that order is defined — scripts/build-js.mjs concatenates them in this order to produce dist/bundle.min.js. Keep it in sync with dependency order (a file may only rely on globals defined by files listed before it).",
   "files": [
+    "core/api.js",
     "core/utils.js",
     "core/storage.js",
     "core/state.js",

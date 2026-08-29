@@ -10,3 +10,4 @@ data/
 pytest-report.xml
 node_modules/
 app/web/static/js/dist/
+scripts/openapi.json

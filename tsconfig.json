@@ -1,0 +1,18 @@
+{
+  "//": "Type-checking only — no .ts files, nothing is compiled or emitted. The app stays plain JS (see package.json). checkJs is deliberately OFF here: turning it on globally would type-check all 36 files in one shot and surface a wall of pre-existing errors. Instead, add a `// @ts-check` comment at the top of a file to opt that file in individually — see core/api.js for the first one (kept as its own small file separate from core/utils.js's untyped DOM helpers, specifically so @ts-check's whole-file scope doesn't drag in unrelated code). Widen `include` file-by-file as more files get JSDoc types, rather than flipping checkJs on for everything at once.",
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowJs": true,
+    "checkJs": false,
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "lib": ["ES2020", "DOM"]
+  },
+  "include": [
+    "app/web/static/js/core/api.js",
+    "app/web/static/js/types/**/*.d.ts"
+  ]
+}

@@ -6,9 +6,13 @@
   "type": "module",
   "scripts": {
     "build:js": "node scripts/build-js.mjs",
-    "watch:js": "node scripts/build-js.mjs --watch"
+    "watch:js": "node scripts/build-js.mjs --watch",
+    "generate:types": "python3 scripts/dump_openapi.py && openapi-typescript scripts/openapi.json -o app/web/static/js/types/api.d.ts",
+    "check:js": "tsc --project tsconfig.json"
   },
   "devDependencies": {
-    "esbuild": "^0.24.0"
+    "esbuild": "^0.24.0",
+    "openapi-typescript": "^7.13.0",
+    "typescript": "^5.9.3"
   }
 }

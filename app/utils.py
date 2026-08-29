@@ -1,6 +1,7 @@
 """Shared utilities."""
 import html
 import logging
+from typing import TypeVar
 from urllib.parse import quote_plus
 
 from aiogram.exceptions import TelegramBadRequest
@@ -11,6 +12,8 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 DEFAULT_PAGE_SIZE = 20
+
+_T = TypeVar("_T")
 
 
 def esc(text: str) -> str:
@@ -52,7 +55,7 @@ def build_watch_link(title: str) -> str | None:
     return template.format(query=quote_plus(title))
 
 
-def paginate(items: list[str], page: int, page_size: int = DEFAULT_PAGE_SIZE) -> tuple[list[str], int, int]:
+def paginate(items: list[_T], page: int, page_size: int = DEFAULT_PAGE_SIZE) -> tuple[list[_T], int, int]:
     """Clamp `page` (1-based) into range and slice `items` for that page.
 
     Returns (page_items, clamped_page, total_pages). total_pages is at least 1

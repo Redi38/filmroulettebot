@@ -112,7 +112,6 @@ function fillMarqueeTrack(track, posters) {
     img.className = "marquee-poster";
     img.src = item.poster_url;
     img.alt = item.title || "";
-    img.loading = "lazy";
     img.draggable = false;
     img.title = item.title || "";
     img.onclick = () => openPosterInfoModal(item.category, item.original_title || item.title);

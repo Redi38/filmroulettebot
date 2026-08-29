@@ -12,6 +12,7 @@ from typing import Any, Hashable, TypeVar
 from fastapi import HTTPException, Request
 from pydantic import BaseModel
 
+from app.config import settings
 from app.services.card_data import resolve_card_data
 from app.services.categories import CATEGORY_LABELS, CATEGORY_SHORT_LABELS
 from app.services.titles import (
@@ -36,18 +37,6 @@ SPIN_COOLDOWN = 1.5  # seconds
 WHEEL_POOL_SIZE = 120  # safety cap on wheel segments (perf/readability), winner included
 FEATURED_CACHE_TTL = 600  # 10 min
 
-# _last_spin_at / _last_spin_title stay in plain process memory on purpose:
-# they're cheap, ephemeral, per-client bookkeeping (cooldown timestamp, last
-# picked title to avoid immediate repeats) that's harmless to lose on a
-# uvicorn restart — a fresh process just means everyone's cooldown resets.
-# What *isn't* harmless is unbounded growth: every distinct client IP adds an
-# entry that (for _last_spin_title, one per category) never naturally
-# expires, so a long-running process talking to many unique IPs would leak
-# memory forever. _BoundedDict below caps that by evicting the
-# least-recently-used entry once the map passes _SPIN_STATE_MAX_ENTRIES —
-# well above any realistic concurrent-client count for this project, so in
-# practice it never evicts anything that's still "live", it just guarantees
-# the maps can't grow past a fixed ceiling.
 _SPIN_STATE_MAX_ENTRIES = 5000
 
 _KT = TypeVar("_KT", bound=Hashable)
@@ -97,6 +86,24 @@ async def _validate_rename(
     return True
 
 
+async def _validate_rename_by_id(
+    conflict_exists_fn, item_id: int, new_title: str,
+    conflict_msg: str,
+) -> bool:
+    """Id-based counterpart of _validate_rename(): the row is identified by
+    id (so it can't silently miss if another request already renamed it —
+    see get_items_with_ids()'s docstring), and the conflict check excludes
+    the row's own id so renaming "Foo" -> "Foo" (or a no-op case change)
+    doesn't falsely report a conflict with itself. Returns True if the
+    caller should proceed, False if new_title is empty after stripping
+    (nothing to do, caller should just no-op)."""
+    if not new_title:
+        raise HTTPException(400, "Title can't be empty")
+    if await conflict_exists_fn(new_title, item_id):
+        raise HTTPException(409, conflict_msg)
+    return True
+
+
 def _check_spin_cooldown(client_ip: str) -> None:
     now = time.monotonic()
     elapsed = now - _last_spin_at.get(client_ip, 0.0)
@@ -107,6 +114,23 @@ def _check_spin_cooldown(client_ip: str) -> None:
 
 
 def _client_ip(request: Request) -> str:
+    """Best-effort per-client identifier used for the spin cooldown.
+
+    Only trusts X-Forwarded-For / X-Real-IP when TRUST_PROXY_HEADERS is
+    enabled (i.e. the app is known to sit behind nginx/Caddy which sets
+    these headers itself). Without a trusted proxy in front, a client could
+    otherwise spoof these headers to dodge or grief the cooldown, so we fall
+    back to the raw socket address in that case.
+    """
+    if settings.TRUST_PROXY_HEADERS:
+        forwarded_for = request.headers.get("x-forwarded-for")
+        if forwarded_for:
+            client_ip = forwarded_for.split(",")[0].strip()
+            if client_ip:
+                return client_ip
+        real_ip = request.headers.get("x-real-ip")
+        if real_ip:
+            return real_ip.strip()
     return request.client.host if request.client else "unknown"
 
 
@@ -185,6 +209,15 @@ class TitleBody(BaseModel):
 
 class RenameBody(BaseModel):
     old_title: str
+    new_title: str
+
+
+class DeleteByIdBody(BaseModel):
+    id: int
+
+
+class RenameByIdBody(BaseModel):
+    id: int
     new_title: str
 
 

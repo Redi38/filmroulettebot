@@ -185,18 +185,23 @@ function showcaseRow(item, cat, isNewSeasons, addMode, skipScope, onSkipSettled)
           const rowParent = wrap.parentNode;
           const rowNext = wrap.nextSibling;
           wrap.remove();
-          let undoClicked = false;
           showInlineUndo(rowParent, rowNext, `«${item.title}» скрыт`, "Отменить", async () => {
-            undoClicked = true;
             try {
               await api("/api/unskip", {
                 method: "POST", headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({scope: skipScope, title: item.title}),
               });
-            } catch (e) {}
-            if (onSkipSettled) onSkipSettled();
-          }, () => {
-            if (!undoClicked && onSkipSettled) onSkipSettled();
+              skipBtn.disabled = false;
+              skipBtn.classList.remove("confirming");
+              skipBtn.textContent = "Скип";
+              if (rowParent && rowParent.isConnected) {
+                rowParent.insertBefore(wrap, rowNext && rowNext.isConnected ? rowNext : null);
+              } else if (onSkipSettled) {
+                onSkipSettled();
+              }
+            } catch (e) {
+              showToast("Не удалось отменить скип");
+            }
           });
         } catch (e) {
           skipBtn.disabled = false;

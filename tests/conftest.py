@@ -17,18 +17,23 @@ import pytest
 
 
 @pytest.fixture
-def db_path(tmp_path, monkeypatch):
+async def db_path(tmp_path, monkeypatch):
     """Point the DB layer at a fresh temp SQLite file for this test.
 
-    app/db/database/connection.py reads settings.DB_PATH fresh on every
-    connection rather than caching it, so patching the attribute here is
-    enough to isolate each test's data — no need to re-import anything.
+    app/db/database/connection.py caches a single connection per process
+    (see connection.py), so simply patching settings.DB_PATH isn't enough
+    once a connection to a previous test's file is already open — we also
+    need to close it here so the next conn() call reopens against the new
+    path. Cleans up after the test too, so nothing leaks into the next one.
     """
     from app.config import settings
+    from app.db.database import close_db
 
+    await close_db()
     path = tmp_path / "test.db"
     monkeypatch.setattr(settings, "DB_PATH", str(path))
-    return str(path)
+    yield str(path)
+    await close_db()
 
 
 @pytest.fixture

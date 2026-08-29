@@ -17,7 +17,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from app.db.database import init_db
+from app.db.database import close_db, init_db
 
 from . import (
     routes_core,
@@ -39,6 +39,7 @@ logger = logging.getLogger(__name__)
 async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
     await init_db()
     yield
+    await close_db()
 
 
 app = FastAPI(title="Filmroulette Web", lifespan=_lifespan)

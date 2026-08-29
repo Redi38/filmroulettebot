@@ -9,7 +9,7 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 
 from app.config import settings
-from app.db.database import init_db
+from app.db.database import close_db, init_db
 from app.routers import dc_marvel, history, roulette, upcoming
 from app.services.tmdb import close_client
 from app.services.watch_link import close_client as close_watch_link_client
@@ -57,6 +57,7 @@ async def main() -> None:
         heartbeat_task.cancel()
         await close_client()
         await close_watch_link_client()
+        await close_db()
 
 
 if __name__ == "__main__":

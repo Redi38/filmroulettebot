@@ -8,20 +8,23 @@ from app.db.database import (
     add_item,
     add_upcoming_movie,
     delete_upcoming_movie,
+    delete_upcoming_movie_by_id,
     get_upcoming_movies,
+    get_upcoming_movies_with_ids,
     item_exists,
-    rename_upcoming_movie,
+    rename_upcoming_movie_by_id,
+    upcoming_title_taken_by_other,
 )
 from app.services.tmdb import check_upcoming_released, search_movie_suggestions
 
-from .shared import MoveBody, RenameBody, TitleBody, _check_category, _validate_rename
+from .shared import DeleteByIdBody, MoveBody, RenameByIdBody, TitleBody, _check_category, _validate_rename_by_id
 
 router = APIRouter()
 
 
 @router.get("/api/upcoming")
 async def api_upcoming() -> dict:
-    items = await get_upcoming_movies()
+    items = await get_upcoming_movies_with_ids()
     return {"items": items}
 
 
@@ -43,21 +46,21 @@ async def api_upcoming_add(body: TitleBody) -> dict:
 
 
 @router.post("/api/upcoming/delete")
-async def api_upcoming_delete(body: TitleBody) -> dict:
-    await delete_upcoming_movie(body.title)
+async def api_upcoming_delete(body: DeleteByIdBody) -> dict:
+    await delete_upcoming_movie_by_id(body.id)
     return {"ok": True}
 
 
 @router.post("/api/upcoming/rename")
-async def api_upcoming_rename(body: RenameBody) -> dict:
-    old_title = body.old_title.strip()
+async def api_upcoming_rename(body: RenameByIdBody) -> dict:
     new_title = body.new_title.strip()
-    if not await _validate_rename(
-        lambda t: item_exists("upcoming_movies", t), old_title, new_title, "",
+    if not await _validate_rename_by_id(
+        upcoming_title_taken_by_other, body.id, new_title,
         conflict_msg=f"«{new_title}» уже в списке ожидаемых",
     ):
         return {"ok": True}
-    await rename_upcoming_movie(old_title, new_title)
+    if not await rename_upcoming_movie_by_id(body.id, new_title):
+        raise HTTPException(404, "Тайтл не найден — возможно, уже удалён в другой вкладке")
     return {"ok": True}
 
 

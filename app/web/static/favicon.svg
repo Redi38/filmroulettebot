@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#141319"/>
+  <!-- clapperboard body -->
+  <rect x="5" y="15" width="22" height="12" rx="1.5" fill="#231f28" stroke="#f2a93b" stroke-width="1.2"/>
+  <!-- clapperboard top (open) -->
+  <g>
+    <path d="M5.5 15 L4.3 10.3 L26.2 5.2 L27.3 9.8 Z" fill="#231f28" stroke="#f2a93b" stroke-width="1.2" stroke-linejoin="round"/>
+    <clipPath id="clapClip">
+      <path d="M5.5 15 L4.3 10.3 L26.2 5.2 L27.3 9.8 Z"/>
+    </clipPath>
+    <g clip-path="url(#clapClip)">
+      <rect x="3" y="3" width="3.4" height="16" transform="rotate(-13 4.7 11)" fill="#f2a93b"/>
+      <rect x="8" y="1.8" width="3.4" height="16" transform="rotate(-13 9.7 9.8)" fill="#ff3b81"/>
+      <rect x="13" y="0.6" width="3.4" height="16" transform="rotate(-13 14.7 8.6)" fill="#f2a93b"/>
+      <rect x="18" y="-0.6" width="3.4" height="16" transform="rotate(-13 19.7 7.4)" fill="#ff3b81"/>
+      <rect x="23" y="-1.8" width="3.4" height="16" transform="rotate(-13 24.7 6.2)" fill="#f2a93b"/>
+    </g>
+  </g>
+  <!-- clapper hinge -->
+  <circle cx="26.6" cy="9" r="1.1" fill="#f2a93b"/>
+</svg>

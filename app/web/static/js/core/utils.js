@@ -43,7 +43,7 @@ async function performSequel(category, title) {
 }
 
 async function performDelete(category, title) {
-  await api(`/api/${category}/delete`, {
+  await api(`/api/${category}/delete-by-title`, {
     method: "POST", headers: {"Content-Type": "application/json"},
     body: JSON.stringify({title}),
   });

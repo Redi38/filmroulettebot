@@ -179,6 +179,8 @@ function setWheelMuted(v) {
   wheelMuted = v;
   saveWheelMuted(v);
   renderControlOnAllDocks(renderWheelMuteToggle, "mute-toggle");
+  if (v) closeSoundThemeMenus();
+  renderControlOnAllDocks(renderSoundThemeToggle, "sound-theme-toggle");
 }
 function toggleWheelMuted() { setWheelMuted(!wheelMuted); }
 
@@ -249,7 +251,7 @@ function renderSoundThemeToggle(containerId) {
   const el = document.getElementById(containerId);
   if (!el) return;
   el.innerHTML = "";
-  el.className = "sound-theme-wrap" + (spinMode === "wheel" ? " visible" : "");
+  el.className = "sound-theme-wrap" + (spinMode === "wheel" && !wheelMuted ? " visible" : "");
 
   const current =
     WHEEL_SOUND_THEME_OPTIONS.find(([val]) => val === wheelSoundTheme) ||

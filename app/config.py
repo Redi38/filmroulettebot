@@ -10,6 +10,8 @@ class Settings(BaseSettings):
 
     WATCH_LINK_TEMPLATE: str = ""
 
+    TRUST_PROXY_HEADERS: bool = False
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 

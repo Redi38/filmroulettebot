@@ -63,17 +63,17 @@ async function loadList(page) {
     if (countEl) countEl.textContent = `Всего: ${data.total_count}`;
     let liveCount = data.total_count;
     container.innerHTML = "";
-    for (const title of data.items) {
+    for (const {id, title} of data.items) {
       const cat = currentCat;
       const row = createEditableRow(title, {
         searchEndpoint: `/api/${cat}/search-suggest`,
         onRename: (newTitle) => api(`/api/${cat}/rename`, {
           method: "POST", headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({old_title: title, new_title: newTitle}),
+          body: JSON.stringify({id, new_title: newTitle}),
         }),
         onDelete: () => api(`/api/${cat}/delete`, {
           method: "POST", headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({title}),
+          body: JSON.stringify({id}),
         }),
         onRestore: () => api(`/api/${cat}/add`, {
           method: "POST", headers: {"Content-Type": "application/json"},

@@ -42,13 +42,34 @@ def retry_on_lock(func: _F) -> _F:
     return wrapper  # type: ignore[return-value]
 
 
-@asynccontextmanager
-async def conn() -> AsyncIterator[aiosqlite.Connection]:
-    async with aiosqlite.connect(settings.DB_PATH) as db:
+_db_conn: aiosqlite.Connection | None = None
+_db_conn_lock = asyncio.Lock()
+
+
+async def _get_connection() -> aiosqlite.Connection:
+    global _db_conn
+    if _db_conn is None:
+        db = await aiosqlite.connect(settings.DB_PATH)
         db.row_factory = aiosqlite.Row
         await db.execute("PRAGMA journal_mode=WAL")
         await db.execute("PRAGMA busy_timeout=5000")
+        _db_conn = db
+    return _db_conn
+
+
+@asynccontextmanager
+async def conn() -> AsyncIterator[aiosqlite.Connection]:
+    async with _db_conn_lock:
+        db = await _get_connection()
         yield db
+
+
+async def close_db() -> None:
+    """Close the shared connection. Call once on process shutdown."""
+    global _db_conn
+    if _db_conn is not None:
+        await _db_conn.close()
+        _db_conn = None
 
 
 def check_table(name: str) -> None:

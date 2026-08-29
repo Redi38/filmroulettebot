@@ -10,7 +10,7 @@ from app.db.database import (
     resolve_history_entry,
 )
 
-from .shared import DeleteHistoryEntryBody, ResolveBody, _check_category
+from ..shared import DeleteHistoryEntryBody, ResolveBody, _check_category
 
 router = APIRouter()
 

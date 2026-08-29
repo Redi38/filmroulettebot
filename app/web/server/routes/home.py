@@ -17,7 +17,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.db.database import get_items, get_tmdb_cache, item_exists
 
-from .shared import _card_data, _check_category
+from ..shared import _card_data, _check_category
 
 router = APIRouter()
 

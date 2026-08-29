@@ -1,6 +1,6 @@
 // Studio showcase (Marvel/DC catalog browsing) and the user's own
-// tracked-series list. Filter helpers live in showcase-filters.js, and
-// row/group rendering (shared with theaters.js) lives in showcase-row.js.
+// tracked-series list. Filter helpers live in filters.js, and
+// row/group rendering (shared with theaters.js) lives in row.js.
 
 let currentShowcaseStudio = null;
 let lastShowcaseData = null;

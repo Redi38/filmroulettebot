@@ -17,7 +17,7 @@ from app.db.database import (
 )
 from app.services.tmdb import check_upcoming_released, search_movie_suggestions
 
-from .shared import DeleteByIdBody, MoveBody, RenameByIdBody, TitleBody, _check_category, _validate_rename_by_id
+from ..shared import DeleteByIdBody, MoveBody, RenameByIdBody, TitleBody, _check_category, _validate_rename_by_id
 
 router = APIRouter()
 

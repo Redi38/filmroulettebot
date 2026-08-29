@@ -1,5 +1,5 @@
 """Integration tests for the id-based rename/delete endpoints
-(app/web/server/routes_items.py, routes_upcoming.py), through a real
+(app/web/server/routes/items.py, routes/upcoming.py), through a real
 FastAPI TestClient talking to a real (temp) SQLite DB.
 
 These specifically cover the race the id-based rewrite exists to fix:

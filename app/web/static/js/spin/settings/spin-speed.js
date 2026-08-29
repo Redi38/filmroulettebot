@@ -2,7 +2,7 @@
 const SPIN_SPEED_KEY = "filmroulette_spin_speed";
 const SPIN_SPEED_MIN = 1;
 const SPIN_SPEED_MAX = 60;
-const SPIN_SPEED_DEFAULT = 4;
+const SPIN_SPEED_DEFAULT = 10;
 const SPIN_SPEED_STEP = 0.1;
 function loadSpinSpeed() {
   const v = parseFloat(getLS(SPIN_SPEED_KEY));

@@ -22,7 +22,7 @@ _BACKOFF_BASE = 1.0  # seconds
 _RETRYABLE_STATUSES = {429, 500, 502, 503, 504}
 
 # Cap how many TMDb requests can be in flight at once. Without this, a page
-# like showcase (routes_showcase.py) that asyncio.gathers several
+# like showcase (routes/showcase.py) that asyncio.gathers several
 # discover_by_company() calls in parallel can burst well past what TMDb's
 # rate limit tolerates on a cold cache, tripping a wave of 429s instead of
 # a few isolated ones the retry/backoff above already handles fine.

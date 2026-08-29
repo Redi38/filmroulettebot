@@ -1,5 +1,5 @@
 """Integration tests for the spin/wheel/featured endpoints
-(app/web/server/routes_spin.py), through a real FastAPI TestClient talking
+(app/web/server/routes/spin.py), through a real FastAPI TestClient talking
 to a real (temp) SQLite DB.
 
 resolve_card_data (which fans out to TMDb + the watch-link scraper, both

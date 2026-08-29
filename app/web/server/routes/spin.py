@@ -16,7 +16,7 @@ from fastapi import APIRouter, HTTPException, Request
 
 from app.db.database import get_items, get_tmdb_cache, save_history, set_tmdb_cache
 
-from .shared import (
+from ..shared import (
     FEATURED_CACHE_TTL,
     ROULETTE_CATEGORIES,
     WEB_USER_ID,

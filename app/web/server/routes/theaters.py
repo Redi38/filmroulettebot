@@ -1,6 +1,7 @@
-"""Global TMDb theatrical calendar (now playing / upcoming), the global
-"series releasing soon" list, and the skip/unskip action shared by both
-tabs (they show TMDb discovery data, not the user's own lists)."""
+"""Global TMDb theatrical calendar (now playing / upcoming) and the global
+"series releasing soon" list, plus the skip/unskip action shared by both
+tabs (they show TMDb discovery data, not the user's own lists). App-wide
+settings used here (e.g. the local-only filter) live in settings.py."""
 from __future__ import annotations
 
 import asyncio
@@ -11,15 +12,12 @@ from fastapi import APIRouter, HTTPException
 from app.db.database import (
     SKIP_SCOPES,
     add_skipped,
-    get_all_settings,
     get_bool_setting,
     get_items,
     get_skipped,
     get_upcoming_movies,
     remove_skipped,
-    set_setting,
 )
-from app.db.database.settings import DEFAULTS
 from app.services.tmdb import (
     filter_globally_released,
     get_now_playing,
@@ -29,7 +27,7 @@ from app.services.tmdb import (
 )
 from app.utils import paginate
 
-from .shared import NOW_PLAYING_MAX_AGE_DAYS, THEATERS_PAGE_SIZE, SettingBody, SkipBody
+from ..shared import NOW_PLAYING_MAX_AGE_DAYS, THEATERS_PAGE_SIZE, SkipBody
 
 router = APIRouter()
 
@@ -142,20 +140,4 @@ async def api_unskip(body: SkipBody) -> dict:
     if body.scope not in SKIP_SCOPES:
         raise HTTPException(400, f"Unknown skip scope: {body.scope!r}")
     await remove_skipped(body.scope, body.title)
-    return {"ok": True}
-
-
-@router.get("/api/settings")
-async def api_get_settings() -> dict:
-    """Shared app-wide settings (not per-browser like the localStorage UI
-    prefs) — currently just the Афиша local-only filter, but a home for any
-    future setting that should apply to both of you at once."""
-    return await get_all_settings()
-
-
-@router.post("/api/settings/{key}")
-async def api_set_setting(key: str, body: SettingBody) -> dict:
-    if key not in DEFAULTS:
-        raise HTTPException(400, f"Unknown setting: {key!r}")
-    await set_setting(key, "1" if body.value else "0")
     return {"ok": True}

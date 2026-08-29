@@ -59,7 +59,9 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
     padding: 11px 8px; font-size: 1.05rem; border-radius: 999px;
     width: 176px;
   }
-  .confetti-toggle-wrap { width: 358px; }
+  .confetti-toggle-wrap { width: auto; }
+  .spin-toggle-row { gap: 16px; }
+  .spin-caption { font-size: 0.88rem; }
   .spin-controls-dock .spin-speed-control { gap: 10px; }
   .spin-controls-dock .spin-speed-control label,
   .spin-controls-dock .spin-speed-control .spin-speed-unit { font-size: 1rem; }
@@ -102,6 +104,15 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
   overflow: hidden; text-overflow: ellipsis;
 }
 
+.spin-section { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.spin-section-toggle { display: none; }
+.spin-section-toggle.visible { display: flex; }
+.spin-caption {
+  margin: 0; padding: 0; align-self: flex-start;
+  font-size: 0.8rem; font-weight: 800; letter-spacing: 0.03em;
+  text-transform: uppercase; text-align: left; color: var(--muted);
+}
+
 .spin-speed-wrap { display: none; justify-content: center; margin: 0; }
 .spin-speed-wrap.visible { display: flex; }
 .spin-weight-wrap { display: none; justify-content: center; margin: 0; }
@@ -109,6 +120,8 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
 
 .spin-appearance-wrap { display: none; justify-content: center; margin: 0; }
 .spin-appearance-wrap.visible { display: flex; }
+
+.spin-toggle-row { display: flex; gap: 10px; justify-content: center; }
 
 .wheel-holder--neon .wheel-canvas-mask {
   animation: wheel-neon-glow 2.4s ease-in-out infinite;
@@ -134,8 +147,8 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
 }
 
 .confetti-toggle-wrap {
-  display: none; justify-content: flex-start; margin: 0 auto;
-  width: 262px;
+  display: none; justify-content: center; margin: 0;
+  width: auto;
 }
 .confetti-toggle-wrap.visible { display: flex; }
 

@@ -6,10 +6,21 @@ function renderSpinDockRow(prefix, { spinBtnId, spinBtnClass }) {
         <div id="${prefix}-sound-theme-toggle"></div>
       </div>
       <div class="spin-controls-dock">
-        <div id="${prefix}-mode-toggle"></div>
-        <div id="${prefix}-appearance-toggle"></div>
-        <div id="${prefix}-weight-toggle"></div>
-        <div id="${prefix}-confetti-toggle"></div>
+        <div class="spin-section">
+          <p class="spin-caption">Режим</p>
+          <div id="${prefix}-mode-toggle"></div>
+        </div>
+        <div class="spin-section spin-section-toggle" id="${prefix}-weight-section">
+          <p class="spin-caption">Вероятность</p>
+          <div id="${prefix}-weight-toggle"></div>
+        </div>
+        <div class="spin-section spin-section-toggle" id="${prefix}-fx-section">
+          <p class="spin-caption">Эффекты</p>
+          <div class="spin-toggle-row">
+            <div id="${prefix}-confetti-toggle"></div>
+            <div id="${prefix}-appearance-toggle"></div>
+          </div>
+        </div>
         <div id="${prefix}-spin-speed"></div>
         <button class="btn ${spinBtnClass}" id="${spinBtnId}"><span>🎲 Крутить</span></button>
       </div>

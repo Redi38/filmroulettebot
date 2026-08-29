@@ -22,7 +22,7 @@
 
 <header>
   <button id="burger-btn" aria-label="Меню"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="17" x2="20" y2="17"></line></svg></button>
-  <h1 id="page-title">🎬 Афиша</h1>
+  <h1 id="page-title">Афиша</h1>
   <script>
     (function () {
       try {
@@ -31,16 +31,16 @@
         var view = (s && s.view) || "home";
         var cat = s && s.cat;
         var ALL_CATS = {
-          movies: "🎬 Фильмы", cartoons: "🎥 Мульты", series: "📺 Сериалы",
-          marvel: "🕷 Marvel", dc: "🦇 DC",
+          movies: "Фильмы", cartoons: "Мульты", series: "Сериалы",
+          marvel: "Marvel", dc: "DC",
         };
         var titles = {
-          home: "🎬 Афиша", random: "🔄 Наугад",
+          home: "Афиша", random: "Наугад",
           spin: ALL_CATS[cat] || "", list: ALL_CATS[cat] || "",
-          upcoming: "🕐 Ожидаемые", history: "📜 История",
+          upcoming: "Ожидаемые", history: "История",
           showcase: (ALL_CATS[cat] || "") + " — скоро",
-          theaters: "🎟 В прокате", series_releases: "📺 Премьеры сериалов",
-          tracked_series: "🔔 Отслеживание сериалов",
+          theaters: "В прокате", series_releases: "Премьеры сериалов",
+          tracked_series: "Отслеживание сериалов",
         };
         if (view in titles) document.getElementById("page-title").textContent = titles[view];
       } catch (e) {}

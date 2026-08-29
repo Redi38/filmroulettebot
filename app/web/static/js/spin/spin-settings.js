@@ -11,9 +11,9 @@ const DOCK_PREFIXES = ["random", "spin"];
 
 function renderAllDockControls(prefix) {
   renderSpinModeToggle(`${prefix}-mode-toggle`);
-  renderWheelAppearanceToggle(`${prefix}-appearance-toggle`);
   renderWeightToggle(`${prefix}-weight-toggle`);
   renderConfettiToggle(`${prefix}-confetti-toggle`);
+  renderWheelAppearanceToggle(`${prefix}-appearance-toggle`);
   renderSpinSpeedControl(`${prefix}-spin-speed`);
   renderWheelMuteToggle(`${prefix}-mute-toggle`);
   renderSoundThemeToggle(`${prefix}-sound-theme-toggle`);
@@ -97,42 +97,54 @@ function renderSpinModeToggle(containerId) {
   });
 }
 
-// ---- wheel appearance -----------------------------------------------------
-const WHEEL_STYLE_LABELS = [
-  ["classic", "🎨 Классика"],
-  ["neon", "✨ Неон"],
-];
+// ---- wheel appearance (neon on/off) ---------------------------------------
 const WHEEL_APPEARANCE_KEY = "filmroulette_wheel_appearance";
 function loadWheelAppearance() {
-  const v = getLS(WHEEL_APPEARANCE_KEY);
-  return WHEEL_STYLE_LABELS.some(([val]) => val === v) ? v : "classic";
+  return getLS(WHEEL_APPEARANCE_KEY) === "neon";
 }
-function saveWheelAppearance(v) {
-  setLS(WHEEL_APPEARANCE_KEY, v);
+function saveWheelAppearance(isNeon) {
+  setLS(WHEEL_APPEARANCE_KEY, isNeon ? "neon" : "classic");
 }
-let wheelAppearance = loadWheelAppearance();
+let wheelAppearance = loadWheelAppearance() ? "neon" : "classic";
 function getWheelAppearance() { return wheelAppearance; }
 
 function renderWheelAppearanceToggle(containerId) {
-  renderChoiceToggle(containerId, {
-    options: WHEEL_STYLE_LABELS,
-    value: wheelAppearance,
-    containerClass: "spin-appearance-wrap",
-    visible: spinMode === "wheel",
-    onChange: (value) => {
-      wheelAppearance = value;
-      saveWheelAppearance(value);
-      renderControlOnAllDocks(renderWheelAppearanceToggle, "appearance-toggle");
-      for (const id of WHEEL_WRAP_IDS) {
-        const wrap = document.getElementById(id);
-        if (!wrap || !wrap._wheelPool) continue;
-        const holder = wrap.querySelector(".wheel-holder");
-        if (holder) holder.className = "wheel-holder wheel-holder--" + value;
-        const canvas = wrap.querySelector("canvas");
-        if (canvas) drawWheel(canvas, wrap._wheelPool, getWheelDPR(), wrap._wheelWeights);
-      }
-    },
-  });
+  const fxSection = document.getElementById(containerId.replace(/-appearance-toggle$/, "-fx-section"));
+  if (fxSection) fxSection.classList.toggle("visible", spinMode === "wheel");
+
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const isNeon = wheelAppearance === "neon";
+  el.innerHTML = "";
+  el.className = "spin-appearance-wrap" + (spinMode === "wheel" ? " visible" : "");
+
+  const outer = document.createElement("div");
+  outer.className = "spin-mode-toggle-wrap";
+  const row = document.createElement("div");
+  row.className = "spin-mode-toggle";
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "showcase-filter-btn" + (isNeon ? " active" : "");
+  btn.textContent = "✨ Неон";
+  btn.setAttribute("aria-pressed", isNeon ? "true" : "false");
+  btn.onclick = () => {
+    wheelAppearance = wheelAppearance === "neon" ? "classic" : "neon";
+    saveWheelAppearance(wheelAppearance === "neon");
+    renderControlOnAllDocks(renderWheelAppearanceToggle, "appearance-toggle");
+    for (const id of WHEEL_WRAP_IDS) {
+      const wrap = document.getElementById(id);
+      if (!wrap || !wrap._wheelPool) continue;
+      const holder = wrap.querySelector(".wheel-holder");
+      if (holder) holder.className = "wheel-holder wheel-holder--" + wheelAppearance;
+      const canvas = wrap.querySelector("canvas");
+      if (canvas) drawWheel(canvas, wrap._wheelPool, getWheelDPR(), wrap._wheelWeights);
+    }
+  };
+
+  row.appendChild(btn);
+  outer.appendChild(row);
+  el.appendChild(outer);
 }
 
 // ---- weighted mode ---------------------------------------------------------
@@ -147,6 +159,8 @@ let weightedMode = loadWeightedMode();
 function isWeightedMode() { return weightedMode; }
 
 function renderWeightToggle(containerId) {
+  const section = document.getElementById(containerId.replace(/-weight-toggle$/, "-weight-section"));
+  if (section) section.classList.toggle("visible", spinMode === "wheel");
   renderChoiceToggle(containerId, {
     options: [[false, "🎲 Обычный"], [true, "⚖️ Весовой"]],
     value: weightedMode,
@@ -178,6 +192,9 @@ let confettiEnabled = loadConfettiEnabled();
 function isConfettiEnabled() { return confettiEnabled; }
 
 function renderConfettiToggle(containerId) {
+  const fxSection = document.getElementById(containerId.replace(/-confetti-toggle$/, "-fx-section"));
+  if (fxSection) fxSection.classList.toggle("visible", spinMode === "wheel");
+
   const el = document.getElementById(containerId);
   if (!el) return;
   el.innerHTML = "";

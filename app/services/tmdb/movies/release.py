@@ -1,6 +1,5 @@
-"""Movie-specific TMDb lookups: search-by-title info cards, now-playing /
-upcoming theatrical listings, and the digital-release-date heuristics used
-to tell whether an upcoming movie is already watchable."""
+"""Digital/streaming-release heuristics: is an upcoming movie already
+watchable, and is a release only local/regional rather than global."""
 from __future__ import annotations
 
 import asyncio
@@ -9,106 +8,9 @@ from typing import Any
 
 from app.db.database import get_tmdb_cache, set_tmdb_cache
 
-from .cache_ttl import DISCOVER_CACHE_TTL, INFO_CACHE_TTL, SEARCH_CACHE_TTL
-from .client import _get
-from .helpers import (
-    actors,
-    best_match,
-    format_movie_results,
-    format_search_suggestions,
-    genres,
-    poster,
-)
-
-
-async def _search_movie_cached(title: str) -> dict[str, Any] | None:
-    """Cached wrapper around /search/movie — shared between get_movie_info
-    and check_upcoming_released so repeated lookups of the same title
-    within SEARCH_CACHE_TTL don't hit the API twice."""
-    cache_key = f"movie_search:{title.strip().lower()}"
-    cached = await get_tmdb_cache(cache_key, SEARCH_CACHE_TTL)
-    if cached is not None:
-        return cached
-    data = await _get("/search/movie", query=title)
-    if data is not None:
-        await set_tmdb_cache(cache_key, data)
-    return data
-
-
-async def search_movie_suggestions(query: str) -> list[dict[str, Any]]:
-    """Titles matching `query` for the add-a-title autocomplete picker —
-    thin wrapper over the same cached /search/movie call get_movie_info
-    already uses, just normalized down to id/title/year/poster."""
-    query = query.strip()
-    if not query:
-        return []
-    data = await _search_movie_cached(query)
-    if not data or not data.get("results"):
-        return []
-    return format_search_suggestions(data["results"], is_series=False)
-
-
-async def search_multi_suggestions(query: str) -> list[dict[str, Any]]:
-    """Combined movie+TV suggestions for categories that legitimately
-    contain either — dc/marvel cover both theatrical films (The Batman)
-    and streaming series (Loki, Green Lantern), unlike movies/cartoons
-    which are movie-only and series which is TV-only."""
-    from .series import _search_tv_cached
-
-    query = query.strip()
-    if not query:
-        return []
-    movie_data, tv_data = await asyncio.gather(_search_movie_cached(query), _search_tv_cached(query))
-    tagged = (
-        [(r, False) for r in (movie_data or {}).get("results", [])]
-        + [(r, True) for r in (tv_data or {}).get("results", [])]
-    )
-    tagged.sort(key=lambda pair: pair[0].get("popularity") or 0, reverse=True)
-
-    seen: set[tuple[int, bool]] = set()
-    out: list[dict[str, Any]] = []
-    for raw, is_series in tagged:
-        formatted = format_search_suggestions([raw], is_series=is_series)
-        if not formatted:
-            continue
-        item = formatted[0]
-        key = (item["tmdb_id"], is_series)
-        if key in seen:
-            continue
-        seen.add(key)
-        out.append(item)
-        if len(out) >= 6:
-            break
-    return out
-
-
-async def get_movie_info(title: str) -> dict[str, Any] | None:
-    cache_key = f"movie_info:{title.strip().lower()}"
-    cached = await get_tmdb_cache(cache_key, INFO_CACHE_TTL)
-    if cached is not None:
-        return cached
-
-    data = await _search_movie_cached(title)
-    if not data or not data.get("results"):
-        return None
-    movie = best_match(data["results"], title, title_field="title")
-    if movie is None:
-        return None
-    mid = movie["id"]
-    details = await _get(f"/movie/{mid}") or {}
-    credits = await _get(f"/movie/{mid}/credits") or {}
-    result = {
-        "title": movie.get("title"),
-        "overview": movie.get("overview") or "Описание недоступно.",
-        "release_date": movie.get("release_date") or "—",
-        "rating": round(movie["vote_average"], 1) if movie.get("vote_average") else "—",
-        "poster_url": poster(movie),
-        "runtime": details.get("runtime") or "—",
-        "genres": genres(details),
-        "actors": actors(credits),
-    }
-    await set_tmdb_cache(cache_key, result)
-    return result
+from ..cache_ttl import SEARCH_CACHE_TTL
+from ..client import _get
+from .search import _search_movie_cached
 
 
 async def _get_digital_release_date(movie_id: int) -> str | None:
@@ -245,51 +147,3 @@ async def filter_globally_released(movies: list[dict[str, Any]]) -> list[dict[st
         m["id"] for m, count in zip(with_id, counts) if count < GLOBAL_RELEASE_MIN_COUNTRIES
     }
     return [m for m in movies if m.get("id") not in local_ids]
-
-
-async def get_now_playing(region: str = "UA", pages: int = 3) -> list[dict[str, Any]]:
-    """Movies currently in theaters, per TMDb's own now_playing endpoint.
-
-    Fetches several pages (TMDb returns 20/page) rather than just the first —
-    a single page leaves too small a pool once the freshness cutoff and any
-    skipped titles are filtered out, so a skip has nothing left to backfill
-    the page with.
-    """
-    cache_key = f"now_playing:{region}:{pages}"
-    cached = await get_tmdb_cache(cache_key, DISCOVER_CACHE_TTL)
-    if cached is not None:
-        return cached
-    raw: list[dict[str, Any]] = []
-    for page in range(1, pages + 1):
-        data = await _get("/movie/now_playing", region=region, page=page)
-        if not data or not data.get("results"):
-            break
-        raw.extend(data["results"])
-        if page >= (data.get("total_pages") or 1):
-            break
-    out = format_movie_results(raw)
-    await set_tmdb_cache(cache_key, out)
-    return out
-
-
-async def get_upcoming_theatrical(region: str = "UA", pages: int = 3) -> list[dict[str, Any]]:
-    """Movies with an upcoming theatrical release, per TMDb's own upcoming
-    endpoint — distinct from the user's own manually-tracked upcoming list
-    in the database, this is TMDb's global release calendar. Same
-    multi-page fetch as get_now_playing, for the same reason (skip backfill
-    needs a reserve pool beyond one page)."""
-    cache_key = f"upcoming_theatrical:{region}:{pages}"
-    cached = await get_tmdb_cache(cache_key, DISCOVER_CACHE_TTL)
-    if cached is not None:
-        return cached
-    raw: list[dict[str, Any]] = []
-    for page in range(1, pages + 1):
-        data = await _get("/movie/upcoming", region=region, page=page)
-        if not data or not data.get("results"):
-            break
-        raw.extend(data["results"])
-        if page >= (data.get("total_pages") or 1):
-            break
-    out = format_movie_results(raw)
-    await set_tmdb_cache(cache_key, out)
-    return out

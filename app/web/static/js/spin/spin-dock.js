@@ -7,6 +7,7 @@ function renderSpinDockRow(prefix, { spinBtnId, spinBtnClass }) {
       </div>
       <div class="spin-controls-dock">
         <div id="${prefix}-mode-toggle"></div>
+        <div id="${prefix}-appearance-toggle"></div>
         <div id="${prefix}-weight-toggle"></div>
         <div id="${prefix}-confetti-toggle"></div>
         <div id="${prefix}-spin-speed"></div>

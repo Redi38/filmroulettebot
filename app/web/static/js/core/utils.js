@@ -150,7 +150,8 @@ function escapeAttr(s) {
 }
 
 function placeholderHtml(text, icon) {
-  return `<div class="placeholder"><span class="big">${icon || "🎲"}</span>${text}</div>`;
+  const fixedText = String(text).replace(/ ([\p{Extended_Pictographic}\uFE0F\u200d]+)$/u, "\u00A0$1");
+  return `<div class="placeholder"><span class="big">${icon || "🎲"}</span>${fixedText}</div>`;
 }
 
 function debounce(fn, wait) {

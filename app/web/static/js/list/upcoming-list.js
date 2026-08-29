@@ -71,7 +71,7 @@ document.getElementById("up-add-btn").onclick = async () => {
 
 document.getElementById("up-check-btn").onclick = async () => {
   const result = document.getElementById("up-check-result");
-  result.innerHTML = '<div class="spinner">⏳ Проверяем по базе TMDb…</div>';
+  result.innerHTML = '<div class="spinner">Проверяем по базе TMDb…</div>';
   try {
     const data = await api("/api/upcoming/check", {method: "POST"});
     let html = "";

@@ -11,6 +11,7 @@ const DOCK_PREFIXES = ["random", "spin"];
 
 function renderAllDockControls(prefix) {
   renderSpinModeToggle(`${prefix}-mode-toggle`);
+  renderWheelAppearanceToggle(`${prefix}-appearance-toggle`);
   renderWeightToggle(`${prefix}-weight-toggle`);
   renderConfettiToggle(`${prefix}-confetti-toggle`);
   renderSpinSpeedControl(`${prefix}-spin-speed`);
@@ -91,6 +92,44 @@ function renderSpinModeToggle(containerId) {
       } else if (currentView === "random") {
         document.getElementById("random-spin-result").innerHTML =
           placeholderHtml("Нажми «Крутить», и рулетка выберет фильм, сериал или мультфильм 🍿");
+      }
+    },
+  });
+}
+
+// ---- wheel appearance -----------------------------------------------------
+const WHEEL_STYLE_LABELS = [
+  ["classic", "🎨 Классика"],
+  ["neon", "✨ Неон"],
+];
+const WHEEL_APPEARANCE_KEY = "filmroulette_wheel_appearance";
+function loadWheelAppearance() {
+  const v = getLS(WHEEL_APPEARANCE_KEY);
+  return WHEEL_STYLE_LABELS.some(([val]) => val === v) ? v : "classic";
+}
+function saveWheelAppearance(v) {
+  setLS(WHEEL_APPEARANCE_KEY, v);
+}
+let wheelAppearance = loadWheelAppearance();
+function getWheelAppearance() { return wheelAppearance; }
+
+function renderWheelAppearanceToggle(containerId) {
+  renderChoiceToggle(containerId, {
+    options: WHEEL_STYLE_LABELS,
+    value: wheelAppearance,
+    containerClass: "spin-appearance-wrap",
+    visible: spinMode === "wheel",
+    onChange: (value) => {
+      wheelAppearance = value;
+      saveWheelAppearance(value);
+      renderControlOnAllDocks(renderWheelAppearanceToggle, "appearance-toggle");
+      for (const id of WHEEL_WRAP_IDS) {
+        const wrap = document.getElementById(id);
+        if (!wrap || !wrap._wheelPool) continue;
+        const holder = wrap.querySelector(".wheel-holder");
+        if (holder) holder.className = "wheel-holder wheel-holder--" + value;
+        const canvas = wrap.querySelector("canvas");
+        if (canvas) drawWheel(canvas, wrap._wheelPool, getWheelDPR(), wrap._wheelWeights);
       }
     },
   });

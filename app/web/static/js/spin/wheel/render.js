@@ -11,6 +11,10 @@ const WHEEL_COLORS = [
 const WHEEL_HUB_GIF_URL = "";
 const WHEEL_WRAP_IDS = ["random-wheel-wrap", "spin-wheel-wrap"];
 
+function getWheelStyle() {
+  return typeof getWheelAppearance === "function" ? getWheelAppearance() : "classic";
+}
+
 function getWheelDPR() {
   const raw = window.devicePixelRatio || 1;
   return Math.min(3, Math.max(2, raw));
@@ -94,7 +98,7 @@ function buildWheel(wrapId, items, weights) {
   wrap.appendChild(titleEl);
 
   const holder = document.createElement("div");
-  holder.className = "wheel-holder";
+  holder.className = "wheel-holder wheel-holder--" + getWheelStyle();
   const pointer = document.createElement("div");
   pointer.className = "wheel-pointer";
   const canvasMask = document.createElement("div");

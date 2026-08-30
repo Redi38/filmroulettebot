@@ -44,7 +44,10 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
   display: inline-block; background: rgba(var(--primary-rgb), 0.08); padding: 3px 10px; border-radius: 8px;
   transition: background 0.15s;
 }
-.title.copy-title:active, .title.copy-title.copied { background: rgba(var(--primary-2-rgb), 0.28); }
+.title.copy-title.copied { background: rgba(var(--primary-2-rgb), 0.28); }
+@media (hover: hover) and (pointer: fine) {
+  .title.copy-title:active { background: rgba(var(--primary-2-rgb), 0.28); }
+}
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 .fade-in { animation: fadeIn 0.35s ease; animation-fill-mode: backwards; }
 .meta { color: var(--muted); font-size: 0.9rem; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
@@ -105,6 +108,8 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
 .list-row {
   display: flex; justify-content: space-between; align-items: center;
   padding: 11px 12px; border-bottom: 1px solid var(--border); gap: 10px;
+  transform: translateZ(0);
+  contain: paint;
 }
 .list-row:last-child { border-bottom: none; }
 .copy-title {
@@ -112,7 +117,10 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
   background: rgba(var(--primary-rgb), 0.08); padding: 4px 10px; border-radius: 8px; transition: background 0.15s;
   font-size: 0.95rem;
 }
-.copy-title:active, .copy-title.copied { background: rgba(var(--primary-2-rgb), 0.28); }
+.copy-title.copied { background: rgba(var(--primary-2-rgb), 0.28); }
+@media (hover: hover) and (pointer: fine) {
+  .copy-title:active { background: rgba(var(--primary-2-rgb), 0.28); }
+}
 .list-row button.del-btn, button.del-btn {
   background: var(--danger); color: white; border: none; border-radius: 8px;
   padding: 5px 11px; cursor: pointer; flex-shrink: 0;

@@ -123,6 +123,11 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
 
 .spin-toggle-row { display: flex; gap: 6px; justify-content: center; }
 
+.spin-mode-toggle .showcase-filter-btn:first-child.active,
+.confetti-toggle-wrap .showcase-filter-btn.active {
+  background: linear-gradient(90deg, var(--primary-2), var(--primary));
+}
+
 .wheel-holder--neon .wheel-canvas-mask {
   animation: wheel-neon-glow 2.4s ease-in-out infinite;
 }

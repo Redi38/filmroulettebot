@@ -160,7 +160,7 @@ function paginationRow(page, totalPages, onNav) {
   return row;
 }
 
-document.getElementById("add-btn").onclick = async () => {
+async function handleAddTitle() {
   const input = document.getElementById("add-input");
   const title = input.value.trim();
   if (!title) return;
@@ -178,4 +178,13 @@ document.getElementById("add-btn").onclick = async () => {
     onPick: doAdd,
     onFallback: () => doAdd(title),
   });
-};
+}
+
+document.getElementById("add-btn").onclick = handleAddTitle;
+
+document.getElementById("add-input").addEventListener("keydown", (ev) => {
+  if (ev.key === "Enter") {
+    ev.preventDefault();
+    handleAddTitle();
+  }
+});

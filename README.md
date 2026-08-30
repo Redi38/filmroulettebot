@@ -62,7 +62,12 @@ A lighter, chat-based companion covering the core flows:
 - 📜 **History** — `/history`, `/clear_history`.
 - 🔗 Optional "where to watch" link via `WATCH_LINK_TEMPLATE`.
 
-## Quick start (Docker)
+---
+
+<details open>
+<summary><strong>🚀 Quick start</strong> (click to collapse)</summary>
+
+### Docker (recommended)
 
 ```bash
 git clone https://github.com/Redi38/filmroulettebot.git
@@ -73,7 +78,13 @@ make up                 # docker compose up -d --build (bot + web + autoheal)
 
 The web app comes up on `http://localhost:8010`.
 
-## Local setup (no Docker)
+Deploying just the web service after a change (no need to restart the bot):
+
+```bash
+make web    # docker compose up -d --build web
+```
+
+### Local setup (no Docker)
 
 ```bash
 make venv && source .venv/bin/activate
@@ -93,9 +104,9 @@ python main.py                                   # the Telegram bot
 ### Frontend JS build
 
 `app/web/static/js/` is plain, framework-free JS (no bundler-required
-import/export) — but the ~30 files under it are concatenated and minified
+import/export) — but the 40+ files under it are concatenated and minified
 into a single `dist/bundle.min.js` by [esbuild](https://esbuild.github.io/)
-so the page loads with one request instead of ~30. That's a build artifact
+so the page loads with one request instead of 40+. That's a build artifact
 (gitignored, built fresh in Docker), so if you're running the app directly
 with `python`/`uvicorn` rather than Docker, build it once after cloning and
 again after editing anything under `static/js`:
@@ -109,7 +120,14 @@ make js-watch     # or: rebuild on every save
 File order matters (plain scripts share globals, no module resolution) —
 it's defined once in `app/web/static/js/manifest.json`.
 
-## Configuration (`.env`)
+</details>
+
+---
+
+<details>
+<summary><strong>⚙️ Configuration</strong> (click to expand)</summary>
+
+### `.env`
 
 | Variable | Required | Description |
 | --- | --- | --- |
@@ -119,6 +137,11 @@ it's defined once in `app/web/static/js/manifest.json`.
 | `DB_PATH` | — | SQLite database path (default `bot_data.db`) |
 | `LOG_LEVEL` | — | Logging level (default `INFO`) |
 | `WATCH_LINK_TEMPLATE` | — | "Where to watch" link template |
+| `TRUST_PROXY_HEADERS` | — | Trust `X-Forwarded-For`/`X-Real-IP` for the per-client spin cooldown — only enable this behind a reverse proxy (nginx/Caddy) that sets those headers itself (default `False`) |
+
+</details>
+
+---
 
 ## Stack
 

@@ -62,7 +62,7 @@ function renderTheatersFilters() {
   if (theatersHideLocalOnly === null) ensureTheatersSettingsLoaded();
 }
 
-async function loadTheaters() {
+async function loadTheaters(trigger) {
   const container = document.getElementById("theaters-container");
   renderTheatersFilters();
   if (!theatersLoaded) {
@@ -71,11 +71,10 @@ async function loadTheaters() {
   }
   try {
     const data = await api(`/api/theaters?now_playing_page=${theatersNowPlayingPage}&upcoming_page=${theatersUpcomingPage}&added=${theatersAddedFilter}`);
-    await fadeOut(container);
     theatersLoaded = true;
-    container.innerHTML = "";
     if (!data.now_playing.length && !data.upcoming.length
         && data.now_playing_total_pages <= 1 && data.upcoming_total_pages <= 1) {
+      await fadeOut(container);
       container.innerHTML = placeholderHtml(
         theatersAddedFilter === "all" ? "Пока нет данных о прокате — загляни попозже" : "Ничего не подходит под выбранный фильтр",
         theatersAddedFilter === "all" ? "🎬" : "🔍"
@@ -83,34 +82,60 @@ async function loadTheaters() {
       fadeIn(container);
       return;
     }
-    const colNow = document.createElement("div");
-    colNow.className = "theaters-col";
-    colNow.appendChild(showcaseGroup(
-      "🎬 Сейчас в прокате / вышло", data.now_playing, "movies", false, "now-playing",
-      "theaters_now_playing", loadTheaters,
-    ));
-    if (data.now_playing_total_pages > 1) {
-      colNow.appendChild(paginationRow(data.now_playing_page, data.now_playing_total_pages, (p) => {
-        theatersNowPlayingPage = p;
-        loadTheaters();
-      }));
-    }
-    container.appendChild(colNow);
 
-    const colUpcoming = document.createElement("div");
-    colUpcoming.className = "theaters-col";
-    colUpcoming.appendChild(showcaseGroup(
-      "⏳ Скоро в кино", data.upcoming, "movies", false, "upcoming",
-      "theaters_upcoming", loadTheaters,
-    ));
-    if (data.upcoming_total_pages > 1) {
-      colUpcoming.appendChild(paginationRow(data.upcoming_page, data.upcoming_total_pages, (p) => {
-        theatersUpcomingPage = p;
-        loadTheaters();
-      }));
+    // Two persistent sub-columns. Paging one column (trigger set) only
+    // ever touches that column's own DOM: doing a full container rebuild
+    // here would wipe out any in-flight skip/undo banner (and its
+    // "Отменить" button) sitting in the *other* column — see the
+    // showInlineUndo call in showcase/actions.js. A trigger-less call
+    // (initial load or a filter change resetting both pages) still does
+    // the old full-container fade/rebuild.
+    let colNow = container.querySelector(".theaters-col-now");
+    let colUpcoming = container.querySelector(".theaters-col-upcoming");
+    const singleColumn = (trigger === "now" || trigger === "upcoming") && colNow && colUpcoming;
+    if (!singleColumn) {
+      await fadeOut(container);
+      container.innerHTML = "";
+      colNow = document.createElement("div");
+      colNow.className = "theaters-col theaters-col-now";
+      colUpcoming = document.createElement("div");
+      colUpcoming.className = "theaters-col theaters-col-upcoming";
+      container.appendChild(colNow);
+      container.appendChild(colUpcoming);
     }
-    container.appendChild(colUpcoming);
-    fadeIn(container);
+
+    if (!singleColumn || trigger === "now") {
+      if (singleColumn) await fadeOut(colNow);
+      colNow.innerHTML = "";
+      colNow.appendChild(showcaseGroup(
+        "🎬 Сейчас в прокате / вышло", data.now_playing, "movies", false, "now-playing",
+        "theaters_now_playing", () => loadTheaters("now"),
+      ));
+      if (data.now_playing_total_pages > 1) {
+        colNow.appendChild(paginationRow(data.now_playing_page, data.now_playing_total_pages, (p) => {
+          theatersNowPlayingPage = p;
+          loadTheaters("now");
+        }));
+      }
+      if (singleColumn) fadeIn(colNow);
+    }
+
+    if (!singleColumn || trigger === "upcoming") {
+      if (singleColumn) await fadeOut(colUpcoming);
+      colUpcoming.innerHTML = "";
+      colUpcoming.appendChild(showcaseGroup(
+        "⏳ Скоро в кино", data.upcoming, "movies", false, "upcoming",
+        "theaters_upcoming", () => loadTheaters("upcoming"),
+      ));
+      if (data.upcoming_total_pages > 1) {
+        colUpcoming.appendChild(paginationRow(data.upcoming_page, data.upcoming_total_pages, (p) => {
+          theatersUpcomingPage = p;
+          loadTheaters("upcoming");
+        }));
+      }
+      if (singleColumn) fadeIn(colUpcoming);
+    }
+    if (!singleColumn) fadeIn(container);
   } catch (e) {
     container.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
     fadeIn(container);

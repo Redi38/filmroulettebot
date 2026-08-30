@@ -28,6 +28,7 @@ const ICONS = {
   movies: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="2"></rect><line x1="7" y1="3" x2="7" y2="21"></line><line x1="17" y1="3" x2="17" y2="21"></line><line x1="2" y1="8" x2="7" y2="8"></line><line x1="2" y1="16" x2="7" y2="16"></line><line x1="17" y1="8" x2="22" y2="8"></line><line x1="17" y1="16" x2="22" y2="16"></line></svg>`,
   cartoons: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>`,
   series: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>`,
+  premiere: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.36 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.36 12 2"></polygon></svg>`,
   list: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>`,
   marvel: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="12" x2="12" y2="3"></line><line x1="12" y1="12" x2="19.8" y2="7.5"></line><line x1="12" y1="12" x2="19.8" y2="16.5"></line><line x1="12" y1="12" x2="12" y2="21"></line><line x1="12" y1="12" x2="4.2" y2="16.5"></line><line x1="12" y1="12" x2="4.2" y2="7.5"></line><polygon points="12 7 16.3 9.5 16.3 14.5 12 17 7.7 14.5 7.7 9.5"></polygon><polygon points="12 3 19.8 7.5 19.8 16.5 12 21 4.2 16.5 4.2 7.5"></polygon></svg>`,
   dc: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12L5 8L8 11L12 7L16 11L19 8L23 12L19 16L16 13L12 17L8 13L5 16Z"></path></svg>`,
@@ -59,7 +60,7 @@ function renderMenu() {
 
   addGroup("Кино и сериалы");
   addItem("theaters", "В прокате", () => switchView("theaters"), currentView === "theaters");
-  addItem("series", "Премьеры сериалов", () => switchView("series_releases"), currentView === "series_releases");
+  addItem("premiere", "Премьеры сериалов", () => switchView("series_releases"), currentView === "series_releases");
   addItem("bell", "Отслеживание сериалов", () => switchView("tracked_series"), currentView === "tracked_series");
 
   addGroup("Рулетка по категориям");

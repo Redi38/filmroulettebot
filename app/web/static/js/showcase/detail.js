@@ -4,8 +4,6 @@
 
 const _mediaDetailsCache = new Map();
 
-// Wires up infoBtn's click handler to toggle `wrap`'s expanded state and
-// lazily fill `detail` with the fetched/cached media details for `item`.
 function attachShowcaseDetailToggle(wrap, infoBtn, detail, item) {
   let expanded = false;
   infoBtn.onclick = async () => {
@@ -35,7 +33,7 @@ function renderShowcaseDetail(data, item) {
   if (data.seasons) extra += metaLine("layers", `Сезонов: ${escapeHtml(String(data.seasons))}`) + metaLine("film", `Эпизодов: ${escapeHtml(String(data.episodes ?? "—"))}`);
 
   const today = new Date().toISOString().slice(0, 10);
-  const notReleasedYet = (item.release_date || "") > today;
+  const notReleasedYet = !item.airing_now && (item.release_date || "") > today;
   let actionBtn = "";
   if (notReleasedYet) {
     if (data.trailer_url) {

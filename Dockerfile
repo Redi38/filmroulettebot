@@ -1,11 +1,12 @@
-FROM node:22-slim AS js-build
+FROM node:22-slim AS assets-build
 
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN --mount=type=cache,target=/root/.npm npm install
-COPY scripts/build-js.mjs scripts/build-js.mjs
+COPY scripts/build-js.mjs scripts/build-css.mjs scripts/
 COPY app/web/static/js app/web/static/js
-RUN npm run build:js
+COPY app/web/static/css app/web/static/css
+RUN npm run build
 
 FROM python:3.14-slim AS base
 
@@ -29,6 +30,7 @@ CMD ["python", "main.py"]
 
 FROM base AS web
 
-COPY --from=js-build /app/app/web/static/js/dist app/web/static/js/dist
+COPY --from=assets-build /app/app/web/static/js/dist app/web/static/js/dist
+COPY --from=assets-build /app/app/web/static/css/dist app/web/static/css/dist
 
 CMD ["uvicorn", "app.web.server:app", "--host", "0.0.0.0", "--port", "8000"]

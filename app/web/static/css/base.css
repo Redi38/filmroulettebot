@@ -6,7 +6,7 @@
   --primary: #f2a93b; --primary-2: #ff3b81; --success: #34d399; --danger: #ff4d6a;
   --primary-rgb: 242, 169, 59; --primary-2-rgb: 255, 59, 129; --on-primary: #1a1108;
   --border: #2c2620; --glow: rgba(var(--primary-rgb), 0.32); --glow-2: rgba(var(--primary-2-rgb), 0.32);
-  --sidebar-w: 260px; --header-h: 63px;
+  --sidebar-w: 260px; --header-h: 63px; --sidebar-bg: #17151b;
 }
 
 body[data-studio="marvel"] {
@@ -77,7 +77,7 @@ header .header-spacer { width: 34px; height: 34px; flex-shrink: 0; }
 #sidebar-brand { display: none; }
 #side-menu {
   position: fixed; top: 0; left: -280px; width: 260px; height: 100%;
-  background: #17151b; border-right: 1px solid var(--border); z-index: 11;
+  background: var(--sidebar-bg); border-right: 1px solid var(--border); z-index: 11;
   transition: left 0.2s ease; padding: 0; overflow: hidden; box-sizing: border-box;
 }
 #side-menu.open { left: 0; }

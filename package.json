@@ -7,6 +7,9 @@
   "scripts": {
     "build:js": "node scripts/build-js.mjs",
     "watch:js": "node scripts/build-js.mjs --watch",
+    "build:css": "node scripts/build-css.mjs",
+    "watch:css": "node scripts/build-css.mjs --watch",
+    "build": "npm run build:js && npm run build:css",
     "generate:types": "python3 scripts/dump_openapi.py && openapi-typescript scripts/openapi.json -o app/web/static/js/types/api.d.ts",
     "check:js": "tsc --project tsconfig.json"
   },

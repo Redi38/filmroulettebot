@@ -10,7 +10,8 @@ DC ?= docker compose
 .DEFAULT_GOAL := help
 
 .PHONY: help venv install install-dev up web down logs ps \
-        ci compile lint typecheck test js-syntax js-install js-build js-watch clean
+        ci compile lint typecheck test js-syntax js-install js-build js-watch \
+        css-build css-watch clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -82,6 +83,20 @@ js-build: ## Bundle+minify app/web/static/js into dist/bundle.min.js
 
 js-watch: ## Rebuild the JS bundle on every change (local dev)
 	npm run watch:js
+
+# --- Frontend CSS bundle (esbuild, no framework) ------------------------
+# `python main.py` / `uvicorn` serve app/web/static/css/dist/bundle.min.css,
+# which is a build artifact (gitignored) — run css-build at least once
+# after cloning, and again after editing anything under static/css.
+# `make up`/`make web` (Docker) build it automatically; only needed here
+# for running the app directly with Python. Uses the same npm install as
+# js-install, so run that first if you haven't.
+
+css-build: ## Bundle+minify app/web/static/css into dist/bundle.min.css
+	npm run build:css
+
+css-watch: ## Rebuild the CSS bundle on every change (local dev)
+	npm run watch:css
 
 # --- Housekeeping -----------------------------------------------------
 

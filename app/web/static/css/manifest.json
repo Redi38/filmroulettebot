@@ -1,0 +1,12 @@
+{
+  "//": "Load order for the CSS files — mirrors app/web/static/js/manifest.json. This is the ONLY place that order is defined — scripts/build-css.mjs concatenates them in this order to produce dist/bundle.min.css. Keep it in sync with cascade order (a later file may rely on/override rules from an earlier one, e.g. modal-responsive.css must stay last).",
+  "files": [
+    "base.css",
+    "buttons-cards.css",
+    "home.css",
+    "showcase.css",
+    "spin-wheel.css",
+    "feedback-history.css",
+    "modal-responsive.css"
+  ]
+}

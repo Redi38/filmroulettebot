@@ -308,12 +308,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Api Tracked Series
-         * @description The user's personal 'notify me about the next season' list — distinct
-         *     from the Сериалы roulette category, which is about picking something to
-         *     watch now, not tracking a specific show's future releases.
-         */
+        /** Api Tracked Series */
         get: operations["api_tracked_series_api_tracked_series_get"];
         put?: never;
         post?: never;
@@ -685,12 +680,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Api Get Settings
-         * @description Shared app-wide settings (not per-browser like the localStorage UI
-         *     prefs) — currently just the Афиша local-only filter, but a home for any
-         *     future setting that should apply to both of you at once.
-         */
+        /** Api Get Settings */
         get: operations["api_get_settings_api_settings_get"];
         put?: never;
         post?: never;

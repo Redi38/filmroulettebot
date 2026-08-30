@@ -121,7 +121,7 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
 .spin-appearance-wrap { display: none; justify-content: center; margin: 0; }
 .spin-appearance-wrap.visible { display: flex; }
 
-.spin-toggle-row { display: flex; gap: 10px; justify-content: center; }
+.spin-toggle-row { display: flex; gap: 6px; justify-content: center; }
 
 .wheel-holder--neon .wheel-canvas-mask {
   animation: wheel-neon-glow 2.4s ease-in-out infinite;

@@ -19,11 +19,6 @@ function renderConfettiToggle(containerId) {
   el.innerHTML = "";
   el.className = "confetti-toggle-wrap" + (spinMode === "wheel" ? " visible" : "");
 
-  const outer = document.createElement("div");
-  outer.className = "spin-mode-toggle-wrap";
-  const row = document.createElement("div");
-  row.className = "spin-mode-toggle";
-
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "showcase-filter-btn" + (confettiEnabled ? " active" : "");
@@ -35,7 +30,5 @@ function renderConfettiToggle(containerId) {
     renderControlOnAllDocks(renderConfettiToggle, "confetti-toggle");
   };
 
-  row.appendChild(btn);
-  outer.appendChild(row);
-  el.appendChild(outer);
+  el.appendChild(btn);
 }

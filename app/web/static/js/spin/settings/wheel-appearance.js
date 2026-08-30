@@ -19,11 +19,6 @@ function renderWheelAppearanceToggle(containerId) {
   el.innerHTML = "";
   el.className = "spin-appearance-wrap" + (spinMode === "wheel" ? " visible" : "");
 
-  const outer = document.createElement("div");
-  outer.className = "spin-mode-toggle-wrap";
-  const row = document.createElement("div");
-  row.className = "spin-mode-toggle";
-
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "showcase-filter-btn" + (isNeon ? " active" : "");
@@ -43,7 +38,5 @@ function renderWheelAppearanceToggle(containerId) {
     }
   };
 
-  row.appendChild(btn);
-  outer.appendChild(row);
-  el.appendChild(outer);
+  el.appendChild(btn);
 }

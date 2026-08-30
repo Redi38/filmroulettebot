@@ -3,11 +3,11 @@
 Split by concern into sibling modules (client/movies/series/studios/
 details/helpers); this file re-exports the same public names the old
 single-file app/services/tmdb.py exposed, so `from app.services.tmdb import
-...` call sites elsewhere in the app don't need to change. The movie-related
-helpers used to live in one movies.py — now a movies/ subpackage split
-further into search.py, info.py, release.py, and listings.py by concern
-(search/autocomplete, the full info card, digital-release heuristics, and
-TMDb's own theatrical listings, respectively).
+...` call sites elsewhere in the app don't need to change. The movie- and
+series-related helpers used to each live in one file (movies.py, series.py)
+— now movies/ and series/ subpackages, split further by concern: movies/
+into search.py, info.py, release.py, and listings.py; series/ into
+search.py, info.py, episodes.py, releases.py, and tracked.py.
 """
 from __future__ import annotations
 

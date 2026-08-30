@@ -44,7 +44,7 @@ async def search_multi_suggestions(query: str) -> list[dict[str, Any]]:
     contain either — dc/marvel cover both theatrical films (The Batman)
     and streaming series (Loki, Green Lantern), unlike movies/cartoons
     which are movie-only and series which is TV-only."""
-    from ..series import _search_tv_cached
+    from ..series.search import _search_tv_cached
 
     query = query.strip()
     if not query:

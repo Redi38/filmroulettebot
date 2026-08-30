@@ -64,7 +64,7 @@ A lighter, chat-based companion covering the core flows:
 
 ---
 
-<details open>
+<details>
 <summary><strong>🚀 Quick start</strong> (click to collapse)</summary>
 
 ### Docker (recommended)
@@ -145,8 +145,14 @@ it's defined once in `app/web/static/js/manifest.json`.
 
 ## Stack
 
-Python 3.12+ · FastAPI + Uvicorn (web app) · [aiogram 3](https://docs.aiogram.dev/) (bot) ·
-SQLite (aiosqlite) · httpx (TMDB) · plain HTML/CSS/JS frontend.
+| Category | Technologies |
+| --- | --- |
+| Language | Python 3.12+ |
+| Web Framework | FastAPI + Uvicorn (web app) |
+| Bot Framework | aiogram 3 (bot) |
+| Database | SQLite (aiosqlite) |
+| HTTP Client | httpx (TMDB) |
+| Frontend | Plain HTML/CSS/JS |
 
 ## License
 

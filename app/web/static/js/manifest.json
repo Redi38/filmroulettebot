@@ -3,6 +3,7 @@
   "files": [
     "core/api.js",
     "core/utils.js",
+    "core/bg-dust.js",
     "core/storage.js",
     "core/state.js",
     "core/modal.js",

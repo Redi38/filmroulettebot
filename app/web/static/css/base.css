@@ -1,8 +1,8 @@
 /* Design tokens, page reset, header, and side navigation menu. */
 
 :root {
-  --bg-a: #2a1a0e; --bg-b: #23102a; --bg-c: #141319;
-  --card: #17151a; --text: #f5f0e6; --muted: #a39a8c;
+  --bg-a: #2a1a0e; --bg-b: #23102a; --bg-c: #18171f;
+  --card: #1e1c23; --text: #f5f0e6; --muted: #a39a8c;
   --primary: #f2a93b; --primary-2: #ff3b81; --success: #34d399; --danger: #ff4d6a;
   --primary-rgb: 242, 169, 59; --primary-2-rgb: 255, 59, 129; --on-primary: #1a1108;
   --border: #2c2620; --glow: rgba(var(--primary-rgb), 0.32); --glow-2: rgba(var(--primary-2-rgb), 0.32);
@@ -39,6 +39,24 @@ body::before {
     radial-gradient(ellipse 55% 35% at 105% 10%, var(--bg-b) 0%, transparent 55%),
     var(--bg-c);
 }
+
+#bg-dust { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.dust-mote {
+  position: absolute; bottom: -5%; border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--primary-rgb), 0.55), transparent 70%);
+  filter: blur(2px);
+  animation: dust-rise linear infinite;
+  will-change: transform;
+}
+@keyframes dust-rise {
+  from { transform: translate(0, 0); opacity: 0; }
+  10% { opacity: 0.8; }
+  90% { opacity: 0.35; }
+  to { transform: translate(20px, -110vh); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dust-mote { animation: none; opacity: 0; }
+}
 header {
   display: flex; align-items: center; justify-content: space-between;
   height: var(--header-h); padding: 14px 16px; border-bottom: 1px solid var(--border);
@@ -59,7 +77,7 @@ header .header-spacer { width: 34px; height: 34px; flex-shrink: 0; }
 #sidebar-brand { display: none; }
 #side-menu {
   position: fixed; top: 0; left: -280px; width: 260px; height: 100%;
-  background: #100e12; border-right: 1px solid var(--border); z-index: 11;
+  background: #17151b; border-right: 1px solid var(--border); z-index: 11;
   transition: left 0.2s ease; padding: 0; overflow: hidden; box-sizing: border-box;
 }
 #side-menu.open { left: 0; }

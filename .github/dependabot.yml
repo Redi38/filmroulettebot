@@ -11,6 +11,11 @@ updates:
       aiogram:
         patterns:
           - "aiogram*"
+      dev-tools:
+        patterns:
+          - "ruff*"
+          - "mypy*"
+          - "pytest*"
       minor-and-patch:
         update-types:
           - "minor"
@@ -19,6 +24,9 @@ updates:
           - "*"
         exclude-patterns:
           - "aiogram*"
+          - "ruff*"
+          - "mypy*"
+          - "pytest*"
 
   - package-ecosystem: "docker"
     directory: "/"
@@ -28,6 +36,10 @@ updates:
     labels:
       - "dependencies"
       - "docker"
+    groups:
+      docker-images:
+        patterns:
+          - "*"
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -37,3 +49,7 @@ updates:
     labels:
       - "dependencies"
       - "ci"
+    groups:
+      github-actions:
+        patterns:
+          - "*"

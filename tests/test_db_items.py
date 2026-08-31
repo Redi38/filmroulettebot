@@ -30,31 +30,27 @@ async def test_add_item_rejects_empty_title():
 
 
 async def test_add_item_ignores_case_insensitive_duplicate():
-    # NOTE: SQLite's built-in COLLATE NOCASE only case-folds ASCII
-    # (A-Z/a-z) — it does *not* fold Cyrillic case, so an ASCII title is
-    # used here to test the guarantee that actually holds. A Cyrillic
-    # duplicate like "Матрица" / "МАТРИЦА" currently is *not* caught (see
-    # test_add_item_cyrillic_case_is_not_folded_by_sqlite below) — that's
-    # a pre-existing SQLite/schema limitation, not something this test
-    # suite changes.
     await add_item("movies", "Inception")
     await add_item("movies", "INCEPTION")
     assert await get_items("movies") == ["Inception"]
 
 
-async def test_add_item_cyrillic_case_is_not_folded_by_sqlite():
-    # Documents a real, pre-existing limitation rather than asserting
-    # aspirational behaviour: SQLite's NOCASE collation is ASCII-only, so
-    # "Матрица" and "МАТРИЦА" are treated as distinct titles today.
+async def test_add_item_ignores_cyrillic_case_insensitive_duplicate():
     await add_item("movies", "Матрица")
     await add_item("movies", "МАТРИЦА")
-    assert await get_items("movies") == ["Матрица", "МАТРИЦА"]
+    assert await get_items("movies") == ["Матрица"]
 
 
 async def test_item_exists_is_case_insensitive_for_ascii():
     await add_item("series", "Breaking Bad")
     assert await item_exists("series", "breaking bad") is True
     assert await item_exists("series", "The Sopranos") is False
+
+
+async def test_item_exists_is_case_insensitive_for_cyrillic():
+    await add_item("series", "Слово пацана")
+    assert await item_exists("series", "слово пацана") is True
+    assert await item_exists("series", "СЛОВО ПАЦАНА") is True
 
 
 async def test_delete_item_removes_it():

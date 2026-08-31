@@ -71,7 +71,7 @@ async def api_add(cat: str, body: TitleBody) -> dict:
     if not title:
         raise HTTPException(400, "Title can't be empty")
     if await item_exists(cat, title):
-        raise HTTPException(409, f"«{title}» уже добавлен(а) в «{CATEGORIES.get(cat, cat)}»")
+        raise HTTPException(409, f"Не добавлено — «{title}» уже есть в «{CATEGORIES.get(cat, cat)}»")
     await add_item(cat, title)
     return {"ok": True}
 
@@ -102,7 +102,7 @@ async def api_rename(cat: str, body: RenameByIdBody) -> dict:
     if not await _validate_rename_by_id(
         lambda title, item_id: item_exists_other_id(cat, title, item_id),
         body.id, new_title,
-        conflict_msg=f"«{new_title}» уже добавлен(а) в «{CATEGORIES.get(cat, cat)}»",
+        conflict_msg=f"Не изменено — «{new_title}» уже есть в «{CATEGORIES.get(cat, cat)}»",
     ):
         return {"ok": True}
     if not await rename_item_by_id(cat, body.id, new_title):

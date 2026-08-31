@@ -20,7 +20,8 @@ function showToast(msg, type) {
   t.textContent = msg;
   t.classList.toggle("toast--error", type === "error");
   t.classList.add("show");
-  setTimeout(() => t.classList.remove("show"), 1400);
+  clearTimeout(t._hideTimer);
+  t._hideTimer = setTimeout(() => t.classList.remove("show"), type === "error" ? 3000 : 1400);
 }
 
 function showInlineUndo(parent, referenceNode, msg, actionLabel, onAction, onDismiss, duration) {
@@ -42,22 +43,22 @@ function showInlineUndo(parent, referenceNode, msg, actionLabel, onAction, onDis
 
   let dismissed = false;
   let timer;
-  const dismiss = () => {
+  const dismiss = (fireCallback) => {
     if (dismissed) return;
     dismissed = true;
     clearTimeout(timer);
     pill.style.opacity = "0";
     setTimeout(() => {
       wrap.remove();
-      if (onDismiss) onDismiss();
+      if (fireCallback && onDismiss) onDismiss();
     }, 200);
   };
   requestAnimationFrame(() => btn.classList.add("wipe"));
   btn.onclick = () => {
-    dismiss();
+    dismiss(false);
     onAction();
   };
-  timer = setTimeout(dismiss, ms);
+  timer = setTimeout(() => dismiss(true), ms);
   return dismiss;
 }
 

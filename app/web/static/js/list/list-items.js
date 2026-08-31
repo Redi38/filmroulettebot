@@ -99,6 +99,10 @@ async function loadList(page) {
 
 function checkListEmpty(container) {
   if (container.querySelector(".list-row") || container.querySelector(".inline-undo-row")) return;
+  if (currentListPage > 1) {
+    loadList(currentListPage - 1);
+    return;
+  }
   const q = currentListQuery.trim();
   container.innerHTML = q
     ? placeholderHtml(`Ничего не найдено по «${escapeHtml(q)}»`, "🔍")

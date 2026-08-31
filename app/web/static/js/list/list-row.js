@@ -26,7 +26,7 @@ function createEditableRow(title, opts) {
           await opts.onRename(finalTitle);
           opts.onReload();
         } catch (e) {
-          showToast(e.message || "Не удалось изменить название");
+          showToast(e.message || "Не удалось изменить название", "error");
         }
       };
       if (opts.searchEndpoint) {

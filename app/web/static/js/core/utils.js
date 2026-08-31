@@ -15,9 +15,10 @@ function ensureFilterPanel(panelId, sectionId, beforeId) {
   return panel;
 }
 
-function showToast(msg) {
+function showToast(msg, type) {
   const t = document.getElementById("toast");
   t.textContent = msg;
+  t.classList.toggle("toast--error", type === "error");
   t.classList.add("show");
   setTimeout(() => t.classList.remove("show"), 1400);
 }

@@ -18,6 +18,10 @@ logger = logging.getLogger(__name__)
 ALLOWED_TABLES = frozenset({"movies", "cartoons", "series", "dc", "marvel", "upcoming_movies", "tracked_series"})
 NOCASE_TABLES = ("movies", "cartoons", "series", "dc", "marvel", "upcoming_movies", "tracked_series")
 
+def _unicode_nocase(a: str, b: str) -> int:
+    a, b = a.casefold(), b.casefold()
+    return -1 if a < b else (1 if a > b else 0)
+
 _DB_MAX_RETRIES = 4
 _DB_RETRY_BASE = 0.15  # seconds
 
@@ -51,6 +55,7 @@ async def _get_connection() -> aiosqlite.Connection:
     if _db_conn is None:
         db = await aiosqlite.connect(settings.DB_PATH)
         db.row_factory = aiosqlite.Row
+        await db._execute(db._conn.create_collation, "UNICODE_NOCASE", _unicode_nocase)
         await db.execute("PRAGMA journal_mode=WAL")
         await db.execute("PRAGMA busy_timeout=5000")
         _db_conn = db

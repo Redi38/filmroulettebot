@@ -172,7 +172,7 @@ async function handleAddTitle() {
       });
       input.value = "";
       loadList();
-    } catch (e) { showToast(e.message); }
+    } catch (e) { showToast(e.message, "error"); }
   };
   openAddSearchModal(`/api/${currentCat}/search-suggest`, title, {
     onPick: doAdd,

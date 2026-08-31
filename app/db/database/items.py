@@ -28,7 +28,8 @@ async def get_items_with_ids(table: str) -> list[dict]:
 
 
 async def item_exists(table: str, title: str) -> bool:
-    """Case-insensitive existence check (relies on COLLATE NOCASE on the column)."""
+    """Case-insensitive existence check (relies on COLLATE UNICODE_NOCASE on
+    the column — see connection.py for why the built-in NOCASE isn't enough)."""
     check_table(table)
     async with conn() as db:
         async with db.execute(f"SELECT 1 FROM {table} WHERE title = ? LIMIT 1", (title,)) as cur:
@@ -98,3 +99,4 @@ async def rename_item_by_id(table: str, item_id: int, new_title: str) -> bool:
         cur = await db.execute(f"UPDATE {table} SET title = ? WHERE id = ?", (new_title, item_id))
         await db.commit()
         return cur.rowcount > 0
+

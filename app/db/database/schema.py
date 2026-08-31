@@ -11,9 +11,12 @@ logger = logging.getLogger(__name__)
 
 
 async def _migrate_to_nocase(db: aiosqlite.Connection, table: str) -> None:
-    """If `table` exists but its `title` column isn't COLLATE NOCASE, rebuild it
-    with the new schema, migrating data and merging case-insensitive duplicates
-    (first occurrence wins, rest are dropped silently)."""
+    """If `table` exists but its `title` column isn't COLLATE UNICODE_NOCASE
+    (our custom Unicode-aware collation — see connection.py), rebuild it with
+    the new schema, migrating data and merging case-insensitive duplicates
+    (first occurrence wins, rest are dropped silently). This also re-runs
+    for tables previously migrated to the old built-in COLLATE NOCASE, which
+    only case-folds ASCII and misses duplicates like 'Матрица' / 'матрица'."""
     async with db.execute(
         "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?", (table,)
     ) as cur:
@@ -23,16 +26,16 @@ async def _migrate_to_nocase(db: aiosqlite.Connection, table: str) -> None:
         return
 
     create_sql = row[0] or ""
-    if "COLLATE NOCASE" in create_sql.upper().replace("COLLATE  NOCASE", "COLLATE NOCASE"):
+    if "COLLATE UNICODE_NOCASE" in create_sql.upper():
         return
 
-    logger.info("Migration: rebuilding table %r with COLLATE NOCASE on title…", table)
+    logger.info("Migration: rebuilding table %r with COLLATE UNICODE_NOCASE on title…", table)
 
     tmp_table = f"{table}__new_nocase"
     await db.execute(f"DROP TABLE IF EXISTS {tmp_table}")
     await db.execute(
         f"CREATE TABLE {tmp_table} "
-        f"(id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE NOCASE)"
+        f"(id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE)"
     )
 
     async with db.execute(f"SELECT title FROM {table} ORDER BY id ASC") as cur:
@@ -54,7 +57,53 @@ async def _migrate_to_nocase(db: aiosqlite.Connection, table: str) -> None:
             "Migration: table %r had %d case-insensitive duplicate(s) merged away: %s",
             table, len(dropped), dropped,
         )
-    logger.info("Migration: table %r rebuilt (%d rows kept).", table, len(titles) - len(dropped))
+    logger.info(
+        "Migration: table %r rebuilt with UNICODE_NOCASE (%d rows kept).", table, len(titles) - len(dropped)
+    )
+
+
+async def _migrate_skipped_titles_to_nocase(db: aiosqlite.Connection) -> None:
+    """Same problem, different shape: skipped_titles has a composite
+    (scope, title) primary key instead of an autoincrement id, so it can't
+    reuse _migrate_to_nocase's rebuild logic above."""
+    async with db.execute(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'skipped_titles'"
+    ) as cur:
+        row = await cur.fetchone()
+
+    if row is None:
+        return
+
+    create_sql = row[0] or ""
+    if "COLLATE UNICODE_NOCASE" in create_sql.upper():
+        return
+
+    logger.info("Migration: rebuilding skipped_titles with COLLATE UNICODE_NOCASE on title…")
+
+    await db.execute("DROP TABLE IF EXISTS skipped_titles__new_nocase")
+    await db.execute(
+        "CREATE TABLE skipped_titles__new_nocase ("
+        "scope TEXT NOT NULL, title TEXT NOT NULL COLLATE UNICODE_NOCASE, PRIMARY KEY (scope, title))"
+    )
+
+    async with db.execute("SELECT scope, title FROM skipped_titles") as cur:
+        rows = [(r[0], r[1]) async for r in cur]
+
+    dropped = 0
+    for scope, title in rows:
+        result = await db.execute(
+            "INSERT OR IGNORE INTO skipped_titles__new_nocase (scope, title) VALUES (?, ?)",
+            (scope, title),
+        )
+        if result.rowcount == 0:
+            dropped += 1
+
+    await db.execute("DROP TABLE skipped_titles")
+    await db.execute("ALTER TABLE skipped_titles__new_nocase RENAME TO skipped_titles")
+
+    if dropped:
+        logger.warning("Migration: skipped_titles had %d case-insensitive duplicate(s) merged away.", dropped)
+    logger.info("Migration: skipped_titles rebuilt with UNICODE_NOCASE (%d rows kept).", len(rows) - dropped)
 
 
 async def init_db() -> None:
@@ -79,6 +128,7 @@ async def init_db() -> None:
 
         for table in NOCASE_TABLES:
             await _migrate_to_nocase(db, table)
+        await _migrate_skipped_titles_to_nocase(db)
         await db.commit()
 
         await db.executescript(
@@ -95,13 +145,13 @@ async def init_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_history_user_category_ts
                 ON history (user_id, category, timestamp);
 
-            CREATE TABLE IF NOT EXISTS movies        (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE NOCASE);
-            CREATE TABLE IF NOT EXISTS cartoons      (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE NOCASE);
-            CREATE TABLE IF NOT EXISTS series        (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE NOCASE);
-            CREATE TABLE IF NOT EXISTS dc            (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE NOCASE);
-            CREATE TABLE IF NOT EXISTS marvel        (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE NOCASE);
-            CREATE TABLE IF NOT EXISTS upcoming_movies (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE NOCASE);
-            CREATE TABLE IF NOT EXISTS tracked_series  (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE NOCASE);
+            CREATE TABLE IF NOT EXISTS movies        (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE);
+            CREATE TABLE IF NOT EXISTS cartoons      (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE);
+            CREATE TABLE IF NOT EXISTS series        (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE);
+            CREATE TABLE IF NOT EXISTS dc            (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE);
+            CREATE TABLE IF NOT EXISTS marvel        (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE);
+            CREATE TABLE IF NOT EXISTS upcoming_movies (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE);
+            CREATE TABLE IF NOT EXISTS tracked_series  (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE);
 
             CREATE TABLE IF NOT EXISTS tmdb_cache (
                 cache_key TEXT PRIMARY KEY,
@@ -112,7 +162,7 @@ async def init_db() -> None:
 
             CREATE TABLE IF NOT EXISTS skipped_titles (
                 scope TEXT NOT NULL,
-                title TEXT NOT NULL COLLATE NOCASE,
+                title TEXT NOT NULL COLLATE UNICODE_NOCASE,
                 PRIMARY KEY (scope, title)
             );
 

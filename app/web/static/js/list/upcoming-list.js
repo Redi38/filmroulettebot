@@ -61,7 +61,7 @@ document.getElementById("up-add-btn").onclick = async () => {
       });
       input.value = "";
       loadUpcoming();
-    } catch (e) { showToast(e.message); }
+    } catch (e) { showToast(e.message, "error"); }
   };
   openAddSearchModal("/api/upcoming/search-suggest", title, {
     onPick: doAdd,

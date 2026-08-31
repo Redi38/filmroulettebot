@@ -5,8 +5,14 @@
   background: linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary) 70%, black)); color: var(--on-primary); padding: 9px 20px; border-radius: 24px;
   font-size: 0.9rem; font-weight: 700; opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 20;
   box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+  max-width: calc(100vw - 32px); text-align: center;
 }
 .toast.show { opacity: 1; }
+.toast.toast--error {
+  bottom: auto; top: calc(var(--header-h, 60px) + 135px);
+  background: linear-gradient(135deg, var(--danger), #b9203f); color: white;
+  font-size: 1.05rem; padding: 13px 26px; border-radius: 24px;
+}
 .inline-undo-row {
   display: flex; justify-content: center; margin: 10px 0;
   animation: fadeIn 0.25s ease;
@@ -68,6 +74,6 @@
   text-transform: uppercase; letter-spacing: 0.03em;
 }
 
-#list-container, #list-featured, #up-list-container, #history-list, #showcase-container, #theaters-container, #series-releases-container, .theaters-col {
+#list-container, #list-featured, #up-list-container, #history-list, #showcase-container, #theaters-container, #series-releases-container {
   transition: opacity 0.22s ease;
 }

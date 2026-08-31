@@ -38,7 +38,7 @@ async def remove_skipped(scope: str, title: str) -> None:
     _check_skip_scope(scope)
     async with conn() as db:
         await db.execute(
-            "DELETE FROM skipped_titles WHERE scope = ? AND title = ? COLLATE NOCASE",
+            "DELETE FROM skipped_titles WHERE scope = ? AND title = ?",
             (scope, title),
         )
         await db.commit()

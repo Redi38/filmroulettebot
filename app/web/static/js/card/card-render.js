@@ -30,7 +30,8 @@ function renderCard(data, opts) {
   if (data.runtime) extra += metaLine("clock", `${data.runtime} мин.`);
   if (data.seasons) extra += metaLine("layers", `Сезонов: ${data.seasons}`) + metaLine("film", `Эпизодов: ${data.episodes ?? "—"}`);
   const link = data.watch_link ? `<a class="watch-link" href="${data.watch_link}" target="_blank">Смотреть онлайн</a>` : "";
-  const autoWatchHint = (showActions && data.watch_link) ? `
+  const autoWatchOn = typeof isAutoWatchEnabled !== "function" || isAutoWatchEnabled();
+  const autoWatchHint = (showActions && data.watch_link && autoWatchOn) ? `
       <div class="auto-watch-hint"><span class="auto-watch-hint-text"></span></div>` : "";
   const catLabel = (ALL_CATS[data.category] || data.category).replace(/^\S+\s+/, "");
   const actionsHtml = showActions ? `

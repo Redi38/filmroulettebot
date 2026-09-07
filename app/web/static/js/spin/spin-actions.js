@@ -12,13 +12,14 @@ function cancelAutoWatchOpen() {
 
 function scheduleAutoWatchOpen(data, result) {
   if (!data || !data.watch_link || !result) return;
+  if (typeof isAutoWatchEnabled === "function" && !isAutoWatchEnabled()) return;
   const hint = result.querySelector(".auto-watch-hint");
   const textEl = hint && hint.querySelector(".auto-watch-hint-text");
 
   const token = ++autoWatchOpenToken;
   let secondsLeft = AUTO_WATCH_OPEN_DELAY_SEC;
   const renderCountdown = () => {
-    if (textEl) textEl.textContent = `Автооткрытие сайта через ${secondsLeft} с (если не перекрутите)`;
+    if (textEl) textEl.textContent = `Автооткрытие сайта через ${secondsLeft} с`;
   };
   renderCountdown();
 
@@ -29,7 +30,7 @@ function scheduleAutoWatchOpen(data, result) {
     if (secondsLeft > 0) { renderCountdown(); return; }
 
     clearInterval(autoWatchOpenInterval);
-    if (currentCardData !== data) return;
+    if (currentCardData !== data) return; // safety net
     const win = window.open(data.watch_link, "_blank", "noopener");
     if (textEl) textEl.textContent = "";
     if (!win) showToast("Не удалось открыть вкладку — разрешите всплывающие окна");

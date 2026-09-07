@@ -104,7 +104,7 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
   overflow: hidden; text-overflow: ellipsis;
 }
 
-.spin-section { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.spin-section { display: flex; flex-direction: column; align-items: center; gap: 6px; align-self: stretch; }
 .spin-section-toggle { display: none; }
 .spin-section-toggle.visible { display: flex; }
 .spin-caption {
@@ -124,7 +124,8 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
 .spin-toggle-row { display: flex; gap: 6px; justify-content: center; }
 
 .spin-mode-toggle .showcase-filter-btn:first-child.active,
-.confetti-toggle-wrap .showcase-filter-btn.active {
+.confetti-toggle-wrap .showcase-filter-btn.active,
+.auto-watch-toggle-wrap .showcase-filter-btn.active {
   background: linear-gradient(90deg, var(--primary-2), var(--primary));
 }
 
@@ -156,6 +157,8 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
   width: auto;
 }
 .confetti-toggle-wrap.visible { display: flex; }
+
+.auto-watch-toggle-wrap { display: flex; justify-content: center; align-self: flex-start; margin: 0; }
 
 .wheel-audio-controls {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;

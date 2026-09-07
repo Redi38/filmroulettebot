@@ -13,6 +13,7 @@ const DOCK_PREFIXES = ["random", "spin"];
 function renderAllDockControls(prefix) {
   renderSpinModeToggle(`${prefix}-mode-toggle`);
   renderWeightToggle(`${prefix}-weight-toggle`);
+  renderAutoWatchToggle(`${prefix}-watch-toggle`);
   renderConfettiToggle(`${prefix}-confetti-toggle`);
   renderWheelAppearanceToggle(`${prefix}-appearance-toggle`);
   renderSpinSpeedControl(`${prefix}-spin-speed`);

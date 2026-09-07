@@ -86,14 +86,15 @@
 }
 .showcase-filter-options { display: flex; flex-wrap: wrap; gap: 6px; }
 .showcase-filter-btn {
-  border: 1px solid var(--border); background: rgba(255,255,255,0.03); color: var(--text);
+  border: none; box-shadow: inset 0 0 0 1px var(--border);
+  background: rgba(255,255,255,0.03); color: var(--text);
   font-family: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer;
-  padding: 6px 12px; border-radius: 999px; white-space: nowrap; transition: background 0.15s, border-color 0.15s;
+  padding: 6px 12px; border-radius: 999px; white-space: nowrap; transition: background 0.15s, box-shadow 0.15s;
 }
-.showcase-filter-btn:hover { border-color: var(--primary); }
+.showcase-filter-btn:hover { box-shadow: inset 0 0 0 1px var(--primary); }
 .showcase-filter-btn:disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
 .showcase-filter-btn.active {
   background: linear-gradient(90deg, var(--primary), var(--primary-2));
-  border-width: 0; color: white;
+  box-shadow: none; color: white;
 }
 .spinner { text-align: center; padding: 30px; color: var(--muted); width: 100%; font-size: 1.15rem; font-weight: 600; }

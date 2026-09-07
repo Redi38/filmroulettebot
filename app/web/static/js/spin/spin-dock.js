@@ -14,6 +14,10 @@ function renderSpinDockRow(prefix, { spinBtnId, spinBtnClass }) {
           <p class="spin-caption">Вероятность</p>
           <div id="${prefix}-weight-toggle"></div>
         </div>
+        <div class="spin-section" id="${prefix}-autowatch-section">
+          <p class="spin-caption">Функции</p>
+          <div id="${prefix}-watch-toggle"></div>
+        </div>
         <div class="spin-section spin-section-toggle" id="${prefix}-fx-section">
           <p class="spin-caption">Эффекты</p>
           <div class="spin-toggle-row">

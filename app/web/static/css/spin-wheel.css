@@ -121,6 +121,12 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
 .spin-mode-toggle--weight .spin-mode-thumb {
   background: linear-gradient(90deg, var(--grp-weight-a), var(--grp-weight-b));
 }
+.spin-mode-toggle--mode:has(.showcase-filter-btn:nth-of-type(2).active) .spin-mode-thumb {
+  background: linear-gradient(90deg, var(--grp-mode-b), var(--grp-mode-a));
+}
+.spin-mode-toggle--weight:has(.showcase-filter-btn:nth-of-type(1).active) .spin-mode-thumb {
+  background: linear-gradient(90deg, var(--grp-weight-b), var(--grp-weight-a));
+}
 .spin-mode-toggle .showcase-filter-btn {
   position: relative; z-index: 1;
   transition: color 0.35s ease, background 0.35s ease, box-shadow 0.15s;
@@ -149,9 +155,11 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
 .spin-toggle-row { display: flex; gap: 6px; justify-content: center; }
 
 .auto-watch-toggle-wrap .showcase-filter-btn.active {
-  background: linear-gradient(90deg, var(--grp-fn-a), var(--grp-fn-b));
+  background: linear-gradient(90deg, var(--grp-fn-b), var(--grp-fn-a));
 }
-.confetti-toggle-wrap .showcase-filter-btn.active,
+.confetti-toggle-wrap .showcase-filter-btn.active {
+  background: linear-gradient(90deg, var(--grp-fx-b), var(--grp-fx-a));
+}
 .spin-appearance-wrap .showcase-filter-btn.active {
   background: linear-gradient(90deg, var(--grp-fx-a), var(--grp-fx-b));
 }

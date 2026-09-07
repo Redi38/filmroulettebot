@@ -17,15 +17,19 @@ function renderWeightToggle(containerId) {
     value: weightedMode,
     containerClass: "spin-weight-wrap",
     visible: spinMode === "wheel",
+    groupClass: "spin-mode-toggle--weight",
     onChange: (value) => {
       weightedMode = value;
       saveWeightedMode(value);
       renderControlOnAllDocks(renderWeightToggle, "weight-toggle");
-      resetWheelWraps();
-      if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
 
-      if (currentCardData) return;
-      if (spinMode === "wheel" && currentView === "spin") showIdleWheel(currentCat);
+      requestAnimationFrame(() => {
+        resetWheelWraps();
+        if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
+
+        if (currentCardData) return;
+        if (spinMode === "wheel" && currentView === "spin") showIdleWheel(currentCat);
+      });
     },
   });
 }

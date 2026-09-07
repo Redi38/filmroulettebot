@@ -26,24 +26,55 @@ function renderControlOnAllDocks(renderFn, suffix) {
 }
 
 // ---- generic toggle renderers -------------------------------------------
-function renderChoiceToggle(containerId, { options, value, onChange, containerClass, visible }) {
+function renderChoiceToggle(containerId, { options, value, onChange, containerClass, visible, groupClass }) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  el.innerHTML = "";
   if (containerClass) el.className = containerClass + (visible ? " visible" : "");
-  const outer = document.createElement("div");
-  outer.className = "spin-mode-toggle-wrap";
-  const row = document.createElement("div");
-  row.className = "spin-mode-toggle";
-  for (const [val, label] of options) {
-    const btn = document.createElement("button");
-    btn.className = "showcase-filter-btn" + (value === val ? " active" : "");
-    btn.textContent = label;
-    btn.onclick = () => { if (value !== val) onChange(val); };
-    row.appendChild(btn);
+
+  const keys = options.map(([val]) => String(val));
+  let row = el.querySelector(".spin-mode-toggle");
+  const sameShape = row && row.dataset.keys === keys.join("|");
+
+  if (!sameShape) {
+    el.innerHTML = "";
+    const outer = document.createElement("div");
+    outer.className = "spin-mode-toggle-wrap";
+    row = document.createElement("div");
+    row.className = "spin-mode-toggle" + (groupClass ? " " + groupClass : "");
+    row.dataset.keys = keys.join("|");
+
+    const thumb = document.createElement("div");
+    thumb.className = "spin-mode-thumb";
+    thumb.style.transition = "none";
+    row.appendChild(thumb);
+
+    for (const [, label] of options) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "showcase-filter-btn";
+      btn.textContent = label;
+      row.appendChild(btn);
+    }
+    outer.appendChild(row);
+    el.appendChild(outer);
   }
-  outer.appendChild(row);
-  el.appendChild(outer);
+
+  const buttons = row.querySelectorAll("button");
+  let activeBtn = buttons[0];
+  options.forEach(([val], i) => {
+    const isActive = value === val;
+    buttons[i].classList.toggle("active", isActive);
+    buttons[i].onclick = () => { if (value !== val) onChange(val); };
+    if (isActive) activeBtn = buttons[i];
+  });
+
+  const thumb = row.querySelector(".spin-mode-thumb");
+  thumb.style.width = activeBtn.offsetWidth + "px";
+  thumb.style.transform = `translateX(${activeBtn.offsetLeft}px)`;
+  if (!sameShape) {
+    void thumb.offsetWidth;
+    thumb.style.transition = "";
+  }
 }
 
 function renderIconToggle(containerId, { containerClass, visible, active, btnClass, activeClass, iconOn, iconOff, labelOn, labelOff, onClick }) {

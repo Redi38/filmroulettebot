@@ -80,7 +80,7 @@ function buildWheel(wrapId, items, weights) {
   wrap.appendChild(titleEl);
 
   const holder = document.createElement("div");
-  holder.className = "wheel-holder wheel-holder--" + getWheelStyle();
+  holder.className = "wheel-holder wheel-holder--enter wheel-holder--" + getWheelStyle();
   const pointer = document.createElement("div");
   pointer.className = "wheel-pointer";
   const canvasMask = document.createElement("div");
@@ -127,5 +127,10 @@ function buildWheel(wrapId, items, weights) {
   canvas._wheelTitleEl = titleEl;
   updatePointerTitle(canvas, 0);
   updateWheelScrollLock();
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => holder.classList.remove("wheel-holder--enter"));
+  });
+
   return canvas;
 }

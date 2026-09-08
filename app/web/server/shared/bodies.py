@@ -35,6 +35,11 @@ class SpinBody(BaseModel):
     weighted: bool = False
 
 
+class WheelWeightsBody(BaseModel):
+    pool: list[str]
+    weighted: bool = False
+
+
 class SkipBody(BaseModel):
     scope: str
     title: str

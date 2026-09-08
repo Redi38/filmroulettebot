@@ -21,12 +21,14 @@ from ..shared import (
     ROULETTE_CATEGORIES,
     WEB_USER_ID,
     SpinBody,
+    WheelWeightsBody,
     _build_wheel_pool,
     _card_data,
     _check_category,
     _check_spin_cooldown,
     _client_ip,
     _pick_title,
+    _pool_weights,
 )
 
 router = APIRouter()
@@ -46,6 +48,22 @@ async def api_wheel_preview(cat: str, weighted: bool = False) -> dict:
     dummy = random.choice(items)
     pool, weights = _build_wheel_pool(items, dummy, weighted)
     return {"wheel_pool": pool, "wheel_weights": weights}
+
+
+@router.post("/api/{cat}/wheel-weights")
+async def api_wheel_weights(cat: str, body: WheelWeightsBody) -> dict:
+    """Recompute segment weights for a wheel pool the client already has on
+    screen (see `pool_weights`), so toggling weighted/normal mode can resize
+    the existing segments in place instead of rebuilding the wheel with a
+    freshly-shuffled pool."""
+    _check_category(cat)
+    if cat not in ROULETTE_CATEGORIES:
+        raise HTTPException(400, f"{cat} has no roulette — it's a reference list only")
+    items = await get_items(cat)
+    if not items:
+        raise HTTPException(404, "List is empty")
+    weights = _pool_weights(items, body.pool, body.weighted)
+    return {"wheel_weights": weights}
 
 
 @router.post("/api/random-spin")

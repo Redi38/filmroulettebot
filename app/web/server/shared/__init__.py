@@ -27,6 +27,7 @@ from .bodies import (
     SkipBody,
     SpinBody,
     TitleBody,
+    WheelWeightsBody,
 )
 from .constants import (
     CATEGORIES,
@@ -46,6 +47,7 @@ from .spin_state import build_wheel_pool as _build_wheel_pool
 from .spin_state import check_spin_cooldown as _check_spin_cooldown
 from .spin_state import client_ip as _client_ip
 from .spin_state import pick_title_for_client as _pick_title
+from .spin_state import pool_weights as _pool_weights
 from .validation import check_category as _check_category
 from .validation import validate_rename as _validate_rename
 from .validation import validate_rename_by_id as _validate_rename_by_id
@@ -106,6 +108,7 @@ __all__ = [
     "SpinBody",
     "SkipBody",
     "SettingBody",
+    "WheelWeightsBody",
     "ResolveBody",
     "DeleteHistoryEntryBody",
     "_check_category",
@@ -115,6 +118,7 @@ __all__ = [
     "_client_ip",
     "_pick_title",
     "_build_wheel_pool",
+    "_pool_weights",
     "_card_data",
     "_BoundedDict",
     "_SPIN_STATE_MAX_ENTRIES",

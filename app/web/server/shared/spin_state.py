@@ -110,3 +110,16 @@ def build_wheel_pool(
     else:
         weights = [1] * len(pool)
     return pool, weights
+
+
+def pool_weights(items: list[str], pool: list[str], weighted: bool = False) -> list[int]:
+    """Recompute wheel-segment weights for an *already-shown* `pool`, in its
+    existing order, without resampling or reshuffling it.
+
+    Used when the client toggles weighted/normal mode on an idle wheel: the
+    segments already on screen should smoothly resize in place rather than
+    the wheel rebuilding with a freshly (and differently) shuffled pool."""
+    if not weighted:
+        return [1] * len(pool)
+    weight_map = title_weights(items)
+    return [weight_map.get(t, 1) for t in pool]

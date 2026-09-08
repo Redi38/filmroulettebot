@@ -30,7 +30,47 @@ function updatePointerTitle(canvas, rotationDeg, playTick) {
   if (titleEl.textContent !== label) titleEl.textContent = label;
 }
 
+function animateWheelWeights(canvas, items, dpr, toWeights, duration = 420) {
+  if (canvas._wheelResizeRAF) cancelAnimationFrame(canvas._wheelResizeRAF);
+  const fromBoundaries = canvas._wheelBoundaries || computeWheelBoundaries(items.length, null);
+  const toBoundaries = computeWheelBoundaries(items.length, toWeights);
+  const n = items.length;
+  const startTime = performance.now();
+  const ease = (t) => 1 - Math.pow(1 - t, 3);
+
+  return new Promise((resolve) => {
+    function step(now) {
+      const t = Math.min(1, (now - startTime) / duration);
+      const e = ease(t);
+      const frameBoundaries = new Array(n);
+      for (let i = 0; i < n; i++) {
+        frameBoundaries[i] = {
+          start: fromBoundaries[i].start + (toBoundaries[i].start - fromBoundaries[i].start) * e,
+          end: fromBoundaries[i].end + (toBoundaries[i].end - fromBoundaries[i].end) * e,
+        };
+      }
+      canvas._wheelBoundaries = frameBoundaries;
+      drawWheelSegments(canvas, items, dpr, frameBoundaries, {animating: true});
+      if (t < 1) {
+        canvas._wheelResizeRAF = requestAnimationFrame(step);
+      } else {
+        canvas._wheelResizeRAF = null;
+        drawWheelSegments(canvas, items, dpr, toBoundaries);
+        updatePointerTitle(canvas, getCanvasRotationDeg(canvas));
+        resolve();
+      }
+    }
+    canvas._wheelResizeRAF = requestAnimationFrame(step);
+  });
+}
+
 function drawWheel(canvas, items, dpr, weights) {
+  const boundaries = computeWheelBoundaries(items.length, weights);
+  drawWheelSegments(canvas, items, dpr, boundaries);
+  canvas._wheelBoundaries = boundaries;
+}
+
+function drawWheelSegments(canvas, items, dpr, boundaries, {animating = false} = {}) {
   const ctx = canvas.getContext("2d");
   const size = canvas.width;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -41,8 +81,6 @@ function drawWheel(canvas, items, dpr, weights) {
   const cssSize = size / dpr;
   const cx = cssSize / 2, cy = cssSize / 2, r = cssSize / 2 - 3;
   const n = items.length;
-  const boundaries = computeWheelBoundaries(n, weights);
-  canvas._wheelBoundaries = boundaries;
 
   for (let i = 0; i < n; i++) {
     const start = -Math.PI / 2 + boundaries[i].start * Math.PI / 180;
@@ -59,7 +97,8 @@ function drawWheel(canvas, items, dpr, weights) {
 
     const segDeg = boundaries[i].end - boundaries[i].start;
     const arcLen = (segDeg * Math.PI / 180) * r;
-    const fontSize = Math.max(8, Math.min(22, arcLen * 0.55));
+    let fontSize = Math.max(8, Math.min(22, arcLen * 0.55));
+    if (animating) fontSize = Math.round(fontSize);
     const maxChars = Math.max(4, Math.min(28, Math.floor((r * 0.66) / (fontSize * 0.56))));
 
     ctx.save();
@@ -68,8 +107,10 @@ function drawWheel(canvas, items, dpr, weights) {
     ctx.textAlign = "right";
     ctx.fillStyle = "#fff";
     ctx.font = `700 ${fontSize}px Manrope, sans-serif`;
-    ctx.shadowColor = "rgba(0,0,0,0.5)";
-    ctx.shadowBlur = 2;
+    if (!animating) {
+      ctx.shadowColor = "rgba(0,0,0,0.5)";
+      ctx.shadowBlur = 2;
+    }
     let label = items[i] || "";
     if (label.length > maxChars) label = label.slice(0, Math.max(maxChars - 1, 1)) + "…";
     ctx.fillText(label, r - 10, fontSize * 0.32);

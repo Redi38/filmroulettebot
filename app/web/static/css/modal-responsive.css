@@ -26,6 +26,13 @@
   margin-top: 14px; width: 100%; background: none; border: 1px solid var(--border);
   color: var(--muted); border-radius: 10px; padding: 10px; cursor: pointer; font-family: inherit; font-size: 0.9rem;
 }
+.modal-cancel {
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.15s ease;
+}
+.modal-cancel:active { transform: scale(0.96); }
+@media (hover: hover) and (pointer: fine) {
+  .modal-cancel:hover { filter: brightness(1.12); }
+}
 
 #rename-modal-overlay {
   position: fixed; inset: 0; background: rgba(5,4,15,0.7); z-index: 30;

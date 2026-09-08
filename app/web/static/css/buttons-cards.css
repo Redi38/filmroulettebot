@@ -65,6 +65,11 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
 .watch-link {
   display: inline-block; margin-top: 14px; color: var(--on-primary); text-decoration: none; font-weight: 700;
   background: linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary) 55%, white)); padding: 8px 16px; border-radius: 10px;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.15s ease;
+}
+.watch-link:active { transform: scale(0.96); }
+@media (hover: hover) and (pointer: fine) {
+  .watch-link:hover { filter: brightness(1.1); }
 }
 .card-actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; justify-content: center; }
 .sequel-prompt { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); text-align: center; }

@@ -9,6 +9,7 @@ function saveConfettiEnabled(v) {
 }
 let confettiEnabled = loadConfettiEnabled();
 function isConfettiEnabled() { return confettiEnabled; }
+let confettiJustToggled = false;
 
 function renderConfettiToggle(containerId) {
   const fxSection = document.getElementById(containerId.replace(/-confetti-toggle$/, "-fx-section"));
@@ -24,10 +25,13 @@ function renderConfettiToggle(containerId) {
   btn.className = "showcase-filter-btn" + (confettiEnabled ? " active" : "");
   btn.textContent = "🎊 Конфетти";
   btn.setAttribute("aria-pressed", confettiEnabled ? "true" : "false");
+  if (confettiJustToggled) btn.classList.add("fx-toggle-pop");
   btn.onclick = () => {
     confettiEnabled = !confettiEnabled;
     saveConfettiEnabled(confettiEnabled);
+    confettiJustToggled = true;
     renderControlOnAllDocks(renderConfettiToggle, "confetti-toggle");
+    confettiJustToggled = false;
   };
 
   el.appendChild(btn);

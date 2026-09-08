@@ -9,6 +9,7 @@ function saveAutoWatchEnabled(v) {
 }
 let autoWatchEnabled = loadAutoWatchEnabled();
 function isAutoWatchEnabled() { return autoWatchEnabled; }
+let autoWatchJustToggled = false;
 
 function renderAutoWatchToggle(containerId) {
   const el = document.getElementById(containerId);
@@ -21,10 +22,13 @@ function renderAutoWatchToggle(containerId) {
   btn.className = "showcase-filter-btn" + (autoWatchEnabled ? " active" : "");
   btn.textContent = "🔗 Редирект";
   btn.setAttribute("aria-pressed", autoWatchEnabled ? "true" : "false");
+  if (autoWatchJustToggled) btn.classList.add("fx-toggle-pop");
   btn.onclick = () => {
     autoWatchEnabled = !autoWatchEnabled;
     saveAutoWatchEnabled(autoWatchEnabled);
+    autoWatchJustToggled = true;
     renderControlOnAllDocks(renderAutoWatchToggle, "watch-toggle");
+    autoWatchJustToggled = false;
   };
 
   el.appendChild(btn);

@@ -8,6 +8,7 @@ function saveWheelAppearance(isNeon) {
 }
 let wheelAppearance = loadWheelAppearance() ? "neon" : "classic";
 function getWheelAppearance() { return wheelAppearance; }
+let wheelAppearanceJustToggled = false;
 
 function renderWheelAppearanceToggle(containerId) {
   const fxSection = document.getElementById(containerId.replace(/-appearance-toggle$/, "-fx-section"));
@@ -24,15 +25,25 @@ function renderWheelAppearanceToggle(containerId) {
   btn.className = "showcase-filter-btn" + (isNeon ? " active" : "");
   btn.textContent = "✨ Неон";
   btn.setAttribute("aria-pressed", isNeon ? "true" : "false");
+  if (wheelAppearanceJustToggled) btn.classList.add("fx-toggle-pop");
   btn.onclick = () => {
+    const turningOff = wheelAppearance === "neon";
     wheelAppearance = wheelAppearance === "neon" ? "classic" : "neon";
     saveWheelAppearance(wheelAppearance === "neon");
+    wheelAppearanceJustToggled = true;
     renderControlOnAllDocks(renderWheelAppearanceToggle, "appearance-toggle");
+    wheelAppearanceJustToggled = false;
     for (const id of WHEEL_WRAP_IDS) {
       const wrap = document.getElementById(id);
       if (!wrap || !wrap._wheelPool) continue;
       const holder = wrap.querySelector(".wheel-holder");
-      if (holder) holder.className = "wheel-holder wheel-holder--" + wheelAppearance;
+      if (holder) {
+        holder.className = "wheel-holder wheel-holder--" + wheelAppearance
+          + (turningOff ? " wheel-holder--neon-exit" : "");
+        if (turningOff) {
+          setTimeout(() => holder.classList.remove("wheel-holder--neon-exit"), 520);
+        }
+      }
       const canvas = wrap.querySelector("canvas");
       if (canvas) drawWheel(canvas, wrap._wheelPool, getWheelDPR(), wrap._wheelWeights);
     }

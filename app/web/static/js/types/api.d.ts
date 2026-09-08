@@ -522,6 +522,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/{cat}/wheel-weights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Api Wheel Weights
+         * @description Recompute segment weights for a wheel pool the client already has on
+         *     screen (see `pool_weights`), so toggling weighted/normal mode can resize
+         *     the existing segments in place instead of rebuilding the wheel with a
+         *     freshly-shuffled pool.
+         */
+        post: operations["api_wheel_weights_api__cat__wheel_weights_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/random-spin": {
         parameters: {
             query?: never;
@@ -828,6 +851,16 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** WheelWeightsBody */
+        WheelWeightsBody: {
+            /** Pool */
+            pool: string[];
+            /**
+             * Weighted
+             * @default false
+             */
+            weighted: boolean;
         };
     };
     responses: never;
@@ -1717,6 +1750,43 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    api_wheel_weights_api__cat__wheel_weights_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cat: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WheelWeightsBody"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

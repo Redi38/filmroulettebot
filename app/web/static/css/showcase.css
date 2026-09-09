@@ -98,4 +98,11 @@
   background: linear-gradient(90deg, var(--primary), var(--primary-2));
   box-shadow: none; color: white;
 }
-.spinner { text-align: center; padding: 30px; color: var(--muted); width: 100%; font-size: 1.15rem; font-weight: 600; }
+.spinner {
+  text-align: center; padding: 30px; color: var(--muted); width: 100%; font-size: 1.15rem; font-weight: 600;
+  animation: spinnerPulse 1.3s ease-in-out infinite;
+}
+@keyframes spinnerPulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation: none; }
+}

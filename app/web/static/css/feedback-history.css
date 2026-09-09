@@ -1,18 +1,20 @@
 /* Toast notifications, inline undo pill, cooldown wipe animation, and history items. */
 
 .toast {
-  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  position: fixed; bottom: 20px; left: 50%; transform: translate(-50%, 8px);
   background: linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary) 70%, black)); color: var(--on-primary); padding: 9px 20px; border-radius: 24px;
-  font-size: 0.9rem; font-weight: 700; opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 20;
+  font-size: 0.9rem; font-weight: 700; opacity: 0; transition: opacity 0.2s ease, transform 0.2s ease; pointer-events: none; z-index: 20;
   box-shadow: 0 6px 20px rgba(0,0,0,0.4);
   max-width: calc(100vw - 32px); text-align: center;
 }
-.toast.show { opacity: 1; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
 .toast.toast--error {
   bottom: auto; top: calc(var(--header-h, 60px) + 135px);
   background: linear-gradient(135deg, var(--danger), #b9203f); color: white;
   font-size: 1.05rem; padding: 13px 26px; border-radius: 24px;
+  transform: translate(-50%, -8px);
 }
+.toast.toast--error.show { transform: translate(-50%, 0); }
 .inline-undo-row {
   display: flex; justify-content: center; margin: 10px 0;
   animation: fadeIn 0.25s ease;

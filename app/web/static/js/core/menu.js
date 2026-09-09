@@ -113,11 +113,21 @@ function applyStudioTheme() {
   document.body.dataset.studio = studio;
 }
 
-function showSection() {
+async function showSection() {
   applyStudioTheme();
   if (typeof closePosterInfoModal === "function") closePosterInfoModal();
   if (typeof closeModal === "function") closeModal();
   if (typeof closeRenameModal === "function") closeRenameModal();
+
+  const targetId = SECTION_IDS[currentView];
+  const prevEl = document.querySelector(".section.active");
+  if (prevEl && prevEl.id !== targetId) {
+    prevEl.style.transition = "opacity 0.1s ease";
+    prevEl.style.opacity = "0";
+    await new Promise((r) => setTimeout(r, 100));
+    prevEl.style.opacity = "";
+    prevEl.style.transition = "";
+  }
 
   window.scrollTo(0, 0);
 

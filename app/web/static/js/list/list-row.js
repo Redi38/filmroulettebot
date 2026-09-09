@@ -5,7 +5,7 @@
 
 function createEditableRow(title, opts) {
   const row = document.createElement("div");
-  row.className = "list-row";
+  row.className = "list-row fade-in";
 
   const span = document.createElement("span");
   span.className = "copy-title";

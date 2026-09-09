@@ -125,6 +125,8 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
   transform: translateZ(0);
   contain: paint;
 }
+.list-row.fade-in { animation: listRowIn 0.18s ease; animation-fill-mode: backwards; }
+@keyframes listRowIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 .list-row:last-child { border-bottom: none; }
 .copy-title {
   flex: 1; word-break: break-word; cursor: pointer; font-family: "Manrope", monospace;

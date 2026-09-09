@@ -22,7 +22,7 @@ async function loadUpcoming() {
       return;
     }
     container.innerHTML = "";
-    for (const {id, title} of data.items) {
+    for (const [idx, {id, title}] of data.items.entries()) {
       const row = createEditableRow(title, {
         searchEndpoint: "/api/upcoming/search-suggest",
         onRename: (newTitle) => api("/api/upcoming/rename", {
@@ -40,6 +40,7 @@ async function loadUpcoming() {
         onReload: () => loadUpcoming(),
         onUndoSettled: () => checkUpcomingEmpty(container),
       });
+      row.style.animationDelay = `${Math.min(idx, 18) * 0.008}s`;
       container.appendChild(row);
     }
     fadeIn(container);
@@ -71,7 +72,9 @@ document.getElementById("up-add-btn").onclick = async () => {
 
 document.getElementById("up-check-btn").onclick = async () => {
   const result = document.getElementById("up-check-result");
-  result.innerHTML = '<div class="spinner">Проверяем по базе TMDb…</div>';
+  if (result.innerHTML) await fadeOut(result);
+  result.innerHTML = '<div class="spinner fade-in">Проверяем по базе TMDb…</div>';
+  fadeIn(result);
   try {
     const data = await api("/api/upcoming/check", {method: "POST"});
     let html = "";
@@ -81,7 +84,7 @@ document.getElementById("up-check-btn").onclick = async () => {
     } else {
       for (const e of data.released) {
         const est = e.estimated ? '<div class="estimated">(оценочно, точной даты нет)</div>' : "";
-        html += `<div class="check-item">🎬 ${escapeHtml(e.tmdb_title)} — ${escapeHtml(e.release_date)}
+        html += `<div class="check-item fade-in" data-title="${escapeAttr(e.title)}">🎬 ${escapeHtml(e.tmdb_title)} — ${escapeHtml(e.release_date)}
           <div class="check-item-action"><button class="btn btn-primary btn-sm" onclick="moveUpcoming('${escapeAttr(e.title)}')">Перенести</button>${est}</div></div>`;
       }
     }
@@ -91,18 +94,22 @@ document.getElementById("up-check-btn").onclick = async () => {
       html += '<div class="muted">—</div>';
     } else {
       for (const e of data.not_yet) {
-        html += `<div class="check-item">🕐 ${escapeHtml(e.tmdb_title)} — ${escapeHtml(e.release_date)} (${e.days_ago > 0 ? e.days_ago + " дн. назад" : "через " + (-e.days_ago) + " дн."})</div>`;
+        html += `<div class="check-item fade-in">🕐 ${escapeHtml(e.tmdb_title)} — ${escapeHtml(e.release_date)} (${e.days_ago > 0 ? e.days_ago + " дн. назад" : "через " + (-e.days_ago) + " дн."})</div>`;
       }
     }
     html += "</div>";
     if (data.no_info.length) {
       html += '<div class="check-group"><h3>❓ Нет данных</h3>';
-      for (const t of data.no_info) html += `<div class="check-item">${escapeHtml(t)}</div>`;
+      for (const t of data.no_info) html += `<div class="check-item fade-in">${escapeHtml(t)}</div>`;
       html += "</div>";
     }
+    await fadeOut(result);
     result.innerHTML = html;
+    fadeIn(result);
   } catch (e) {
+    await fadeOut(result);
     result.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
+    fadeIn(result);
   }
 };
 
@@ -112,7 +119,13 @@ async function moveUpcoming(title) {
       method: "POST", headers: {"Content-Type": "application/json"},
       body: JSON.stringify({title, category}),
     });
-    document.getElementById("up-check-btn").click();
+    const item = document.querySelector(`#up-check-result .check-item[data-title="${CSS.escape(title)}"]`);
+    if (item) {
+      item.style.transition = "opacity .15s ease, transform .15s ease";
+      item.style.opacity = "0";
+      item.style.transform = "translateX(10px)";
+      setTimeout(() => item.remove(), 150);
+    }
     loadUpcoming();
   });
 }

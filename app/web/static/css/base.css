@@ -68,6 +68,11 @@ header h1 { margin: 0; font-size: 1.15rem; font-weight: 800; }
   font-size: 1.3rem; border-radius: 8px; cursor: pointer;
   font-family: inherit; display: inline-flex; align-items: center; justify-content: center;
   width: 34px; height: 34px; padding: 0; flex-shrink: 0;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.15s ease;
+}
+#burger-btn:active { transform: scale(0.9); }
+@media (hover: hover) and (pointer: fine) {
+  #burger-btn:hover { background: rgba(var(--primary-rgb), 0.14); }
 }
 #burger-btn svg { width: 20px; height: 20px; display: block; }
 header .header-spacer { width: 34px; height: 34px; flex-shrink: 0; }
@@ -97,6 +102,7 @@ header .header-spacer { width: 34px; height: 34px; flex-shrink: 0; }
   display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: none; border: none;
   color: var(--text); padding: 13px 20px; font-size: 1.05rem; font-weight: 600; cursor: pointer; font-family: inherit;
   box-sizing: border-box; margin: 0; border-radius: 0; border-left: 3px solid transparent;
+  transition: background 0.15s ease, border-left-color 0.15s ease, color 0.15s ease;
 }
 #side-menu .menu-item svg { width: 19px; height: 19px; flex-shrink: 0; stroke: currentColor; }
 #side-menu .menu-item:hover { background: rgba(var(--primary-rgb), 0.08); border-left-color: rgba(var(--primary-rgb), 0.4); }

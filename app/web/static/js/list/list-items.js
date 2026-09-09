@@ -63,7 +63,7 @@ async function loadList(page) {
     if (countEl) countEl.textContent = `Всего: ${data.total_count}`;
     let liveCount = data.total_count;
     container.innerHTML = "";
-    for (const {id, title} of data.items) {
+    for (const [idx, {id, title}] of data.items.entries()) {
       const cat = currentCat;
       const row = createEditableRow(title, {
         searchEndpoint: `/api/${cat}/search-suggest`,
@@ -87,6 +87,7 @@ async function loadList(page) {
           countEl.textContent = `Всего: ${liveCount}`;
         },
       });
+      row.style.animationDelay = `${Math.min(idx, 18) * 0.008}s`;
       container.appendChild(row);
     }
     if (data.total_pages > 1) container.appendChild(paginationRow(data.page, data.total_pages, (p) => loadList(p)));

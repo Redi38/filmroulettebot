@@ -1,22 +1,23 @@
 /* Modal dialog and the >=900px desktop sidebar layout override. */
 
-#modal-overlay {
+.modal-overlay-base {
   position: fixed; inset: 0; background: rgba(5,4,15,0.7); z-index: 30;
   align-items: center; justify-content: center; padding: 20px;
   display: flex; opacity: 0; visibility: hidden; pointer-events: none;
   transition: opacity 0.22s ease, visibility 0s linear 0.22s;
 }
-#modal-overlay.open {
+.modal-overlay-base.open {
   opacity: 1; visibility: visible; pointer-events: auto;
   transition: opacity 0.22s ease;
 }
-#modal-box {
+.modal-box-base {
   background: var(--card); border: 1px solid var(--border); border-radius: 16px;
   padding: 22px; max-width: 340px; width: 100%; box-shadow: 0 12px 40px rgba(0,0,0,0.4);
   transform: scale(0.94) translateY(10px);
   transition: transform 0.25s cubic-bezier(0.34, 1.35, 0.64, 1);
 }
-#modal-overlay.open #modal-box { transform: scale(1) translateY(0); }
+.modal-overlay-base.open .modal-box-base { transform: scale(1) translateY(0); }
+
 #modal-box h3 { margin: 0 0 16px; font-size: 1.05rem; }
 #modal-box .modal-options { display: flex; flex-direction: column; gap: 10px; }
 #modal-box .modal-options button {
@@ -34,23 +35,6 @@
   .modal-cancel:hover { filter: brightness(1.12); }
 }
 
-#rename-modal-overlay {
-  position: fixed; inset: 0; background: rgba(5,4,15,0.7); z-index: 30;
-  align-items: center; justify-content: center; padding: 20px;
-  display: flex; opacity: 0; visibility: hidden; pointer-events: none;
-  transition: opacity 0.22s ease, visibility 0s linear 0.22s;
-}
-#rename-modal-overlay.open {
-  opacity: 1; visibility: visible; pointer-events: auto;
-  transition: opacity 0.22s ease;
-}
-#rename-modal-box {
-  background: var(--card); border: 1px solid var(--border); border-radius: 16px;
-  padding: 22px; max-width: 340px; width: 100%; box-shadow: 0 12px 40px rgba(0,0,0,0.4);
-  transform: scale(0.94) translateY(10px);
-  transition: transform 0.25s cubic-bezier(0.34, 1.35, 0.64, 1);
-}
-#rename-modal-overlay.open #rename-modal-box { transform: scale(1) translateY(0); }
 #rename-modal-box h3 { margin: 0 0 16px; font-size: 1.05rem; }
 .rename-modal-input {
   width: 100%; box-sizing: border-box; background: var(--card); border: 1px solid var(--border);
@@ -63,24 +47,9 @@
   color: var(--muted); border-radius: 10px; padding: 10px; cursor: pointer; font-family: inherit; font-size: 0.9rem;
 }
 
-#poster-info-overlay {
-  position: fixed; inset: 0; background: rgba(5,4,15,0.7); z-index: 30;
-  align-items: center; justify-content: center; padding: 20px;
-  display: flex; opacity: 0; visibility: hidden; pointer-events: none;
-  transition: opacity 0.22s ease, visibility 0s linear 0.22s;
-}
-#poster-info-overlay.open {
-  opacity: 1; visibility: visible; pointer-events: auto;
-  transition: opacity 0.22s ease;
-}
 #poster-info-box {
-  position: relative; background: var(--card); border: 1px solid var(--border); border-radius: 16px;
-  max-width: 640px; width: 100%; max-height: 85vh; overflow-y: auto;
-  box-shadow: 0 12px 40px rgba(0,0,0,0.4); padding: 22px;
-  transform: scale(0.94) translateY(10px);
-  transition: transform 0.25s cubic-bezier(0.34, 1.35, 0.64, 1);
+  position: relative; max-width: 640px; max-height: 85vh; overflow-y: auto;
 }
-#poster-info-overlay.open #poster-info-box { transform: scale(1) translateY(0); }
 #poster-info-box .card { margin: 0; padding: 0; border: none; box-shadow: none; }
 #poster-info-content { container-type: inline-size; }
 .modal-close {
@@ -90,24 +59,10 @@
   cursor: pointer; display: flex; align-items: center; justify-content: center;
 }
 
-#add-search-overlay {
-  position: fixed; inset: 0; background: rgba(5,4,15,0.7); z-index: 30;
-  align-items: center; justify-content: center; padding: 20px;
-  display: flex; opacity: 0; visibility: hidden; pointer-events: none;
-  transition: opacity 0.22s ease, visibility 0s linear 0.22s;
-}
-#add-search-overlay.open {
-  opacity: 1; visibility: visible; pointer-events: auto;
-  transition: opacity 0.22s ease;
-}
 #add-search-box {
-  background: var(--card); border: 1px solid var(--border); border-radius: 16px;
-  padding: 22px; max-width: 400px; width: 100%; max-height: 80vh;
-  display: flex; flex-direction: column; box-shadow: 0 12px 40px rgba(0,0,0,0.4);
-  transform: scale(0.94) translateY(10px);
-  transition: transform 0.25s cubic-bezier(0.34, 1.35, 0.64, 1);
+  max-width: 400px; max-height: 80vh;
+  display: flex; flex-direction: column;
 }
-#add-search-overlay.open #add-search-box { transform: scale(1) translateY(0); }
 #add-search-box h3 { margin: 0 0 14px; font-size: 1.05rem; }
 #add-search-results { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; min-height: 40px; }
 .add-search-empty { padding: 4px 0; }

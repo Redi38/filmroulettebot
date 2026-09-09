@@ -67,20 +67,19 @@ function renderShowcaseFilters() {
     const section = document.getElementById("showcase-section");
     section.insertBefore(panel, document.getElementById("showcase-container"));
   }
-  panel.innerHTML = "";
   if (isNewPanel || currentShowcaseStudio !== panel.dataset.studio) {
     panel.dataset.studio = currentShowcaseStudio;
     panel.classList.remove("fade-in");
-    void panel.offsetWidth; // restart animation
+    void panel.offsetWidth;
     panel.classList.add("fade-in");
   }
 
-  panel.appendChild(showcaseFilterGroup("Тип", [
+  showcaseFilterGroup(panel, "Тип", [
     ["all", "Все"], ["movie", "Фильмы"], ["series", "Сериалы"],
-  ], "type"));
-  panel.appendChild(showcaseFilterGroup("Показывать", [
+  ], "type");
+  showcaseFilterGroup(panel, "Показывать", [
     ["all", "Все"], ["hide", "Не добавленные"], ["only", "Уже добавленные"],
-  ], "added"));
+  ], "added");
 }
 
 let trackedSeriesLoaded = false;

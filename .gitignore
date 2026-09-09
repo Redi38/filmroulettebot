@@ -1,11 +1,13 @@
 .env
 *.db
+*.db-shm
+*.db-wal
+*.sqlite3
 *.log
 __pycache__/
 .venv/
 data/
 .idea/
-data/
 .pytest_cache/
 pytest-report.xml
 node_modules/

@@ -10,14 +10,36 @@ let theatersAddedFilter = loadSimpleAddedFilter(THEATERS_FILTER_KEY);
 
 let theatersHideLocalOnly = null;
 
-function appendGlobalOnlyToggle(row) {
-  const btn = document.createElement("button");
-  btn.className = "showcase-filter-btn" + (theatersHideLocalOnly ? " active" : "");
-  btn.textContent = "Только мировой прокат";
+function appendGlobalOnlyToggle(panel) {
+  let wrap = panel.querySelector('[data-filter-key="theaters-global-only"]');
+  let btn;
+  if (!wrap) {
+    wrap = document.createElement("div");
+    wrap.className = "showcase-filter-group";
+    wrap.dataset.filterKey = "theaters-global-only";
+    const row = document.createElement("div");
+    row.className = "showcase-filter-options";
+    btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "showcase-filter-btn";
+    btn.textContent = "Только мировой прокат";
+    btn.addEventListener("animationend", (ev) => {
+      if (ev.animationName === "fxTogglePop") btn.classList.remove("fx-toggle-pop");
+    });
+    row.appendChild(btn);
+    wrap.appendChild(row);
+    panel.appendChild(wrap);
+  } else {
+    btn = wrap.querySelector(".showcase-filter-btn");
+  }
+  btn.classList.toggle("active", !!theatersHideLocalOnly);
   btn.disabled = theatersHideLocalOnly === null;
   btn.onclick = async () => {
     const next = !theatersHideLocalOnly;
     theatersHideLocalOnly = next;
+    btn.classList.remove("fx-toggle-pop");
+    void btn.offsetWidth;
+    btn.classList.add("fx-toggle-pop");
     renderTheatersFilters();
     try {
       await api("/api/settings/hide_local_only_afisha", {
@@ -34,7 +56,6 @@ function appendGlobalOnlyToggle(row) {
     theatersUpcomingPage = 1;
     loadTheaters();
   };
-  row.appendChild(btn);
 }
 
 async function ensureTheatersSettingsLoaded() {
@@ -50,15 +71,14 @@ async function ensureTheatersSettingsLoaded() {
 
 function renderTheatersFilters() {
   const panel = ensureFilterPanel("theaters-filters", "theaters-section", "theaters-container");
-  const addedGroup = simpleAddedFilterGroup(THEATERS_FILTER_KEY, theatersAddedFilter, (value) => {
+  simpleAddedFilterGroup(panel, THEATERS_FILTER_KEY, theatersAddedFilter, (value) => {
     theatersAddedFilter = value;
     theatersNowPlayingPage = 1;
     theatersUpcomingPage = 1;
     renderTheatersFilters();
     loadTheaters();
   });
-  appendGlobalOnlyToggle(addedGroup.querySelector(".showcase-filter-options"));
-  panel.appendChild(addedGroup);
+  appendGlobalOnlyToggle(panel);
   if (theatersHideLocalOnly === null) ensureTheatersSettingsLoaded();
 }
 
@@ -83,13 +103,6 @@ async function loadTheaters(trigger) {
       return;
     }
 
-    // Two persistent sub-columns. Paging one column (trigger set) only
-    // ever touches that column's own DOM: doing a full container rebuild
-    // here would wipe out any in-flight skip/undo banner (and its
-    // "Отменить" button) sitting in the *other* column — see the
-    // showInlineUndo call in showcase/actions.js. A trigger-less call
-    // (initial load or a filter change resetting both pages) still does
-    // the old full-container fade/rebuild.
     let colNow = container.querySelector(".theaters-col-now");
     let colUpcoming = container.querySelector(".theaters-col-upcoming");
     const singleColumn = (trigger === "now" || trigger === "upcoming") && colNow && colUpcoming;
@@ -149,12 +162,12 @@ let seriesReleasesAddedFilter = loadSimpleAddedFilter(SERIES_RELEASES_FILTER_KEY
 
 function renderSeriesReleasesFilters() {
   const panel = ensureFilterPanel("series-releases-filters", "series-releases-section", "series-releases-container");
-  panel.appendChild(simpleAddedFilterGroup(SERIES_RELEASES_FILTER_KEY, seriesReleasesAddedFilter, (value) => {
+  simpleAddedFilterGroup(panel, SERIES_RELEASES_FILTER_KEY, seriesReleasesAddedFilter, (value) => {
     seriesReleasesAddedFilter = value;
     seriesReleasesPage = 1;
     renderSeriesReleasesFilters();
     loadSeriesReleases();
-  }));
+  });
 }
 
 async function loadSeriesReleases() {

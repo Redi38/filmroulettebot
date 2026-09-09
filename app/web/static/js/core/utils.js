@@ -11,7 +11,6 @@ function ensureFilterPanel(panelId, sectionId, beforeId) {
     panel.className = "filter-panel";
     section.insertBefore(panel, document.getElementById(beforeId));
   }
-  panel.innerHTML = "";
   return panel;
 }
 

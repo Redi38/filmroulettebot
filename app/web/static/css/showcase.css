@@ -80,12 +80,21 @@
   background: var(--card); border: 1px solid var(--border); border-radius: 14px;
 }
 #showcase-filters.fade-in { animation: fadeIn 0.3s ease; animation-fill-mode: backwards; }
-.showcase-filter-group { display: flex; flex-direction: column; gap: 6px; }
+.showcase-filter-group { display: flex; flex-direction: column; gap: 6px; justify-content: flex-end; }
 .showcase-filter-group h4 {
   margin: 0; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.03em;
   text-transform: uppercase; color: var(--muted);
 }
 .showcase-filter-options { display: flex; flex-wrap: wrap; gap: 6px; }
+.showcase-filter-options.segmented { position: relative; }
+.showcase-filter-thumb {
+  position: absolute; top: 0; left: 0; border-radius: 999px;
+  background: linear-gradient(90deg, var(--primary), var(--primary-2));
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), width 0.35s cubic-bezier(0.4, 0, 0.2, 1), height 0.35s ease;
+  pointer-events: none; z-index: 0;
+}
+.showcase-filter-options.segmented .showcase-filter-btn { position: relative; z-index: 1; transition: color 0.35s ease, box-shadow 0.15s; }
+.showcase-filter-options.segmented .showcase-filter-btn.active { background: transparent; box-shadow: none; color: white; }
 .showcase-filter-btn {
   border: none; box-shadow: inset 0 0 0 1px var(--border);
   background: rgba(255,255,255,0.03); color: var(--text);
@@ -98,6 +107,7 @@
   background: linear-gradient(90deg, var(--primary), var(--primary-2));
   box-shadow: none; color: white;
 }
+.showcase-filter-btn.fx-toggle-pop { animation: fxTogglePop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .spinner {
   text-align: center; padding: 30px; color: var(--muted); width: 100%; font-size: 1.15rem; font-weight: 600;
   animation: spinnerPulse 1.3s ease-in-out infinite;

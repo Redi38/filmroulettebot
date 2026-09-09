@@ -44,7 +44,8 @@ function showcaseRow(item, cat, isNewSeasons, addMode, skipScope, onSkipSettled)
     <div class="showcase-info-text">
       <div class="showcase-title">${escapeHtml(item.title)}</div>
       <div class="showcase-date">${escapeHtml(dateLine)}</div>
-    </div>`;
+    </div>
+    <svg class="showcase-chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
   row.appendChild(infoBtn);
 
   row.appendChild(buildShowcaseActionSlot(item, cat, addMode, skipScope, wrap, onSkipSettled));

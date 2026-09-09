@@ -25,7 +25,10 @@ function renderCard(data, opts) {
   opts = opts || {};
   const showActions = opts.actions !== false;
   const poster = data.poster_url ? `<img class="poster fade-in" src="${data.poster_url}">` : "";
-  const rating = data.rating !== "—" ? `${data.rating}/10` : "—";
+  const ratingNum = parseFloat(data.rating);
+  const rating = (data.rating !== "—" && !isNaN(ratingNum))
+    ? `<span class="rating-value" data-target="${ratingNum}">0</span>/10`
+    : "—";
   let extra = "";
   if (data.runtime) extra += metaLine("clock", `${data.runtime} мин.`);
   if (data.seasons) extra += metaLine("layers", `Сезонов: ${data.seasons}`) + metaLine("film", `Эпизодов: ${data.episodes ?? "—"}`);
@@ -57,4 +60,47 @@ function renderCard(data, opts) {
         ${actionsHtml}
       </div>
     </div>`;
+}
+
+const RATING_ANIM_MS = 1100;
+const prefersReducedMotion = typeof window !== "undefined" && typeof window.matchMedia === "function"
+  ? window.matchMedia("(prefers-reduced-motion: reduce)")
+  : {matches: false};
+
+function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+function animateRatingValue(el) {
+  if (!el || el.dataset.animated === "1") return;
+  el.dataset.animated = "1";
+  const target = parseFloat(el.dataset.target);
+  if (isNaN(target)) return;
+  const decimals = (el.dataset.target.split(".")[1] || "").length;
+  if (prefersReducedMotion.matches) {
+    el.textContent = target.toFixed(decimals);
+    return;
+  }
+  const start = performance.now();
+  function tick(now) {
+    const t = Math.min(1, (now - start) / RATING_ANIM_MS);
+    const value = target * easeOutCubic(t);
+    el.textContent = value.toFixed(decimals);
+    if (t < 1) requestAnimationFrame(tick);
+    else el.textContent = target.toFixed(decimals);
+  }
+  requestAnimationFrame(tick);
+}
+
+if (typeof MutationObserver !== "undefined" && typeof document !== "undefined") {
+  const ratingObserver = new MutationObserver((mutations) => {
+    for (const m of mutations) {
+      for (const node of m.addedNodes) {
+        if (node.nodeType !== 1) continue;
+        if (node.matches && node.matches(".rating-value")) animateRatingValue(node);
+        if (node.querySelectorAll) node.querySelectorAll(".rating-value").forEach(animateRatingValue);
+      }
+    }
+  });
+  document.addEventListener("DOMContentLoaded", () => {
+    ratingObserver.observe(document.body, {childList: true, subtree: true});
+  });
 }

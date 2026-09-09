@@ -55,9 +55,10 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
 }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 .fade-in { animation: fadeIn 0.35s ease; animation-fill-mode: backwards; }
-.meta { color: var(--muted); font-size: 0.9rem; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
-.meta-icon { display: inline-flex; flex-shrink: 0; opacity: 0.85; }
+.meta { color: color-mix(in srgb, var(--text) 55%, var(--muted) 45%); font-size: 0.94rem; font-weight: 500; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+.meta-icon { display: inline-flex; flex-shrink: 0; opacity: 1; color: var(--primary); }
 .meta-icon svg { display: block; }
+.rating-value { font-weight: 800; color: var(--primary); font-size: 1.05em; }
 .overview { margin-top: 10px; line-height: 1.55; }
 .auto-watch-hint {
   margin-top: 6px; font-size: 0.78rem; color: var(--muted); min-height: 1.2em;

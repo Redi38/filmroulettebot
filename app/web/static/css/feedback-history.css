@@ -56,13 +56,18 @@
   background: var(--card); border: 1px solid var(--border); border-radius: 12px;
   padding: 13px; margin-bottom: 10px;
 }
+.hist-item { transition: opacity 0.25s ease; }
 .hist-item.resolved { opacity: 0.55; }
+.hist-item.fade-in { animation-name: histItemEnter; }
+.hist-item.fade-in.resolved { animation-name: histItemEnterResolved; }
+@keyframes histItemEnter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes histItemEnterResolved { from { opacity: 0; transform: translateY(6px); } to { opacity: 0.55; transform: translateY(0); } }
 .hist-item .hist-title { font-weight: 700; margin-bottom: 3px; }
 .hist-item .hist-meta { color: var(--muted); font-size: 0.82rem; margin-bottom: 8px; }
 .hist-item .hist-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .hist-item .hist-actions .hist-clear-entry-btn { margin-left: auto; }
 .hist-tabs { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 16px; }
-.hist-tabs .btn { opacity: 0.55; }
+.hist-tabs .btn { opacity: 0.55; transition: opacity 0.2s ease; }
 .hist-tabs .btn.active { opacity: 1; }
 .hist-clear-row { display: flex; justify-content: center; margin-bottom: 16px; }
 .hist-clear-row .btn { opacity: 0.75; }

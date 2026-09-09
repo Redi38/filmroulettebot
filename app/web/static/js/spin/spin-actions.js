@@ -123,7 +123,9 @@ async function doWheelSpin(cat, isRandom) {
     wrap.innerHTML = "";
     wrap.classList.remove("wheel-done");
     updateWheelScrollLock();
+    await fadeOut(result);
     result.innerHTML = renderCard(data);
+    fadeIn(result);
     scheduleAutoWatchOpen(data, result);
   } catch (e) {
     wrap.innerHTML = prevWrapHtml;
@@ -190,7 +192,9 @@ async function doClassicSpin(cat, isRandom) {
       body: JSON.stringify({weighted: isWeightedMode()}),
     });
     currentCardData = data;
+    await fadeOut(result);
     result.innerHTML = renderCard(data);
+    fadeIn(result);
     scheduleAutoWatchOpen(data, result);
   } catch (e) {
     handleSpinError(e, result, prevHtml);

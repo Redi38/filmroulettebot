@@ -60,6 +60,7 @@ async function renderShowcaseContent() {
 
 function renderShowcaseFilters() {
   let panel = document.getElementById("showcase-filters");
+  const isNewPanel = !panel;
   if (!panel) {
     panel = document.createElement("div");
     panel.id = "showcase-filters";
@@ -67,6 +68,12 @@ function renderShowcaseFilters() {
     section.insertBefore(panel, document.getElementById("showcase-container"));
   }
   panel.innerHTML = "";
+  if (isNewPanel || currentShowcaseStudio !== panel.dataset.studio) {
+    panel.dataset.studio = currentShowcaseStudio;
+    panel.classList.remove("fade-in");
+    void panel.offsetWidth; // restart animation
+    panel.classList.add("fade-in");
+  }
 
   panel.appendChild(showcaseFilterGroup("Тип", [
     ["all", "Все"], ["movie", "Фильмы"], ["series", "Сериалы"],

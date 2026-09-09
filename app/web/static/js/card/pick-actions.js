@@ -2,13 +2,16 @@
 
 function confirmPick() {
   const prompt = document.getElementById("sequel-prompt");
-  prompt.style.display = "block";
   prompt.innerHTML = `
     <p>Добавить продолжение (сиквел)?</p>
     <div class="card-actions">
       <button class="btn btn-success btn" onclick="sequelYes()">Да, сиквел</button>
       <button class="btn btn-danger btn" onclick="sequelNo()">Нет, удалить</button>
     </div>`;
+  prompt.style.display = "block";
+  prompt.classList.remove("fade-in");
+  void prompt.offsetWidth; // restart animation if confirmPick() is ever called twice
+  prompt.classList.add("fade-in");
 }
 
 function markCurrentPickResolved(outcome) {
@@ -29,8 +32,11 @@ async function sequelYes() {
   try {
     const newTitle = await performSequel(currentCardData.category, currentCardData.original_title);
     markCurrentPickResolved({ type: "sequel", newTitle });
-    resultEl().innerHTML =
+    const container = resultEl();
+    await fadeOut(container);
+    container.innerHTML =
       `<div class="card card-simple"><div class="title">🔄 ${escapeHtml(currentCardData.original_title)} → ${escapeHtml(newTitle)}</div></div>`;
+    fadeIn(container);
     currentCardData = null;
   } catch (e) { showToast(e.message); }
 }
@@ -40,8 +46,11 @@ async function sequelNo() {
   try {
     await performDelete(currentCardData.category, currentCardData.original_title);
     markCurrentPickResolved({ type: "delete" });
-    resultEl().innerHTML =
+    const container = resultEl();
+    await fadeOut(container);
+    container.innerHTML =
       `<div class="card card-simple"><div class="title">❌ ${escapeHtml(currentCardData.original_title)} удалён</div></div>`;
+    fadeIn(container);
     currentCardData = null;
   } catch (e) { showToast(e.message); }
 }

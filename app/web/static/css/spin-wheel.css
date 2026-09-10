@@ -2,10 +2,14 @@
 
 #random-spin-section, #spin-section { position: relative; }
 
-#random-spin-section.fade-in, #spin-section.fade-in {
+#random-spin-section.section-fade-in, #spin-section.section-fade-in {
   animation-name: fadeInOpacityOnly;
 }
 @keyframes fadeInOpacityOnly { from { opacity: 0; } to { opacity: 1; } }
+#random-spin-section.section-leaving, #spin-section.section-leaving {
+  animation-name: sectionLeaveOpacityOnly;
+}
+@keyframes sectionLeaveOpacityOnly { from { opacity: 1; } to { opacity: 0; } }
 #random-spin-section.active, #spin-section.active {
   display: flex; flex-direction: column; align-items: center;
 }

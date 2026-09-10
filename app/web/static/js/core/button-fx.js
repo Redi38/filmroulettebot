@@ -102,7 +102,6 @@ function spawnButtonRipple(btn, evt) {
   ripple.addEventListener("animationend", () => ripple.remove(), { once: true });
 }
 
-// Press feedback (ripple + a quick scale) for every .btn and the watch-link.
 document.addEventListener("click", (evt) => {
   const btn = evt.target.closest(".btn, .watch-link");
   if (!btn || btn.disabled) return;
@@ -111,8 +110,6 @@ document.addEventListener("click", (evt) => {
   setTimeout(() => btn.classList.remove("btn-press-fx"), 220);
 }, true);
 
-// The "Смотреть онлайн" link gets a neon glow + confetti burst, then redirects
-// to the external site once the effect has had a moment to play.
 document.addEventListener("click", (evt) => {
   const link = evt.target.closest(".watch-link");
   if (!link || link.dataset.fxPending) return;

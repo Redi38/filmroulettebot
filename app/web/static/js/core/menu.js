@@ -121,12 +121,11 @@ async function showSection() {
 
   const targetId = SECTION_IDS[currentView];
   const prevEl = document.querySelector(".section.active");
-  if (prevEl && prevEl.id !== targetId) {
-    prevEl.style.transition = "opacity 0.1s ease";
-    prevEl.style.opacity = "0";
-    await new Promise((r) => setTimeout(r, 100));
-    prevEl.style.opacity = "";
-    prevEl.style.transition = "";
+  const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (prevEl && prevEl.id !== targetId && !reduceMotion) {
+    prevEl.classList.add("section-leaving");
+    await new Promise((r) => setTimeout(r, 120));
+    prevEl.classList.remove("section-leaving");
   }
 
   window.scrollTo(0, 0);
@@ -138,13 +137,13 @@ async function showSection() {
   if (typeof updateWheelScrollLock === "function") updateWheelScrollLock();
 
   const activeEl = document.getElementById(SECTION_IDS[currentView]);
-  if (activeEl) {
-    activeEl.classList.remove("fade-in");
+  if (activeEl && !reduceMotion) {
+    activeEl.classList.remove("section-fade-in");
     void activeEl.offsetWidth;
-    activeEl.classList.add("fade-in");
+    activeEl.classList.add("section-fade-in");
     activeEl.addEventListener("animationend", function onDone(ev) {
       if (ev.target !== activeEl) return;
-      activeEl.classList.remove("fade-in");
+      activeEl.classList.remove("section-fade-in");
       activeEl.removeEventListener("animationend", onDone);
     });
   }

@@ -55,7 +55,7 @@ function renderCard(data, opts) {
         <div class="title copy-title" onclick="copyToClipboard('${escapeAttr(data.title)}', this)" title="Нажмите, чтобы скопировать">${escapeHtml(data.title)}</div>
         <span class="cat-badge">${CARD_ICON[CATEGORY_ICON[data.category] || "tag"]}${catLabel}</span>
         ${metaLine("star", rating)}
-        ${metaLine("calendar", escapeHtml(String(data.release_date)))}
+        ${metaLine("calendar", escapeHtml(humanizeShowcaseDate(String(data.release_date))))}
         ${extra}
         ${metaLine("tag", escapeHtml(data.genres))}
         ${metaLine("users", escapeHtml(data.actors))}

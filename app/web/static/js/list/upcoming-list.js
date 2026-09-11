@@ -84,7 +84,7 @@ document.getElementById("up-check-btn").onclick = async () => {
     } else {
       for (const e of data.released) {
         const est = e.estimated ? '<div class="estimated">(оценочно, точной даты нет)</div>' : "";
-        html += `<div class="check-item fade-in" data-title="${escapeAttr(e.title)}">🎬 ${escapeHtml(e.tmdb_title)} — ${escapeHtml(e.release_date)}
+        html += `<div class="check-item fade-in" data-title="${escapeAttr(e.title)}">🎬 ${escapeHtml(e.tmdb_title)} — ${escapeHtml(humanizeShowcaseDate(e.release_date))}
           <div class="check-item-action"><button class="btn btn-primary btn-sm" onclick="moveUpcoming('${escapeAttr(e.title)}')">Перенести</button>${est}</div></div>`;
       }
     }
@@ -94,7 +94,7 @@ document.getElementById("up-check-btn").onclick = async () => {
       html += '<div class="muted">—</div>';
     } else {
       for (const e of data.not_yet) {
-        html += `<div class="check-item fade-in">🕐 ${escapeHtml(e.tmdb_title)} — ${escapeHtml(e.release_date)} (${e.days_ago > 0 ? e.days_ago + " дн. назад" : "через " + (-e.days_ago) + " дн."})</div>`;
+        html += `<div class="check-item fade-in">🕐 ${escapeHtml(e.tmdb_title)} — ${escapeHtml(humanizeShowcaseDate(e.release_date))}</div>`;
       }
     }
     html += "</div>";

@@ -255,7 +255,7 @@ html.vt-section::view-transition-new(main-content) {
 }
 .list-row.fade-in { animation: listRowIn 0.26s var(--ease-out); animation-fill-mode: backwards; }
 @media (prefers-reduced-motion: no-preference) {
-  .list-row.fade-in { animation-delay: calc(var(--row-i, 0) * 25ms); }
+  .list-row.fade-in { animation-delay: calc(var(--row-i, 0) * 12ms); }
 }
 @keyframes listRowIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 .list-row:last-child { border-bottom: none; }

@@ -128,6 +128,12 @@ function buildWheel(wrapId, items, weights) {
   updatePointerTitle(canvas, 0);
   updateWheelScrollLock();
 
+  // The resting wheel drifts and responds to the cursor — see wheel-idle.js.
+  if (typeof startWheelIdle === "function") {
+    attachWheelHover(canvas, canvasMask);
+    startWheelIdle(canvas);
+  }
+
   requestAnimationFrame(() => {
     requestAnimationFrame(() => holder.classList.remove("wheel-holder--enter"));
   });

@@ -68,6 +68,10 @@ function showInlineUndo(parent, referenceNode, msg, actionLabel, onAction, onDis
   pill.appendChild(btn);
   wrap.appendChild(pill);
   parent.insertBefore(wrap, referenceNode && referenceNode.isConnected ? referenceNode : null);
+  // The pill takes the place of a row that is collapsing to zero height at
+  // this very moment, so it has to grow into the gap rather than appear at
+  // full height — otherwise the row visibly "comes back" as the pill pops in.
+  expandRowIn(wrap);
 
   let dismissed = false;
   let timer;
@@ -76,10 +80,11 @@ function showInlineUndo(parent, referenceNode, msg, actionLabel, onAction, onDis
     dismissed = true;
     clearTimeout(timer);
     pill.style.opacity = "0";
-    setTimeout(() => {
-      wrap.remove();
+    // Collapse the pill's own height too, so the rows below glide up instead
+    // of jumping the moment the node leaves the flow.
+    collapseAndRemoveRow(wrap, () => {
       if (fireCallback && onDismiss) onDismiss();
-    }, 200);
+    }, {fadeMs: 120});
   };
   requestAnimationFrame(() => btn.classList.add("wipe"));
   btn.onclick = () => {
@@ -213,12 +218,74 @@ function fadeIn(el) {
 const ROW_FADE_MS = 140;
 const ROW_COLLAPSE_MS = 200;
 
-function collapseAndRemoveRow(row, onRemoved) {
+// Inline styles left behind by a collapse. Cleared before a node that was
+// collapsed is put back into the flow (undo), otherwise it would return with
+// height: 0 and stay invisible.
+const ROW_COLLAPSE_PROPS = [
+  "overflow", "boxSizing", "height", "marginTop", "marginBottom",
+  "paddingTop", "paddingBottom", "borderTopWidth", "borderBottomWidth",
+  "transition", "opacity", "transform",
+];
+
+function resetRowCollapse(el) {
+  if (!el) return;
+  for (const prop of ROW_COLLAPSE_PROPS) el.style[prop] = "";
+}
+
+// Grows `el` from zero height to its natural height. Used for anything that
+// appears where a row just was (the undo pill), so the two animations cancel
+// out and the surrounding rows never move.
+function expandRowIn(el) {
+  if (!el || reducedMotion()) return;
+  const cs = getComputedStyle(el);
+  const target = el.getBoundingClientRect().height;
+  if (!target) return;
+  const marginTop = cs.marginTop;
+  const marginBottom = cs.marginBottom;
+  const paddingTop = cs.paddingTop;
+  const paddingBottom = cs.paddingBottom;
+
+  el.style.overflow = "hidden";
+  el.style.boxSizing = "border-box";
+  el.style.height = "0px";
+  el.style.marginTop = "0px";
+  el.style.marginBottom = "0px";
+  el.style.paddingTop = "0px";
+  el.style.paddingBottom = "0px";
+  el.style.opacity = "0";
+
+  requestAnimationFrame(() => {
+    el.style.transition =
+      `height ${ROW_COLLAPSE_MS}ms var(--ease-standard), ` +
+      `margin ${ROW_COLLAPSE_MS}ms var(--ease-standard), ` +
+      `padding ${ROW_COLLAPSE_MS}ms var(--ease-standard), ` +
+      `opacity ${ROW_FADE_MS}ms ease ${ROW_COLLAPSE_MS * 0.4}ms`;
+    el.style.height = `${target}px`;
+    el.style.marginTop = marginTop;
+    el.style.marginBottom = marginBottom;
+    el.style.paddingTop = paddingTop;
+    el.style.paddingBottom = paddingBottom;
+    el.style.opacity = "1";
+  });
+  // Hand the box back to the layout engine once it has arrived, so later
+  // content changes are not pinned to a stale pixel height.
+  setTimeout(() => resetRowCollapse(el), ROW_COLLAPSE_MS + ROW_FADE_MS + 40);
+}
+
+// `opts.onCollapseStart` fires on the frame the collapse begins, so a caller
+// can insert a replacement (the undo pill) that expands in step with it.
+function collapseAndRemoveRow(row, onRemoved, opts) {
+  const options = opts || {};
+  const fadeMs = options.fadeMs === undefined ? ROW_FADE_MS : options.fadeMs;
   const done = () => {
     row.remove();
     if (onRemoved) onRemoved();
   };
-  if (reducedMotion()) { done(); return; }
+  if (reducedMotion()) {
+    if (options.onCollapseStart) options.onCollapseStart();
+    done();
+    return;
+  }
 
   const cs = getComputedStyle(row);
   const height = row.getBoundingClientRect().height;
@@ -231,12 +298,13 @@ function collapseAndRemoveRow(row, onRemoved) {
   row.style.paddingBottom = cs.paddingBottom;
 
   requestAnimationFrame(() => {
+    if (options.onCollapseStart) options.onCollapseStart();
     row.style.transition =
-      `opacity ${ROW_FADE_MS}ms ease, transform ${ROW_FADE_MS}ms ease, ` +
-      `height ${ROW_COLLAPSE_MS}ms var(--ease-standard) ${ROW_FADE_MS * 0.5}ms, ` +
-      `margin ${ROW_COLLAPSE_MS}ms var(--ease-standard) ${ROW_FADE_MS * 0.5}ms, ` +
-      `padding ${ROW_COLLAPSE_MS}ms var(--ease-standard) ${ROW_FADE_MS * 0.5}ms, ` +
-      `border-width ${ROW_COLLAPSE_MS}ms var(--ease-standard) ${ROW_FADE_MS * 0.5}ms`;
+      `opacity ${fadeMs}ms ease, transform ${fadeMs}ms ease, ` +
+      `height ${ROW_COLLAPSE_MS}ms var(--ease-standard) ${fadeMs * 0.5}ms, ` +
+      `margin ${ROW_COLLAPSE_MS}ms var(--ease-standard) ${fadeMs * 0.5}ms, ` +
+      `padding ${ROW_COLLAPSE_MS}ms var(--ease-standard) ${fadeMs * 0.5}ms, ` +
+      `border-width ${ROW_COLLAPSE_MS}ms var(--ease-standard) ${fadeMs * 0.5}ms`;
     row.style.opacity = "0";
     row.style.transform = "translateX(10px)";
     row.style.height = "0px";
@@ -247,14 +315,52 @@ function collapseAndRemoveRow(row, onRemoved) {
     row.style.borderTopWidth = "0px";
     row.style.borderBottomWidth = "0px";
   });
-  setTimeout(done, ROW_FADE_MS * 0.5 + ROW_COLLAPSE_MS + 20);
+  setTimeout(done, fadeMs * 0.5 + ROW_COLLAPSE_MS + 20);
 }
 
-function removeRowOptimistically(row, deleteRequest, onRemoved) {
-  collapseAndRemoveRow(row, onRemoved);
+function removeRowOptimistically(row, deleteRequest, onRemoved, opts) {
+  collapseAndRemoveRow(row, onRemoved, opts);
   deleteRequest().catch((e) => {
     showToast(e.message || "Не удалось удалить");
   });
+}
+
+// Swaps a container's contents with the outgoing and incoming markup
+// overlapping, so a skeleton hands over to the real card instead of being
+// replaced between two frames. The outgoing copy is taken out of the flow
+// while it fades, so the box is sized by the incoming content throughout.
+const CROSSFADE_MS = 220;
+
+function crossfadeContent(container, html) {
+  if (!container) return;
+  if (reducedMotion() || !container.firstChild) {
+    container.innerHTML = html;
+    return;
+  }
+  const outgoing = document.createElement("div");
+  outgoing.className = "xfade-layer xfade-out";
+  while (container.firstChild) outgoing.appendChild(container.firstChild);
+
+  const incoming = document.createElement("div");
+  incoming.className = "xfade-layer xfade-in";
+  incoming.innerHTML = html;
+
+  container.classList.add("xfade-host");
+  container.appendChild(outgoing);
+  container.appendChild(incoming);
+
+  requestAnimationFrame(() => {
+    outgoing.style.opacity = "0";
+    incoming.style.opacity = "1";
+  });
+
+  setTimeout(() => {
+    outgoing.remove();
+    // Unwrap the incoming layer so callers keep querying a flat container.
+    while (incoming.firstChild) container.insertBefore(incoming.firstChild, incoming);
+    incoming.remove();
+    container.classList.remove("xfade-host");
+  }, CROSSFADE_MS + 30);
 }
 
 // Runs `update` inside a View Transition when the browser has one, with

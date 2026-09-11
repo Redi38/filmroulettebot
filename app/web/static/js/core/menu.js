@@ -63,7 +63,6 @@ function syncMenuIndicator(activeItem) {
   indicator.style.height = `${height}px`;
   indicator.style.transform = `translateY(${top}px)`;
   indicator.classList.add("visible");
-  // First placement jumps; every later one slides from the previous row.
   if (indicator.classList.contains("no-anim")) {
     void indicator.offsetWidth;
     indicator.classList.remove("no-anim");
@@ -115,11 +114,38 @@ function renderMenu() {
   addGroup("Прочее");
   addItem("upcoming", "Ожидаемые", () => switchView("upcoming"), currentView === "upcoming");
   addItem("history", "История", () => switchView("history"), currentView === "history");
+
+  syncMenuIndicator(activeItem);
 }
 
-function openMenu() { sideMenu.classList.add("open"); overlay.classList.add("open"); }
-function closeMenu() { sideMenu.classList.remove("open"); overlay.classList.remove("open"); }
-document.getElementById("burger-btn").onclick = openMenu;
+const burgerBtn = document.getElementById("burger-btn");
+
+function setBurgerOpen(isOpen) {
+  if (!burgerBtn) return;
+  burgerBtn.classList.toggle("open", isOpen);
+  burgerBtn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+  burgerBtn.setAttribute("aria-label", isOpen ? "Закрыть меню" : "Меню");
+}
+
+function openMenu() {
+  sideMenu.classList.add("open");
+  overlay.classList.add("open");
+  setBurgerOpen(true);
+  syncMenuIndicator(sideMenuScroll.querySelector(".menu-item.active"));
+}
+function closeMenu() {
+  sideMenu.classList.remove("open");
+  overlay.classList.remove("open");
+  setBurgerOpen(false);
+}
+function toggleMenu() {
+  if (sideMenu.classList.contains("open")) closeMenu();
+  else openMenu();
+}
+if (burgerBtn) {
+  burgerBtn.onclick = toggleMenu;
+  setBurgerOpen(false);
+}
 overlay.onclick = closeMenu;
 
 function switchCat(code, view) {
@@ -150,6 +176,25 @@ function applyStudioTheme() {
   document.body.dataset.studio = studio;
 }
 
+const VIEW_TITLES = {
+  home: "Афиша", random: "Наугад", upcoming: "Ожидаемые", history: "История",
+  theaters: "В прокате", series_releases: "Премьеры сериалов",
+  tracked_series: "Отслеживание сериалов",
+};
+
+function currentViewTitle() {
+  if (currentView === "spin" || currentView === "list") return `${ALL_CATS[currentCat] || ""}`;
+  if (currentView === "showcase") return `${ALL_CATS[currentCat] || ""} — скоро`;
+  return VIEW_TITLES[currentView] || "";
+}
+
+function updateHeaderTitle() {
+  const titleEl = document.getElementById("page-title");
+  if (!titleEl) return;
+  const nextTitle = currentViewTitle();
+  if (titleEl.textContent !== nextTitle) titleEl.textContent = nextTitle;
+}
+
 async function showSection() {
   applyStudioTheme();
   if (typeof closePosterInfoModal === "function") closePosterInfoModal();
@@ -158,45 +203,37 @@ async function showSection() {
 
   const targetId = SECTION_IDS[currentView];
   const prevEl = document.querySelector(".section.active");
-  const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (prevEl && prevEl.id !== targetId && !reduceMotion) {
-    prevEl.classList.add("section-leaving");
-    await new Promise((r) => setTimeout(r, 120));
-    prevEl.classList.remove("section-leaving");
-  }
+  const reduceMotion = reducedMotion();
+  const isSwap = !!(prevEl && prevEl.id !== targetId);
+  const hasViewTransitions = !reduceMotion && typeof document.startViewTransition === "function";
+  const useViewTransition = isSwap && hasViewTransitions;
 
-  window.scrollTo(0, 0);
+  const applyDom = () => {
+    window.scrollTo(0, 0);
+    for (const [view, id] of Object.entries(SECTION_IDS)) {
+      document.getElementById(id).classList.toggle("active", currentView === view);
+    }
+    updateHeaderTitle();
+  };
 
-  for (const [view, id] of Object.entries(SECTION_IDS)) {
-    document.getElementById(id).classList.toggle("active", currentView === view);
+  if (useViewTransition) {
+    await runViewTransition(applyDom, "vt-section");
+  } else {
+    applyDom();
+    const activeEl = document.getElementById(targetId);
+    if (activeEl && isSwap && !reduceMotion) {
+      activeEl.classList.remove("section-fade-in");
+      void activeEl.offsetWidth;
+      activeEl.classList.add("section-fade-in");
+      activeEl.addEventListener("animationend", function onDone(ev) {
+        if (ev.target !== activeEl) return;
+        activeEl.classList.remove("section-fade-in");
+        activeEl.removeEventListener("animationend", onDone);
+      });
+    }
   }
 
   if (typeof updateWheelScrollLock === "function") updateWheelScrollLock();
-
-  const activeEl = document.getElementById(SECTION_IDS[currentView]);
-  if (activeEl && !reduceMotion) {
-    activeEl.classList.remove("section-fade-in");
-    void activeEl.offsetWidth;
-    activeEl.classList.add("section-fade-in");
-    activeEl.addEventListener("animationend", function onDone(ev) {
-      if (ev.target !== activeEl) return;
-      activeEl.classList.remove("section-fade-in");
-      activeEl.removeEventListener("animationend", onDone);
-    });
-  }
-
-  const titles = {home: "Афиша", random: "Наугад", spin: `${ALL_CATS[currentCat] || ""}`, list: `${ALL_CATS[currentCat] || ""}`,
-                   upcoming: "Ожидаемые", history: "История", showcase: `${ALL_CATS[currentCat] || ""} — скоро`,
-                   theaters: "В прокате", series_releases: "Премьеры сериалов",
-                   tracked_series: "Отслеживание сериалов"};
-  const titleEl = document.getElementById("page-title");
-  const nextTitle = titles[currentView] || "";
-  if (titleEl.textContent !== nextTitle) {
-    titleEl.textContent = nextTitle;
-    titleEl.classList.remove("page-title--swap");
-    void titleEl.offsetWidth;
-    titleEl.classList.add("page-title--swap");
-  }
 
   if (currentView === "home") loadHome();
   if (currentView === "random") {

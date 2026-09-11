@@ -84,11 +84,12 @@ header {
   background: linear-gradient(90deg, rgba(var(--primary-rgb), 0.14), rgba(var(--primary-2-rgb), 0.08));
 }
 header h1 { margin: 0; font-size: 1.15rem; font-weight: 800; }
-header h1.page-title--swap { animation: pageTitleSwap var(--dur-base) var(--ease-out); }
-@keyframes pageTitleSwap {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+
+/* The page title is deliberately left out of the section View Transition and
+   has no entrance animation of its own: a label that flies in on every tab
+   change draws the eye away from the content that actually changed. It swaps
+   in place while the body below it transitions. */
+
 #burger-btn {
   background: var(--card); border: 1px solid var(--border); color: var(--text);
   font-size: 1.3rem; border-radius: 8px; cursor: pointer;
@@ -101,8 +102,6 @@ header h1.page-title--swap { animation: pageTitleSwap var(--dur-base) var(--ease
   #burger-btn:hover { background: rgba(var(--primary-rgb), 0.14); }
 }
 #burger-btn svg { width: 20px; height: 20px; display: block; overflow: visible; }
-/* Burger -> X: the outer two bars slide onto the middle one and rotate,
-   while the middle one collapses. Origin is the viewBox centre (12,12). */
 #burger-btn svg line {
   transform-box: view-box; transform-origin: 12px 12px;
   transition: transform var(--dur-base) var(--ease-out), opacity var(--dur-fast) ease;
@@ -122,8 +121,6 @@ header .header-spacer { width: 34px; height: 34px; flex-shrink: 0; }
   transition: opacity 0.2s ease;
 }
 #sidebar-brand { display: none; }
-/* Slides on `transform` rather than `left`: `left` is a layout property, so
-   animating it relayouts the menu on every frame. */
 #side-menu {
   position: fixed; top: 0; left: 0; width: 260px; height: 100%;
   background: var(--sidebar-bg); border-right: 1px solid var(--border); z-index: 11;
@@ -141,8 +138,6 @@ header .header-spacer { width: 34px; height: 34px; flex-shrink: 0; }
   scrollbar-width: none; -ms-overflow-style: none;
 }
 #side-menu-scroll::-webkit-scrollbar { width: 0; height: 0; }
-/* The active-item marker is one element that slides between rows instead of
-   a border that pops on/off a different row each time. */
 #menu-active-indicator {
   position: absolute; left: 0; top: 0; width: 3px; height: 0;
   background: var(--primary); border-radius: 0 3px 3px 0;
@@ -161,8 +156,6 @@ header .header-spacer { width: 34px; height: 34px; flex-shrink: 0; }
 }
 #side-menu .menu-item svg { width: 19px; height: 19px; flex-shrink: 0; stroke: currentColor; }
 #side-menu .menu-item:hover { background: rgba(var(--primary-rgb), 0.08); border-left-color: rgba(var(--primary-rgb), 0.4); }
-/* No border-left-color here: #menu-active-indicator draws the bar so it can
-   slide from the previously active row to this one. */
 #side-menu .menu-item.active {
   background: linear-gradient(90deg, rgba(var(--primary-rgb), 0.16), rgba(var(--primary-2-rgb), 0.05));
   color: var(--primary); font-weight: 700;

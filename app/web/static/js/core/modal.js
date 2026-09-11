@@ -65,8 +65,8 @@ function openPosterInfoModal(category, title) {
   overlay.classList.add("open");
 
   api(`/api/home/card?category=${encodeURIComponent(category)}&title=${encodeURIComponent(title)}`)
-    .then((data) => { content.innerHTML = renderCard(data, {actions: false}); })
-    .catch((e) => { content.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`; });
+    .then((data) => { crossfadeContent(content, renderCard(data, {actions: false})); })
+    .catch((e) => { crossfadeContent(content, `<div class="muted">❌ ${escapeHtml(e.message)}</div>`); });
 }
 function closePosterInfoModal() { document.getElementById("poster-info-overlay").classList.remove("open"); }
 document.getElementById("poster-info-close").onclick = closePosterInfoModal;

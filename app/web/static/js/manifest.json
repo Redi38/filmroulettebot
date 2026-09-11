@@ -28,6 +28,7 @@
     "spin/wheel/wheel-build.js",
     "spin/wheel/wheel-draw.js",
     "spin/wheel/spin.js",
+    "spin/wheel/wheel-idle.js",
     "spin/wheel/viewport.js",
     "spin/wheel/hub-upload.js",
     "card/card-render.js",

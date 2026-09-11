@@ -531,3 +531,27 @@ body.dock-ready .wheel-audio-controls { opacity: 1; pointer-events: auto; }
 }
 .wheel-wrap.wheel-done .wheel-holder { animation: wheelPop 0.4s var(--ease-spring); }
 @keyframes wheelPop { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
+
+/* The label for the segment under the cursor on a resting wheel. Positioned
+   by wheel-idle.js from the pointer coordinates; translated up and left of
+   the cursor so it never sits under the pointing finger. */
+.wheel-hover-label {
+  position: absolute; z-index: 4; pointer-events: none;
+  transform: translate(-50%, calc(-100% - 12px));
+  padding: 5px 10px; max-width: 220px;
+  font-size: 0.85rem; font-weight: 700; line-height: 1.25; color: #fff;
+  text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  background: rgba(9, 12, 22, 0.88);
+  border: 1px solid rgba(var(--primary-rgb), 0.45);
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transition: opacity var(--dur-fast) ease;
+}
+.wheel-hover-label.visible { opacity: 1; }
+@media (hover: none) and (pointer: coarse) {
+  .wheel-hover-label { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wheel-hover-label { transition: none; }
+}

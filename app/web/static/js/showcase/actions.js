@@ -41,10 +41,7 @@ function buildTrackedSeriesActions(item, wrap, onSkipSettled) {
     ev.stopPropagation();
     const rowParent = wrap.parentNode;
     const rowNext = wrap.nextSibling;
-    removeRowOptimistically(wrap, () => api("/api/tracked-series/delete", {
-      method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({title: item.title}),
-    }), () => {
+    const showUndo = () => {
       showInlineUndo(rowParent, rowNext, `«${item.title}» больше не отслеживается`, "Отменить", async () => {
         try {
           await api("/api/tracked-series/add", {
@@ -56,7 +53,11 @@ function buildTrackedSeriesActions(item, wrap, onSkipSettled) {
           showToast("Не удалось восстановить");
         }
       });
-    });
+    };
+    removeRowOptimistically(wrap, () => api("/api/tracked-series/delete", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({title: item.title}),
+    }), null, {onCollapseStart: showUndo});
   };
   actionSlot.appendChild(del);
 
@@ -132,8 +133,7 @@ function buildAddActionSlot(item, cat, addMode, skipScope, wrap, onSkipSettled) 
         });
         const rowParent = wrap.parentNode;
         const rowNext = wrap.nextSibling;
-        wrap.remove();
-        showInlineUndo(rowParent, rowNext, `«${item.title}» скрыт`, "Отменить", async () => {
+        const showUndo = () => showInlineUndo(rowParent, rowNext, `«${item.title}» скрыт`, "Отменить", async () => {
           try {
             await api("/api/unskip", {
               method: "POST", headers: {"Content-Type": "application/json"},
@@ -143,7 +143,11 @@ function buildAddActionSlot(item, cat, addMode, skipScope, wrap, onSkipSettled) 
             skipBtn.classList.remove("confirming");
             skipBtn.textContent = "Скип";
             if (rowParent && rowParent.isConnected) {
+              // The node carries the inline styles its collapse left behind;
+              // clear them before it re-enters the flow, then grow it back.
+              resetRowCollapse(wrap);
               rowParent.insertBefore(wrap, rowNext && rowNext.isConnected ? rowNext : null);
+              expandRowIn(wrap);
             } else if (onSkipSettled) {
               onSkipSettled();
             }
@@ -151,6 +155,7 @@ function buildAddActionSlot(item, cat, addMode, skipScope, wrap, onSkipSettled) 
             showToast("Не удалось отменить скип");
           }
         });
+        collapseAndRemoveRow(wrap, null, {onCollapseStart: showUndo});
       } catch (e) {
         skipBtn.disabled = false;
         showToast(e.message || "Не удалось скрыть");

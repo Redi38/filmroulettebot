@@ -35,8 +35,35 @@ function flickWheelPointer(canvas) {
   pointer.classList.add("wheel-pointer--flick");
 }
 
+// The wheel overshoots its resting angle by this much and then eases back,
+// so the stop reads as momentum being absorbed rather than the animation
+// simply reaching the end of its timeline. Overshooting *forward* and
+// settling back means the final angle is still exactly the winning one.
+const WHEEL_SETTLE_REBOUND_DEG = 1.6;
+const WHEEL_SETTLE_REBOUND_MS = 260;
+
+function settleWheelRebound(canvas, fromDeg, toDeg, onFrame) {
+  return new Promise((resolve) => {
+    const start = performance.now();
+    const delta = toDeg - fromDeg;
+    const ease = (t) => 1 - Math.pow(1 - t, 3);
+    const step = (now) => {
+      const t = Math.min(1, (now - start) / WHEEL_SETTLE_REBOUND_MS);
+      const deg = fromDeg + delta * ease(t);
+      setCanvasRotation(canvas, deg);
+      if (onFrame) onFrame(deg);
+      if (t < 1) requestAnimationFrame(step);
+      else resolve();
+    };
+    requestAnimationFrame(step);
+  });
+}
+
 function spinWheelTo(canvas, n, winnerIndex, durationMs) {
   wheelSpinActive = true;
+  if (typeof stopWheelIdle === "function") stopWheelIdle(canvas);
+  if (typeof hideWheelHoverLabel === "function") hideWheelHoverLabel(canvas);
+  canvas._idleHovering = false;
   return new Promise((resolve) => {
     const boundaries = canvas._wheelBoundaries || Array.from({length: n}, (_, i) => ({start: i * (360 / n), end: (i + 1) * (360 / n)}));
     const seg = boundaries[winnerIndex];
@@ -56,8 +83,11 @@ function spinWheelTo(canvas, n, winnerIndex, durationMs) {
     const extraSpins = reduced ? 1 : WHEEL_EXTRA_SPINS;
     const startMod = ((startDeg % 360) + 360) % 360;
     const deltaToTarget = ((finalMod - startMod) % 360 + 360) % 360;
-    const totalDelta = extraSpins * 360 + deltaToTarget;
-    const endDeg = startDeg + totalDelta;
+    const endDeg = startDeg + extraSpins * 360 + deltaToTarget;
+    // Aim past the winning angle; the rebound below walks the difference off.
+    const overshoot = reduced ? 0 : WHEEL_SETTLE_REBOUND_DEG;
+    const overshootDeg = endDeg + overshoot;
+    const totalDelta = overshootDeg - startDeg;
 
     const onCross = reduced ? null : () => flickWheelPointer(canvas);
     const startTime = performance.now();
@@ -65,11 +95,20 @@ function spinWheelTo(canvas, n, winnerIndex, durationMs) {
 
     const finish = () => {
       cancelAnimationFrame(rafId);
-      setCanvasRotation(canvas, endDeg);
-      updatePointerTitle(canvas, ((endDeg % 360) + 360) % 360, true, onCross);
-      wheelSpinActive = false;
+      setCanvasRotation(canvas, overshootDeg);
+      updatePointerTitle(canvas, ((overshootDeg % 360) + 360) % 360, true, onCross);
       playWheelStop();
-      resolve();
+      const settle = overshoot
+        ? settleWheelRebound(canvas, overshootDeg, endDeg, (deg) => {
+            updatePointerTitle(canvas, ((deg % 360) + 360) % 360, false, null);
+          })
+        : Promise.resolve();
+      settle.then(() => {
+        setCanvasRotation(canvas, endDeg);
+        updatePointerTitle(canvas, ((endDeg % 360) + 360) % 360, false, null);
+        wheelSpinActive = false;
+        resolve();
+      });
     };
 
     const tick = (now) => {

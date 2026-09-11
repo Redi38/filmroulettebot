@@ -49,8 +49,7 @@ function createEditableRow(title, opts) {
     ev.stopPropagation();
     const rowParent = row.parentNode;
     const rowNext = row.nextSibling;
-    removeRowOptimistically(row, opts.onDelete, () => {
-      if (opts.onCountChange) opts.onCountChange(-1);
+    const showUndo = () => {
       showInlineUndo(rowParent, rowNext, `«${title}» удалён`, "Отменить", async () => {
         try {
           await opts.onRestore();
@@ -60,7 +59,13 @@ function createEditableRow(title, opts) {
           showToast("Не удалось восстановить");
         }
       }, opts.onUndoSettled);
-    });
+    };
+    // The pill is inserted while the row is still collapsing so the two
+    // heights trade places in one motion — inserting it after the row was
+    // removed made the gap snap back open.
+    removeRowOptimistically(row, opts.onDelete, () => {
+      if (opts.onCountChange) opts.onCountChange(-1);
+    }, {onCollapseStart: showUndo});
   };
   row.appendChild(del);
 

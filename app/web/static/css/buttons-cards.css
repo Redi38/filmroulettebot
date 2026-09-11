@@ -57,7 +57,7 @@ html.vt-section::view-transition-new(main-content) {
 .actions .btn { padding-left: 18px; padding-right: 18px; }
 .btn {
   position: relative; overflow: hidden;
-  border: none; border-radius: 12px; padding: 12px 22px; font-size: 0.98rem;
+  border: none; border-radius: var(--radius-sm); padding: 12px 22px; font-size: 0.98rem;
   cursor: pointer; color: white; font-weight: 700; box-shadow: 0 4px 14px rgba(0,0,0,0.25);
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   text-decoration: none; font-family: inherit;
@@ -104,8 +104,8 @@ html.vt-section::view-transition-new(main-content) {
 }
 .pagination-row .muted { padding: 0; }
 .card {
-  background: var(--card); border: 1px solid var(--border); border-radius: 16px;
-  padding: 18px; margin-bottom: 14px; box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-md);
+  padding: 18px; margin-bottom: 14px; box-shadow: var(--shadow-1);
 }
 /* `aspect-ratio` reserves the poster's box before the image bytes arrive, so
    the meta lines below it don't jump down once it loads. Until then the box
@@ -265,7 +265,7 @@ html.vt-section::view-transition-new(main-content) {
 @keyframes listRowIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 .list-row:last-child { border-bottom: none; }
 .copy-title {
-  flex: 1; word-break: break-word; cursor: pointer; font-family: "Manrope", monospace;
+  flex: 1; word-break: break-word; cursor: pointer; font-family: "Manrope", sans-serif;
   background: rgba(var(--primary-rgb), 0.08); padding: 4px 10px; border-radius: 8px; transition: background 0.15s;
   font-size: 0.95rem;
 }

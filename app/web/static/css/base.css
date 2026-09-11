@@ -18,6 +18,14 @@
   --ease-in: cubic-bezier(0.4, 0, 1, 1);             /* leave */
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);     /* sliding thumbs, expands */
   --dur-fast: 150ms; --dur-base: 250ms; --dur-slow: 400ms;
+
+  /* Shape system: buttons/dock use sm, cards/modals use md, hero/large
+     surfaces use lg. Introduced to replace the ad-hoc 12/14/16/18px values
+     that had drifted across buttons-cards.css, home.css, spin-wheel.css and
+     modal-responsive.css. */
+  --radius-sm: 12px; --radius-md: 16px; --radius-lg: 18px;
+  --shadow-1: 0 8px 24px rgba(0, 0, 0, 0.25);  /* dock, resting cards */
+  --shadow-2: 0 12px 40px rgba(0, 0, 0, 0.4);  /* modals */
 }
 
 /* One switch for the whole app. Individual components no longer need their

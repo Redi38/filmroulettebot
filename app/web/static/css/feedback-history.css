@@ -78,6 +78,9 @@
 .hist-item.resolved { opacity: 0.55; }
 .hist-item.fade-in { animation-name: histItemEnter; }
 .hist-item.fade-in.resolved { animation-name: histItemEnterResolved; }
+@media (prefers-reduced-motion: no-preference) {
+  .hist-item.fade-in { animation-delay: calc(var(--row-i, 0) * 30ms); }
+}
 @keyframes histItemEnter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes histItemEnterResolved { from { opacity: 0; transform: translateY(6px); } to { opacity: 0.55; transform: translateY(0); } }
 .hist-item .hist-title { font-weight: 700; margin-bottom: 3px; }

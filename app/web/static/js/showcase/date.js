@@ -66,7 +66,10 @@ function ymdSpan(from, to) {
 
 // dateStr: "YYYY-MM-DD". Returns the original string unchanged if it can't
 // be parsed, so unexpected formats degrade gracefully instead of breaking.
-function humanizeShowcaseDate(dateStr) {
+// withSpan=false drops the trailing "· через X" / "· X назад" part, leaving
+// just the short date (or the Сегодня/Завтра/На этой неделе badges) — used
+// for plain release dates where "29 лет 6 месяцев назад" isn't useful.
+function humanizeShowcaseDate(dateStr, withSpan = true) {
   if (!dateStr) return dateStr;
   const d = new Date(`${dateStr}T00:00:00`);
   if (Number.isNaN(d.getTime())) return dateStr;
@@ -86,6 +89,8 @@ function humanizeShowcaseDate(dateStr) {
   }
 
   const future = diffDays > 0;
+  if (!withSpan) return short;
+
   const {years, months, days} = future ? ymdSpan(today, d) : ymdSpan(d, today);
   let span;
   if (years >= 1) {
@@ -113,6 +118,6 @@ function showcaseDateLine(item, cat, isNewSeasons, addMode) {
   }
   if (item.is_new_season) return `🆕 Новый сезон — ${humanizeShowcaseDate(item.release_date)}`;
   if (item.airing_now) return `📅 Сезон выходит — финал ${humanizeShowcaseDate(item.release_date)}`;
-  if (addMode === "now-playing" && item.digitally_released) return `${humanizeShowcaseDate(item.release_date)} · 📀 уже в цифре`;
-  return humanizeShowcaseDate(item.release_date);
+  if (addMode === "now-playing" && item.digitally_released) return `${humanizeShowcaseDate(item.release_date, false)} · 📀 уже в цифре`;
+  return humanizeShowcaseDate(item.release_date, false);
 }

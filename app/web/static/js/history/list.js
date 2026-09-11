@@ -28,7 +28,7 @@ function renderHistoryList() {
     const outcome = serverOutcome || resolved[key];
     const isResolved = !!outcome;
     div.className = "hist-item fade-in" + (isResolved ? " resolved" : "");
-    div.style.animationDelay = `${Math.min(idx, 10) * 0.03}s`;
+    div.style.setProperty("--row-i", Math.min(idx, 10));
     div.dataset.category = e.category;
     div.dataset.title = e.title;
     div.dataset.timestamp = e.timestamp;

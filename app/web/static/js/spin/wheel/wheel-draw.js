@@ -41,6 +41,17 @@ function animateWheelWeights(canvas, items, dpr, toWeights, duration = 420) {
   const startTime = performance.now();
   const ease = (t) => 1 - Math.pow(1 - t, 3);
 
+  // A full redraw touches every segment (fill + stroke + two text passes)
+  // over the whole canvas, so its cost scales with the backing-store pixel
+  // count — at dpr 2-3 that's 4-9x the pixels of a 1x canvas. Doing that on
+  // every animation frame is what reads as jank when switching normal/
+  // weighted mode. So: animate at dpr 1 (the canvas is briefly upscaled by
+  // the browser, which is imperceptible for a 420ms transition) and only
+  // pay the full-resolution cost once, on the settled final frame.
+  const cssSize = canvas.width / dpr;
+  const animDpr = 1;
+  canvas.width = canvas.height = Math.round(cssSize * animDpr);
+
   return new Promise((resolve) => {
     function step(now) {
       const t = Math.min(1, (now - startTime) / duration);
@@ -53,11 +64,12 @@ function animateWheelWeights(canvas, items, dpr, toWeights, duration = 420) {
         };
       }
       canvas._wheelBoundaries = frameBoundaries;
-      drawWheelSegments(canvas, items, dpr, frameBoundaries, {animating: true});
+      drawWheelSegments(canvas, items, animDpr, frameBoundaries, {animating: true});
       if (t < 1) {
         canvas._wheelResizeRAF = requestAnimationFrame(step);
       } else {
         canvas._wheelResizeRAF = null;
+        canvas.width = canvas.height = Math.round(cssSize * dpr);
         drawWheelSegments(canvas, items, dpr, toBoundaries);
         updatePointerTitle(canvas, getCanvasRotationDeg(canvas));
         resolve();

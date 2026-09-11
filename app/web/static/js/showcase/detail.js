@@ -15,7 +15,7 @@ function attachShowcaseDetailToggle(wrap, infoBtn, detail, item) {
       detail.innerHTML = renderShowcaseDetail(_mediaDetailsCache.get(cacheKey), item);
       return;
     }
-    detail.innerHTML = `<div class="spinner">Загрузка…</div>`;
+    detail.innerHTML = skeletonDetailHtml();
     try {
       const data = await api(`/api/media/${item.is_series ? "tv" : "movie"}/${item.id}`);
       _mediaDetailsCache.set(cacheKey, data);

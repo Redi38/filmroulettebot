@@ -87,7 +87,7 @@ async function loadTheaters(trigger) {
   renderTheatersFilters();
   if (!theatersLoaded) {
     container.style.opacity = "1";
-    container.innerHTML = '<div class="spinner">Загрузка…</div>';
+    container.innerHTML = skeletonShowcaseHtml();
   }
   try {
     const data = await api(`/api/theaters?now_playing_page=${theatersNowPlayingPage}&upcoming_page=${theatersUpcomingPage}&added=${theatersAddedFilter}`);
@@ -175,7 +175,7 @@ async function loadSeriesReleases() {
   renderSeriesReleasesFilters();
   if (!seriesReleasesLoaded) {
     container.style.opacity = "1";
-    container.innerHTML = '<div class="spinner">Загрузка…</div>';
+    container.innerHTML = skeletonShowcaseHtml();
   }
   try {
     const data = await api(`/api/series-releases?page=${seriesReleasesPage}&added=${seriesReleasesAddedFilter}`);

@@ -9,7 +9,7 @@ async function openAddSearchModal(searchEndpoint, query, {onPick, onFallback}) {
   const fallbackLabel = document.getElementById("add-search-fallback-label");
 
   fallbackLabel.textContent = `Добавить «${query}» как есть`;
-  resultsEl.innerHTML = '<div class="spinner">Ищем на TMDb…</div>';
+  resultsEl.innerHTML = skeletonSearchHtml();
   overlay.classList.add("open");
 
   const close = () => {

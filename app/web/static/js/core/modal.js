@@ -61,7 +61,7 @@ function closeRenameModal() { if (_closeActiveRenameModal) _closeActiveRenameMod
 function openPosterInfoModal(category, title) {
   const overlay = document.getElementById("poster-info-overlay");
   const content = document.getElementById("poster-info-content");
-  content.innerHTML = '<div class="spinner">Загрузка…</div>';
+  content.innerHTML = skeletonCardHtml();
   overlay.classList.add("open");
 
   api(`/api/home/card?category=${encodeURIComponent(category)}&title=${encodeURIComponent(title)}`)

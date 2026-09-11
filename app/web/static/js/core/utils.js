@@ -14,13 +14,42 @@ function ensureFilterPanel(panelId, sectionId, beforeId) {
   return panel;
 }
 
+// Toasts stack rather than overwrite one another: a second message used to
+// replace the text of the toast already on screen, so the first one was
+// never read. Each call now appends its own element; at most TOAST_MAX are
+// kept and the oldest is retired early once that many pile up.
+const TOAST_MAX = 3;
+const TOAST_LEAVE_MS = 260;
+
+function dismissToast(el) {
+  if (!el || el._dismissed) return;
+  el._dismissed = true;
+  clearTimeout(el._hideTimer);
+  el.classList.remove("show");
+  setTimeout(() => el.remove(), TOAST_LEAVE_MS);
+}
+
 function showToast(msg, type) {
-  const t = document.getElementById("toast");
-  t.textContent = msg;
-  t.classList.toggle("toast--error", type === "error");
-  t.classList.add("show");
-  clearTimeout(t._hideTimer);
-  t._hideTimer = setTimeout(() => t.classList.remove("show"), type === "error" ? 3000 : 1400);
+  const isError = type === "error";
+  const stack = document.getElementById(isError ? "toast-stack-error" : "toast-stack");
+  if (!stack) return null;
+
+  // Everything already on screen is a previous message — recede it so the
+  // newest toast is the one that reads as current.
+  for (const prev of stack.children) prev.classList.add("toast--stale");
+
+  const el = document.createElement("div");
+  el.className = "toast" + (isError ? " toast--error" : "");
+  el.setAttribute("role", isError ? "alert" : "status");
+  el.textContent = msg;
+  stack.appendChild(el);
+  requestAnimationFrame(() => el.classList.add("show"));
+
+  const live = [...stack.children].filter((c) => !c._dismissed);
+  for (const extra of live.slice(0, Math.max(0, live.length - TOAST_MAX))) dismissToast(extra);
+
+  el._hideTimer = setTimeout(() => dismissToast(el), isError ? 3000 : 1400);
+  return el;
 }
 
 function showInlineUndo(parent, referenceNode, msg, actionLabel, onAction, onDismiss, duration) {
@@ -138,25 +167,117 @@ function maxTransitionMs(el) {
   }
   return max;
 }
+function reducedMotion() {
+  return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+}
+
+// Page navigation slides the old page out and the new one in along the
+// direction of travel instead of cross-fading in place. paginationRow()
+// tags the container it lives in; fadeOut() reads the tag and fadeIn()
+// clears it, so an untagged container keeps the plain cross-fade.
+const NAV_SLIDE_PX = 22;
+
+function setNavDirection(el, dir) {
+  if (el) el._navDir = dir;
+}
+
 async function fadeOut(el) {
+  const dir = reducedMotion() ? 0 : (el._navDir || 0);
   const ms = maxTransitionMs(el);
   el.style.opacity = "0";
+  if (dir) el.style.transform = `translateX(${-dir * NAV_SLIDE_PX}px)`;
   await nextFrame();
   await new Promise((r) => setTimeout(r, Math.min(400, Math.max(60, ms + 20))));
 }
-function fadeIn(el) { requestAnimationFrame(() => { el.style.opacity = "1"; }); }
 
-function removeRowOptimistically(row, deleteRequest, onRemoved) {
-  row.style.transition = "opacity .15s ease, transform .15s ease";
-  row.style.opacity = "0";
-  row.style.transform = "translateX(10px)";
-  setTimeout(() => {
+function fadeIn(el) {
+  const dir = reducedMotion() ? 0 : (el._navDir || 0);
+  el._navDir = 0;
+  if (dir) {
+    // Jump to the far edge with the transition suppressed, then animate home
+    // on the next frame — otherwise the element would slide back across from
+    // where fadeOut() left it.
+    el.style.transition = "none";
+    el.style.transform = `translateX(${dir * NAV_SLIDE_PX}px)`;
+    void el.offsetWidth;
+    el.style.transition = "";
+  }
+  requestAnimationFrame(() => {
+    el.style.opacity = "1";
+    el.style.transform = "";
+  });
+}
+
+// Fades a row out and then collapses its height to zero, so the rows below
+// glide up into the gap instead of jumping the moment the node is removed.
+const ROW_FADE_MS = 140;
+const ROW_COLLAPSE_MS = 200;
+
+function collapseAndRemoveRow(row, onRemoved) {
+  const done = () => {
     row.remove();
     if (onRemoved) onRemoved();
-  }, 150);
+  };
+  if (reducedMotion()) { done(); return; }
+
+  const cs = getComputedStyle(row);
+  const height = row.getBoundingClientRect().height;
+  row.style.overflow = "hidden";
+  row.style.boxSizing = "border-box";
+  row.style.height = `${height}px`;
+  row.style.marginTop = cs.marginTop;
+  row.style.marginBottom = cs.marginBottom;
+  row.style.paddingTop = cs.paddingTop;
+  row.style.paddingBottom = cs.paddingBottom;
+
+  requestAnimationFrame(() => {
+    row.style.transition =
+      `opacity ${ROW_FADE_MS}ms ease, transform ${ROW_FADE_MS}ms ease, ` +
+      `height ${ROW_COLLAPSE_MS}ms var(--ease-standard) ${ROW_FADE_MS * 0.5}ms, ` +
+      `margin ${ROW_COLLAPSE_MS}ms var(--ease-standard) ${ROW_FADE_MS * 0.5}ms, ` +
+      `padding ${ROW_COLLAPSE_MS}ms var(--ease-standard) ${ROW_FADE_MS * 0.5}ms, ` +
+      `border-width ${ROW_COLLAPSE_MS}ms var(--ease-standard) ${ROW_FADE_MS * 0.5}ms`;
+    row.style.opacity = "0";
+    row.style.transform = "translateX(10px)";
+    row.style.height = "0px";
+    row.style.marginTop = "0px";
+    row.style.marginBottom = "0px";
+    row.style.paddingTop = "0px";
+    row.style.paddingBottom = "0px";
+    row.style.borderTopWidth = "0px";
+    row.style.borderBottomWidth = "0px";
+  });
+  setTimeout(done, ROW_FADE_MS * 0.5 + ROW_COLLAPSE_MS + 20);
+}
+
+function removeRowOptimistically(row, deleteRequest, onRemoved) {
+  collapseAndRemoveRow(row, onRemoved);
   deleteRequest().catch((e) => {
     showToast(e.message || "Не удалось удалить");
   });
+}
+
+// Runs `update` inside a View Transition when the browser has one, with
+// `vtClass` on <html> for the duration so the transition's CSS can be scoped
+// to this particular navigation. Falls back to running `update` directly.
+function runViewTransition(update, vtClass) {
+  if (reducedMotion() || typeof document.startViewTransition !== "function") {
+    update();
+    return Promise.resolve();
+  }
+  document.documentElement.classList.add(vtClass);
+  let vt;
+  try {
+    vt = document.startViewTransition(update);
+  } catch (e) {
+    document.documentElement.classList.remove(vtClass);
+    return Promise.resolve();
+  }
+  // `finished` rejects when a transition is interrupted by the next one; the
+  // DOM update itself has already run either way.
+  return vt.finished
+    .catch(() => {})
+    .then(() => { document.documentElement.classList.remove(vtClass); });
 }
 
 const TRASH_ICON_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>`;

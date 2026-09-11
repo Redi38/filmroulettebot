@@ -20,6 +20,39 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
   from { opacity: 0; transform: translateY(8px) scale(0.985); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+/* Section switching via the View Transitions API (core/menu.js falls back to
+   the two animations above where the API is missing). Only <main> is given a
+   name, so the header and sidebar stay in the root snapshot and are not
+   double-rendered while the content cross-fades. Old and new snapshots get
+   `height: auto` + `object-fit: none` — the standard recipe for cross-fading
+   two captures of different heights without squashing either one. */
+html.vt-section main { view-transition-name: main-content; }
+html.vt-section::view-transition-group(main-content) {
+  animation-duration: var(--dur-base);
+  animation-timing-function: var(--ease-out);
+}
+html.vt-section::view-transition-image-pair(main-content) { isolation: auto; }
+html.vt-section::view-transition-old(main-content),
+html.vt-section::view-transition-new(main-content) {
+  mix-blend-mode: normal;
+  height: auto; width: 100%;
+  object-fit: none; object-position: top center;
+}
+html.vt-section::view-transition-old(main-content) {
+  animation: vtSectionOut 0.14s var(--ease-in) both;
+}
+html.vt-section::view-transition-new(main-content) {
+  animation: vtSectionIn 0.26s 0.05s var(--ease-out) both;
+}
+@keyframes vtSectionOut {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.985); }
+}
+@keyframes vtSectionIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
 .actions { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; justify-content: center; }
 .actions .btn { padding-left: 18px; padding-right: 18px; }
 .btn {
@@ -69,8 +102,20 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
   background: var(--card); border: 1px solid var(--border); border-radius: 16px;
   padding: 18px; margin-bottom: 14px; box-shadow: 0 8px 30px rgba(0,0,0,0.25);
 }
-.poster { width: 100%; max-width: min(280px, 100%); max-height: 44vh; object-fit: cover; border-radius: 12px; display: block; margin: 0 auto 14px;
+/* `aspect-ratio` reserves the poster's box before the image bytes arrive, so
+   the meta lines below it don't jump down once it loads. Until then the box
+   shows the same shimmer the skeletons use. */
+.poster { width: 100%; max-width: min(280px, 100%); aspect-ratio: 2 / 3; max-height: 44vh; object-fit: cover; border-radius: 12px; display: block; margin: 0 auto 14px;
   box-shadow: 0 6px 24px var(--glow); background: rgba(255,255,255,0.04); }
+.poster.img-pending {
+  background-image: linear-gradient(100deg, rgba(255,255,255,0.02) 30%, rgba(var(--primary-rgb), 0.12) 50%, rgba(255,255,255,0.02) 70%);
+  background-size: 250% 100%;
+  animation: posterShimmer 1.35s var(--ease-standard) infinite;
+}
+@keyframes posterShimmer {
+  from { background-position: 150% 0; }
+  to { background-position: -150% 0; }
+}
 /* Poster enter: opacity + scale only — no filter, animating blur/filter on
    a large image is expensive on integrated GPUs. Only the spin-result card
    carries the shared-element name so the wheel morphs into it. */
@@ -78,6 +123,30 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
 @keyframes posterIn {
   from { opacity: 0; transform: scale(0.96); }
   to { opacity: 1; transform: scale(1); }
+}
+
+/* Result card entrance: the poster settles first, then the text lines and
+   the action row follow it in. Same stagger idea as the home hero. */
+@keyframes cardPartIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+/* The shell only fades — the movement belongs to the poster and the lines,
+   so the card doesn't slide as a block while its contents also slide. */
+.card.card-stagger { animation: cardShellIn 0.28s var(--ease-out) backwards; }
+@keyframes cardShellIn { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: no-preference) {
+  .card.card-stagger .card-body > * {
+    animation: cardPartIn 0.38s var(--ease-out) backwards;
+  }
+  .card.card-stagger .card-body > *:nth-child(1) { animation-delay: 0.06s; }
+  .card.card-stagger .card-body > *:nth-child(2) { animation-delay: 0.10s; }
+  .card.card-stagger .card-body > *:nth-child(3) { animation-delay: 0.14s; }
+  .card.card-stagger .card-body > *:nth-child(4) { animation-delay: 0.18s; }
+  .card.card-stagger .card-body > *:nth-child(5) { animation-delay: 0.22s; }
+  .card.card-stagger .card-body > *:nth-child(6) { animation-delay: 0.26s; }
+  .card.card-stagger .card-body > *:nth-child(7) { animation-delay: 0.30s; }
+  .card.card-stagger .card-body > *:nth-child(n+8) { animation-delay: 0.34s; }
 }
 .vt-spin-landing #random-spin-result .poster,
 .vt-spin-landing #spin-result .poster { view-transition-name: spin-hero; }

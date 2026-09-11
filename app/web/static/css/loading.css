@@ -1,0 +1,97 @@
+/* Loading placeholders: skeleton blocks shaped like the content they stand
+   in for, so the layout doesn't jump when the real data arrives. Every
+   screen that used to show a centred "Загрузка…" spinner now renders one of
+   the skeleton groups built in core/skeleton.js. */
+
+.skeleton {
+  position: relative; overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+.skeleton::after {
+  content: ""; position: absolute; inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(var(--primary-rgb), 0.13), transparent);
+  animation: skeletonSweep 1.35s var(--ease-standard) infinite;
+  animation-delay: calc(var(--skel-i, 0) * 90ms);
+}
+@keyframes skeletonSweep { to { transform: translateX(100%); } }
+
+.skel-group { animation: fadeIn var(--dur-base) var(--ease-out); }
+
+/* A showcase/theaters row: poster thumb + title line + date line. */
+.skel-showcase-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+}
+.skel-showcase-row:last-child { border-bottom: none; }
+.skel-showcase-poster { width: 46px; height: 68px; border-radius: 8px; flex-shrink: 0; }
+.skel-showcase-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.skel-line { height: 11px; border-radius: 6px; }
+.skel-line--title { height: 13px; width: 62%; }
+.skel-line--sub { width: 34%; }
+.skel-showcase-action { width: 92px; height: 34px; border-radius: 10px; flex-shrink: 0; }
+
+/* A watchlist row: wide title pill + the edit/delete button pair. */
+.skel-list-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 12px; border-bottom: 1px solid var(--border);
+}
+.skel-list-row:last-child { border-bottom: none; }
+.skel-list-title { flex: 1; height: 30px; border-radius: 8px; }
+.skel-list-btn { width: 38px; height: 28px; border-radius: 8px; flex-shrink: 0; }
+
+/* A result card: poster block beside the meta lines. */
+.skel-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+  padding: 18px; margin-bottom: 14px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+}
+.skel-card-poster {
+  width: 100%; max-width: min(280px, 100%); aspect-ratio: 2 / 3; max-height: 44vh;
+  border-radius: 12px; margin: 0 auto 14px; display: block;
+}
+.skel-card-body { display: flex; flex-direction: column; gap: 10px; }
+.skel-card-body .skel-line--title { height: 20px; width: 70%; }
+.skel-card-body .skel-line--badge { height: 16px; width: 88px; border-radius: 20px; }
+.skel-card-body .skel-line--wide { width: 100%; }
+.skel-card-body .skel-line--mid { width: 78%; }
+
+@container (min-width: 560px) {
+  .skel-card {
+    display: grid; grid-template-columns: 220px 1fr;
+    column-gap: clamp(16px, 2.6vh, 26px); align-items: start;
+    padding: clamp(16px, 2.6vh, 30px);
+  }
+  .skel-card-poster { margin: 0; max-height: clamp(220px, 42vh, 420px); }
+}
+
+/* Modal search results: poster thumb + one title line. */
+.skel-search-row {
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border);
+  border-radius: 10px; padding: 8px 10px;
+}
+.skel-search-poster { width: 36px; height: 54px; border-radius: 6px; flex-shrink: 0; }
+
+/* Expanded showcase detail panel. */
+.skel-detail { display: flex; flex-direction: column; gap: 10px; padding: 6px 4px 20px; }
+
+/* History entries: title, timestamp, and the action button row. */
+.skel-hist-item {
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+  padding: 13px; margin-bottom: 10px;
+  display: flex; flex-direction: column; gap: 9px;
+}
+.skel-hist-actions { display: flex; gap: 8px; margin-top: 2px; }
+.skel-hist-btn { width: 104px; height: 32px; border-radius: 12px; }
+
+/* The wheel, during the moment between "Крутить" and the built canvas. */
+.skel-wheel-wrap {
+  display: flex; flex-direction: column; align-items: center; gap: 22px;
+  animation: fadeIn var(--dur-base) var(--ease-out);
+}
+.skel-wheel-title { width: 190px; height: 30px; border-radius: 12px; }
+.skel-wheel-disc {
+  width: min(62vh, 82vw, 520px); aspect-ratio: 1 / 1;
+  border-radius: 50%; border: 4px solid var(--border);
+}

@@ -19,7 +19,7 @@ async function loadList(page) {
     currentListQuery = "";
     searchInput.value = "";
     container.style.opacity = "1";
-    container.innerHTML = '<div class="spinner">Загрузка…</div>';
+    container.innerHTML = skeletonListHtml();
     featured.style.opacity = "1";
     featured.innerHTML = "";
     const countElReset = document.getElementById("list-count");
@@ -34,7 +34,7 @@ async function loadList(page) {
   const itemsPromise = api(`/api/${currentCat}/items?page=${currentListPage}&q=${encodeURIComponent(q)}`);
 
   if (isFeaturedCat && isFreshView) {
-    featured.innerHTML = '<div class="spinner">Загрузка витрины…</div>';
+    featured.innerHTML = skeletonCardHtml();
   }
 
   try {
@@ -145,12 +145,20 @@ function paginationRow(page, totalPages, onNav) {
   row.style.gap = "14px";
   row.style.padding = "14px 0 4px";
 
+  // Tell the container this row sits in which way the reader is travelling,
+  // so its fade out/in becomes a slide in that direction (see fadeOut() and
+  // fadeIn() in core/utils.js).
+  const navigate = (targetPage, dir) => {
+    setNavDirection(row.parentNode, dir);
+    onNav(targetPage);
+  };
+
   const prev = document.createElement("button");
   prev.className = "btn btn-primary page-nav-btn";
   prev.appendChild(chevronSvg("left"));
   prev.setAttribute("aria-label", "Назад");
   prev.disabled = page <= 1;
-  prev.onclick = () => onNav(page - 1);
+  prev.onclick = () => navigate(page - 1, -1);
 
   const label = document.createElement("span");
   label.className = "muted";
@@ -162,7 +170,7 @@ function paginationRow(page, totalPages, onNav) {
   next.appendChild(chevronSvg("right"));
   next.setAttribute("aria-label", "Вперёд");
   next.disabled = page >= totalPages;
-  next.onclick = () => onNav(page + 1);
+  next.onclick = () => navigate(page + 1, 1);
 
   row.appendChild(prev); row.appendChild(label); row.appendChild(next);
   return row;

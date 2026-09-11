@@ -24,7 +24,12 @@ function metaLine(icon, text) {
 function renderCard(data, opts) {
   opts = opts || {};
   const showActions = opts.actions !== false;
-  const poster = data.poster_url ? `<img class="poster fade-in" src="${data.poster_url}">` : "";
+  // `img-pending` keeps the shimmer running inside the poster's reserved box
+  // (`aspect-ratio` in buttons-cards.css) until the bytes arrive, so the meta
+  // lines below never shift down when the image finally paints.
+  const poster = data.poster_url
+    ? `<img class="poster fade-in img-pending" src="${data.poster_url}" alt="" decoding="async" onload="this.classList.remove('img-pending')" onerror="this.classList.remove('img-pending')">`
+    : "";
   const ratingNum = parseFloat(data.rating);
   const rating = (data.rating !== "—" && !isNaN(ratingNum))
     ? `<span class="rating-value" data-target="${ratingNum}">0</span>/10`
@@ -44,7 +49,7 @@ function renderCard(data, opts) {
       </div>
       <div class="sequel-prompt" id="sequel-prompt" style="display:none"></div>` : "";
   return `
-    <div class="card fade-in">
+    <div class="card card-stagger">
       ${poster}
       <div class="card-body">
         <div class="title copy-title" onclick="copyToClipboard('${escapeAttr(data.title)}', this)" title="Нажмите, чтобы скопировать">${escapeHtml(data.title)}</div>

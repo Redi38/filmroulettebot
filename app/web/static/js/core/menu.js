@@ -38,14 +38,51 @@ const ICONS = {
   bell: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>`,
 };
 
+// The active-row marker is a single element that slides between rows, so it
+// has to outlive renderMenu()'s rebuild — hence clearing the item nodes one
+// by one rather than wiping innerHTML, and positioning it afterwards.
+let menuIndicator = null;
+
+function ensureMenuIndicator() {
+  if (menuIndicator && menuIndicator.isConnected) return menuIndicator;
+  menuIndicator = document.createElement("div");
+  menuIndicator.id = "menu-active-indicator";
+  menuIndicator.className = "no-anim";
+  sideMenuScroll.appendChild(menuIndicator);
+  return menuIndicator;
+}
+
+function syncMenuIndicator(activeItem) {
+  const indicator = ensureMenuIndicator();
+  if (!activeItem) {
+    indicator.classList.remove("visible");
+    return;
+  }
+  const top = activeItem.offsetTop;
+  const height = activeItem.offsetHeight;
+  indicator.style.height = `${height}px`;
+  indicator.style.transform = `translateY(${top}px)`;
+  indicator.classList.add("visible");
+  // First placement jumps; every later one slides from the previous row.
+  if (indicator.classList.contains("no-anim")) {
+    void indicator.offsetWidth;
+    indicator.classList.remove("no-anim");
+  }
+}
+
 function renderMenu() {
-  sideMenuScroll.innerHTML = "";
+  const indicator = ensureMenuIndicator();
+  for (const child of [...sideMenuScroll.children]) {
+    if (child !== indicator) child.remove();
+  }
+  let activeItem = null;
   const addItem = (icon, label, onClick, active, sub) => {
     const b = document.createElement("button");
     b.className = "menu-item" + (sub ? " sub" : "") + (active ? " active" : "");
     b.innerHTML = `${icon ? ICONS[icon] : ""}<span>${label}</span>`;
     b.onclick = () => { onClick(); closeMenu(); };
     sideMenuScroll.appendChild(b);
+    if (active) activeItem = b;
   };
   const addGroup = (label) => {
     const h = document.createElement("div");

@@ -1,20 +1,36 @@
 /* Toast notifications, inline undo pill, cooldown wipe animation, and history items. */
 
-.toast {
-  position: fixed; bottom: 20px; left: 50%; transform: translate(-50%, 8px);
-  background: linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary) 70%, black)); color: var(--on-primary); padding: 9px 20px; border-radius: 24px;
-  font-size: 0.9rem; font-weight: 700; opacity: 0; transition: opacity 0.2s ease, transform 0.2s ease; pointer-events: none; z-index: 20;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.4);
-  max-width: calc(100vw - 32px); text-align: center;
+/* Toasts stack instead of overwriting each other: each call appends its own
+   element to one of the two fixed stacks (normal at the bottom, errors under
+   the header), and the stack's flex gap pushes the existing ones aside. */
+.toast-stack {
+  position: fixed; left: 50%; transform: translateX(-50%); z-index: 20;
+  display: flex; flex-direction: column-reverse; align-items: center; gap: 8px;
+  pointer-events: none; max-width: calc(100vw - 32px);
+  bottom: 20px;
 }
-.toast.show { opacity: 1; transform: translate(-50%, 0); }
-.toast.toast--error {
+.toast-stack--error {
   bottom: auto; top: calc(var(--header-h, 60px) + 135px);
+  flex-direction: column;
+}
+.toast {
+  background: linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary) 70%, black)); color: var(--on-primary); padding: 9px 20px; border-radius: 24px;
+  font-size: 0.9rem; font-weight: 700; opacity: 0; transform: translateY(8px) scale(0.96);
+  transition: opacity 0.2s ease, transform 0.2s var(--ease-out);
+  pointer-events: none;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+  max-width: 100%; text-align: center;
+}
+.toast.show { opacity: 1; transform: translateY(0) scale(1); }
+/* Older toasts recede so the newest one reads as the current message. */
+.toast.toast--stale { opacity: 0.62; transform: translateY(0) scale(0.94); }
+.toast.toast--error {
   background: linear-gradient(135deg, var(--danger), #b9203f); color: white;
   font-size: 1.05rem; padding: 13px 26px; border-radius: 24px;
-  transform: translate(-50%, -8px);
+  transform: translateY(-8px) scale(0.96);
 }
-.toast.toast--error.show { transform: translate(-50%, 0); }
+.toast.toast--error.show { transform: translateY(0) scale(1); }
+.toast.toast--error.toast--stale { transform: translateY(0) scale(0.94); }
 .inline-undo-row {
   display: flex; justify-content: center; margin: 10px 0;
   animation: fadeIn 0.25s ease;
@@ -81,6 +97,10 @@
   text-transform: uppercase; letter-spacing: 0.03em;
 }
 
-#list-container, #list-featured, #up-list-container, #up-check-result, #history-list, #showcase-container, #theaters-container, #series-releases-container {
-  transition: opacity 0.22s ease;
+/* `transform` is transitioned as well so page navigation can slide the list
+   out and the next page in from the direction the reader is travelling —
+   see setNavDirection()/fadeOut()/fadeIn() in core/utils.js. */
+#list-container, #list-featured, #up-list-container, #up-check-result, #history-list, #showcase-container, #theaters-container, #series-releases-container,
+.theaters-col, #poster-info-content {
+  transition: opacity 0.22s ease, transform 0.22s var(--ease-out);
 }

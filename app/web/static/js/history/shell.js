@@ -8,7 +8,7 @@ async function loadHistory() {
   const list = document.getElementById("history-list");
   const isFreshView = list.dataset.loaded !== "1";
   if (isFreshView) {
-    list.innerHTML = '<div class="spinner">Загрузка…</div>';
+    list.innerHTML = skeletonHistoryHtml();
   }
   try {
     const data = await api("/api/history?limit=50");

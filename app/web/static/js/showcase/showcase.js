@@ -12,7 +12,7 @@ async function loadShowcase() {
   currentShowcaseStudio = cat;
   if (isFreshView) {
     container.style.opacity = "1";
-    container.innerHTML = '<div class="spinner">Загрузка…</div>';
+    container.innerHTML = skeletonShowcaseHtml();
   }
   try {
     const data = await api(`/api/showcase/${cat}`);
@@ -87,7 +87,7 @@ async function loadTrackedSeries() {
   const container = document.getElementById("tracked-series-container");
   if (!trackedSeriesLoaded) {
     container.style.opacity = "1";
-    container.innerHTML = '<div class="spinner">Загрузка…</div>';
+    container.innerHTML = skeletonShowcaseHtml();
   }
   try {
     const data = await api(`/api/tracked-series`);

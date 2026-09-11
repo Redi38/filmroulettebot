@@ -10,7 +10,7 @@ async function loadUpcoming() {
   const isFreshView = container.dataset.loaded !== "1";
   if (isFreshView) {
     container.style.opacity = "1";
-    container.innerHTML = '<div class="spinner">Загрузка…</div>';
+    container.innerHTML = skeletonListHtml();
   }
   try {
     const data = await api("/api/upcoming");

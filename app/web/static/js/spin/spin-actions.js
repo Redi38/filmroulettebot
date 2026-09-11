@@ -91,7 +91,7 @@ async function doWheelSpin(cat, isRandom) {
   result.innerHTML = "";
   wrap.classList.remove("wheel-done");
   wrap.style.display = "flex";
-  wrap.innerHTML = '<div class="spinner">Готовим колесо…</div>';
+  wrap.innerHTML = skeletonWheelHtml();
 
   try {
     const endpoint = isRandom ? "/api/random-spin" : `/api/${cat}/spin`;
@@ -214,7 +214,7 @@ async function doClassicSpin(cat, isRandom) {
   cancelAutoWatchOpen();
   const result = isRandom ? document.getElementById("random-spin-result") : resultEl();
   const prevHtml = result.innerHTML;
-  result.innerHTML = '<div class="spinner">Крутим…</div>';
+  result.innerHTML = skeletonCardHtml();
   applySpinCooldown(SPIN_COOLDOWN_SECONDS);
   setDockLocked(true);
   try {

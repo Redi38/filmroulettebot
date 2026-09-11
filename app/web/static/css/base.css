@@ -7,6 +7,9 @@
   --primary-rgb: 242, 169, 59; --primary-2-rgb: 255, 59, 129; --on-primary: #1a1108;
   --border: #2c2620; --glow: rgba(var(--primary-rgb), 0.32); --glow-2: rgba(var(--primary-2-rgb), 0.32);
   --sidebar-w: 260px; --header-h: 63px; --sidebar-bg: #17151b;
+  /* Clears header + search/filter row above content so the error-toast
+     stack (feedback-history.css) doesn't sit on top of them. */
+  --error-toast-offset: 135px;
 
   /* Motion system: every press/hover/enter animation in the app should use
      one of these so timing feels consistent from screen to screen. */

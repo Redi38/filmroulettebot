@@ -10,7 +10,7 @@
   bottom: 20px;
 }
 .toast-stack--error {
-  bottom: auto; top: calc(var(--header-h, 60px) + 135px);
+  bottom: auto; top: calc(var(--header-h, 60px) + var(--error-toast-offset, 135px));
   flex-direction: column;
 }
 .toast {

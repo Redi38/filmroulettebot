@@ -74,7 +74,9 @@ function humanizeShowcaseDate(dateStr) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const diffDays = Math.round((d - today) / 86400000);
-  const short = `${d.getDate()} ${RU_MONTHS_SHORT[d.getMonth()]}`;
+  const short = d.getFullYear() !== today.getFullYear()
+    ? `${d.getDate()} ${RU_MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`
+    : `${d.getDate()} ${RU_MONTHS_SHORT[d.getMonth()]}`;
 
   if (diffDays === 0) return "Сегодня";
   if (diffDays === 1) return "Завтра";

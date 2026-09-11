@@ -136,11 +136,7 @@ function chevronSvg(dir) {
 
 function paginationRow(page, totalPages, onNav) {
   const row = document.createElement("div");
-  row.style.display = "flex";
-  row.style.justifyContent = "center";
-  row.style.alignItems = "center";
-  row.style.gap = "14px";
-  row.style.padding = "14px 0 4px";
+  row.className = "pagination-row";
 
   // Tell the container this row sits in which way the reader is travelling,
   // so its fade out/in becomes a slide in that direction (see fadeOut() and
@@ -159,7 +155,6 @@ function paginationRow(page, totalPages, onNav) {
 
   const label = document.createElement("span");
   label.className = "muted";
-  label.style.padding = "0";
   label.textContent = `${page} / ${totalPages}`;
 
   const next = document.createElement("button");

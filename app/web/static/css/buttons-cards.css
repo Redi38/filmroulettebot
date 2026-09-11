@@ -5,7 +5,7 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
 .section.active { display: block; }
 
 .section.section-leaving {
-  animation: sectionLeave 0.12s cubic-bezier(0.4, 0, 1, 1) forwards;
+  animation: sectionLeave 0.12s var(--ease-in) forwards;
 }
 @keyframes sectionLeave {
   from { opacity: 1; transform: scale(1); }
@@ -13,7 +13,7 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
 }
 
 .section.section-fade-in {
-  animation: sectionEnter 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: sectionEnter 0.32s var(--ease-out);
   animation-fill-mode: backwards;
 }
 @keyframes sectionEnter {
@@ -28,7 +28,7 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
   cursor: pointer; color: white; font-weight: 700; box-shadow: 0 4px 14px rgba(0,0,0,0.25);
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   text-decoration: none; font-family: inherit;
-  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.15s ease;
+  transition: transform var(--dur-fast) var(--ease-spring), filter var(--dur-fast) ease;
 }
 .btn:active { transform: scale(0.96); }
 @media (hover: hover) and (pointer: fine) {
@@ -43,7 +43,7 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
 @keyframes btnRippleExpand {
   to { transform: scale(1); opacity: 0; }
 }
-.btn-press-fx { animation: btnPressPop 0.22s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.btn-press-fx { animation: btnPressPop 0.22s var(--ease-spring); }
 @keyframes btnPressPop {
   0% { transform: scale(0.96); }
   60% { transform: scale(1.015); }
@@ -70,7 +70,25 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
   padding: 18px; margin-bottom: 14px; box-shadow: 0 8px 30px rgba(0,0,0,0.25);
 }
 .poster { width: 100%; max-width: min(280px, 100%); max-height: 44vh; object-fit: cover; border-radius: 12px; display: block; margin: 0 auto 14px;
-  box-shadow: 0 6px 24px var(--glow); }
+  box-shadow: 0 6px 24px var(--glow); background: rgba(255,255,255,0.04); }
+/* Poster enter: opacity + scale only — no filter, animating blur/filter on
+   a large image is expensive on integrated GPUs. Only the spin-result card
+   carries the shared-element name so the wheel morphs into it. */
+.poster.fade-in { animation: posterIn 0.45s var(--ease-out); animation-fill-mode: backwards; }
+@keyframes posterIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+.vt-spin-landing #random-spin-result .poster,
+.vt-spin-landing #spin-result .poster { view-transition-name: spin-hero; }
+::view-transition-old(spin-hero),
+::view-transition-new(spin-hero) {
+  animation-duration: 0.55s;
+  animation-timing-function: var(--ease-out);
+  mix-blend-mode: normal;
+}
+::view-transition-old(spin-hero) { border-radius: 50%; overflow: hidden; }
+::view-transition-new(spin-hero) { border-radius: 12px; overflow: hidden; }
 .cat-badge {
   display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; font-weight: 700; padding: 3px 10px;
   border-radius: 20px; margin-top: 8px; margin-bottom: 4px; background: rgba(var(--primary-rgb), 0.16); color: var(--primary);
@@ -87,7 +105,8 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
   .title.copy-title:active { background: rgba(var(--primary-2-rgb), 0.28); }
 }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-.fade-in { animation: fadeIn 0.35s ease; animation-fill-mode: backwards; }
+.fade-in { animation: fadeIn 0.35s var(--ease-out); animation-fill-mode: backwards; }
+.spin-result { transition: opacity var(--dur-fast) ease; }
 .meta { color: color-mix(in srgb, var(--text) 55%, var(--muted) 45%); font-size: 0.94rem; font-weight: 500; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
 .meta-icon { display: inline-flex; flex-shrink: 0; opacity: 1; color: var(--primary); }
 .meta-icon svg { display: block; }
@@ -100,7 +119,7 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
   position: relative;
   display: inline-block; margin-top: 14px; color: var(--on-primary); text-decoration: none; font-weight: 700;
   background: linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary) 55%, white)); padding: 8px 16px; border-radius: 10px;
-  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.15s ease;
+  transition: transform var(--dur-fast) var(--ease-spring), filter var(--dur-fast) ease;
 }
 .watch-link:active { transform: scale(0.96); }
 @media (hover: hover) and (pointer: fine) {
@@ -165,7 +184,10 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
   transform: translateZ(0);
   contain: paint;
 }
-.list-row.fade-in { animation: listRowIn 0.18s ease; animation-fill-mode: backwards; }
+.list-row.fade-in { animation: listRowIn 0.26s var(--ease-out); animation-fill-mode: backwards; }
+@media (prefers-reduced-motion: no-preference) {
+  .list-row.fade-in { animation-delay: calc(var(--row-i, 0) * 25ms); }
+}
 @keyframes listRowIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 .list-row:last-child { border-bottom: none; }
 .copy-title {
@@ -189,7 +211,7 @@ main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
 }
 .list-row button.del-btn, button.del-btn,
 .list-row button.edit-btn, button.edit-btn {
-  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.15s ease;
+  transition: transform var(--dur-fast) var(--ease-spring), filter var(--dur-fast) ease;
 }
 .list-row button.del-btn:active, button.del-btn:active,
 .list-row button.edit-btn:active, button.edit-btn:active {

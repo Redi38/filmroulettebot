@@ -33,7 +33,7 @@ function showcaseRow(item, cat, isNewSeasons, addMode, skipScope, onSkipSettled)
   const row = document.createElement("div");
   row.className = "showcase-item";
   const posterHtml = item.poster_url
-    ? `<img class="showcase-poster" src="${item.poster_url}">`
+    ? `<img class="showcase-poster img-pending" src="${item.poster_url}" alt="" decoding="async" onload="this.classList.remove('img-pending')" onerror="this.classList.remove('img-pending')">`
     : `<div class="showcase-poster showcase-poster-placeholder">${item.is_series ? "📺" : "🎬"}</div>`;
   const dateLine = showcaseDateLine(item, cat, isNewSeasons, addMode);
 

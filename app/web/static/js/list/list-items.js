@@ -87,7 +87,10 @@ async function loadList(page) {
           countEl.textContent = `Всего: ${liveCount}`;
         },
       });
-      row.style.animationDelay = `${Math.min(idx, 18) * 0.008}s`;
+      // Stagger index; the delay itself lives in CSS so it is skipped entirely
+      // under prefers-reduced-motion (animation-delay is not shortened by the
+      // global reduced-motion rule, so rows would otherwise pop in late).
+      row.style.setProperty("--row-i", Math.min(idx, 12));
       container.appendChild(row);
     }
     if (data.total_pages > 1) container.appendChild(paginationRow(data.page, data.total_pages, (p) => loadList(p)));

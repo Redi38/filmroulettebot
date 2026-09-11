@@ -354,12 +354,24 @@ body.dock-ready .wheel-audio-controls { opacity: 1; pointer-events: auto; }
   font-weight: 700; font-size: 1.05rem; text-align: center; color: #fff;
   background: rgba(9,12,22,0.55); border-radius: 12px; max-width: 90%;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  transition: background var(--dur-base) ease, box-shadow var(--dur-base) ease;
+}
+.wheel-current-title--win {
+  background: rgba(var(--primary-rgb), 0.28);
+  box-shadow: 0 0 0 1px rgba(var(--primary-rgb), 0.5), 0 0 22px rgba(var(--primary-rgb), 0.45);
+  animation: wheelTitleWin 0.5s var(--ease-spring);
+}
+@keyframes wheelTitleWin {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.12); }
+  100% { transform: scale(1); }
 }
 .wheel-holder {
   position: relative; display: flex; align-items: center; justify-content: center;
   filter: drop-shadow(0 10px 26px rgba(0,0,0,0.35));
-  transition: opacity 0.32s ease, transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: opacity 0.32s ease, transform 0.32s var(--ease-out);
 }
+.vt-spin-landing .wheel-holder { view-transition-name: spin-hero; }
 .wheel-holder--enter { opacity: 0; transform: scale(0.9); }
 .wheel-canvas-mask {
   position: relative; border-radius: 50%; overflow: hidden;
@@ -379,6 +391,15 @@ body.dock-ready .wheel-audio-controls { opacity: 1; pointer-events: auto; }
   clip-path: path('M27,76 C15,55 8,40 8,24 C8,10 16,2 27,2 C38,2 46,10 46,24 C46,40 39,55 27,76 Z');
   background: var(--border);
   filter: drop-shadow(0 3px 6px rgba(0,0,0,0.5));
+  transform-origin: 50% 14px;
+}
+/* One "peg hit" per segment crossing, triggered from spin.js. The pointer is
+   pushed back against the direction of travel and springs home. */
+.wheel-pointer.wheel-pointer--flick { animation: wheelPointerFlick 0.14s var(--ease-out); }
+@keyframes wheelPointerFlick {
+  0% { transform: translateX(-50%) rotate(0deg); }
+  35% { transform: translateX(-50%) rotate(-11deg); }
+  100% { transform: translateX(-50%) rotate(0deg); }
 }
 .wheel-pointer::before {
   content: '';
@@ -508,5 +529,5 @@ body.dock-ready .wheel-audio-controls { opacity: 1; pointer-events: auto; }
   padding: 10px 14px; border-radius: 10px; background: var(--primary); color: var(--on-primary);
   border: none; cursor: pointer; font-family: inherit; font-weight: 700;
 }
-.wheel-wrap.wheel-done .wheel-holder { animation: wheelPop 0.4s ease; }
+.wheel-wrap.wheel-done .wheel-holder { animation: wheelPop 0.4s var(--ease-spring); }
 @keyframes wheelPop { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }

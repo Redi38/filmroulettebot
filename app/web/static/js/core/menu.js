@@ -152,7 +152,14 @@ async function showSection() {
                    upcoming: "Ожидаемые", history: "История", showcase: `${ALL_CATS[currentCat] || ""} — скоро`,
                    theaters: "В прокате", series_releases: "Премьеры сериалов",
                    tracked_series: "Отслеживание сериалов"};
-  document.getElementById("page-title").textContent = titles[currentView] || "";
+  const titleEl = document.getElementById("page-title");
+  const nextTitle = titles[currentView] || "";
+  if (titleEl.textContent !== nextTitle) {
+    titleEl.textContent = nextTitle;
+    titleEl.classList.remove("page-title--swap");
+    void titleEl.offsetWidth;
+    titleEl.classList.add("page-title--swap");
+  }
 
   if (currentView === "home") loadHome();
   if (currentView === "random") {

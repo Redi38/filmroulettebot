@@ -117,15 +117,11 @@ async function doWheelSpin(cat, isRandom) {
       fireWheelConfetti(wheelWrapId);
     }
 
+    // Landing: pop the wheel, dim losers / glow the winner, hold, then
+    // morph the wheel into the result card (View Transitions when available).
     wrap.classList.add("wheel-done");
-    await new Promise((r) => setTimeout(r, 450));
-    wrap.style.display = "none";
-    wrap.innerHTML = "";
-    wrap.classList.remove("wheel-done");
-    updateWheelScrollLock();
-    await fadeOut(result);
-    result.innerHTML = renderCard(data);
-    fadeIn(result);
+    await highlightWheelWinner(canvas, winnerIndex);
+    await swapWheelForCard(wrap, result, data);
     scheduleAutoWatchOpen(data, result);
   } catch (e) {
     wrap.innerHTML = prevWrapHtml;
@@ -135,6 +131,42 @@ async function doWheelSpin(cat, isRandom) {
   } finally {
     setDockLocked(false);
   }
+}
+
+// Replaces the wheel with the rendered card. With the View Transitions API
+// the wheel holder and the card poster share `view-transition-name: spin-hero`
+// (see spin-wheel.css / buttons-cards.css), so the browser animates one into
+// the other. Falls back to the old fade when the API is missing.
+async function swapWheelForCard(wrap, result, data) {
+  const applyDom = () => {
+    wrap.style.display = "none";
+    wrap.innerHTML = "";
+    wrap.classList.remove("wheel-done");
+    updateWheelScrollLock();
+    result.innerHTML = renderCard(data);
+    result.style.opacity = "1";
+  };
+  const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!reduced && typeof document.startViewTransition === "function") {
+    document.documentElement.classList.add("vt-spin-landing");
+    try {
+      const vt = document.startViewTransition(applyDom);
+      await vt.finished;
+    } catch (e) {
+      // startViewTransition rejects if a transition was interrupted; the DOM
+      // update itself still ran.
+    } finally {
+      document.documentElement.classList.remove("vt-spin-landing");
+    }
+    return;
+  }
+  wrap.style.display = "none";
+  wrap.innerHTML = "";
+  wrap.classList.remove("wheel-done");
+  updateWheelScrollLock();
+  await fadeOut(result);
+  result.innerHTML = renderCard(data);
+  fadeIn(result);
 }
 
 function handleSpinError(e, result, prevHtml) {

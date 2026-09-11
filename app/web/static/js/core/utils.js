@@ -118,10 +118,31 @@ function debounce(fn, wait) {
 
 function nextFrame() { return new Promise((r) => requestAnimationFrame(r)); }
 
+// Fades `el` to opacity 0 and resolves once its CSS transition has actually
+// finished, so callers can swap innerHTML while it is fully invisible.
+// Previously this waited a fixed 90 ms while the containers transition over
+// 220 ms — the new content was inserted at ~40% opacity and then finished
+// fading, which read as a visible jump.
+function maxTransitionMs(el) {
+  const cs = getComputedStyle(el);
+  const parse = (v) => v.split(",").map((s) => {
+    s = s.trim();
+    return s.endsWith("ms") ? parseFloat(s) : parseFloat(s) * 1000;
+  });
+  const durs = parse(cs.transitionDuration);
+  const delays = parse(cs.transitionDelay);
+  let max = 0;
+  for (let i = 0; i < durs.length; i++) {
+    const d = (durs[i] || 0) + (delays[i % delays.length] || 0);
+    if (d > max) max = d;
+  }
+  return max;
+}
 async function fadeOut(el) {
+  const ms = maxTransitionMs(el);
   el.style.opacity = "0";
   await nextFrame();
-  await new Promise((r) => setTimeout(r, 90));
+  await new Promise((r) => setTimeout(r, Math.min(400, Math.max(60, ms + 20))));
 }
 function fadeIn(el) { requestAnimationFrame(() => { el.style.opacity = "1"; }); }
 

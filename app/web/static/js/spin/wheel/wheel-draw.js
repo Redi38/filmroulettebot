@@ -14,7 +14,9 @@ function getCanvasRotationDeg(canvas) {
   return deg;
 }
 
-function updatePointerTitle(canvas, rotationDeg, playTick) {
+// `onCross` (optional) fires whenever the pointer moves onto a new segment —
+// used by spin.js to flick the pointer in sync with the audio tick.
+function updatePointerTitle(canvas, rotationDeg, playTick, onCross) {
   const items = canvas._wheelItems;
   const boundaries = canvas._wheelBoundaries;
   const titleEl = canvas._wheelTitleEl;
@@ -22,8 +24,9 @@ function updatePointerTitle(canvas, rotationDeg, playTick) {
   const angleAtPointer = ((360 - rotationDeg) % 360 + 360) % 360;
   let idx = boundaries.findIndex((b) => angleAtPointer >= b.start && angleAtPointer < b.end);
   if (idx === -1) idx = angleAtPointer < boundaries[0].start ? 0 : boundaries.length - 1;
-  if (playTick && canvas._wheelPointerIdx !== undefined && canvas._wheelPointerIdx !== idx) {
-    playWheelTick();
+  if (canvas._wheelPointerIdx !== undefined && canvas._wheelPointerIdx !== idx) {
+    if (playTick) playWheelTick();
+    if (typeof onCross === "function") onCross(idx);
   }
   canvas._wheelPointerIdx = idx;
   const label = items[idx] || "";
@@ -70,7 +73,21 @@ function drawWheel(canvas, items, dpr, weights) {
   canvas._wheelBoundaries = boundaries;
 }
 
-function drawWheelSegments(canvas, items, dpr, boundaries, {animating = false} = {}) {
+// Labels narrower than this (in px of arc at the rim) are skipped: at that
+// size they are unreadable anyway and just add visual noise. The current
+// segment is always shown in the pointer title above the wheel.
+const WHEEL_LABEL_MIN_ARC_PX = 14;
+
+function hexToRgb(hex) {
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [128, 128, 128];
+}
+function shadeHex(hex, amount) {
+  const [r, g, b] = hexToRgb(hex).map((c) => Math.max(0, Math.min(255, Math.round(c + amount))));
+  return `rgb(${r},${g},${b})`;
+}
+
+function drawWheelSegments(canvas, items, dpr, boundaries, {animating = false, highlightIndex = -1} = {}) {
   const ctx = canvas.getContext("2d");
   const size = canvas.width;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -81,23 +98,50 @@ function drawWheelSegments(canvas, items, dpr, boundaries, {animating = false} =
   const cssSize = size / dpr;
   const cx = cssSize / 2, cy = cssSize / 2, r = cssSize / 2 - 3;
   const n = items.length;
+  const highlighting = highlightIndex >= 0;
+
+  // Rendering is identical whether or not we're mid-animation: switching
+  // fills/strokes on and off between frames reads as flicker. Gradients are
+  // shared per palette colour, so at most WHEEL_COLORS.length are built.
+  const gradientCache = new Map();
+  const segmentFill = (color) => {
+    let g = gradientCache.get(color);
+    if (!g) {
+      g = ctx.createRadialGradient(cx, cy, r * 0.18, cx, cy, r);
+      g.addColorStop(0, shadeHex(color, -34));
+      g.addColorStop(0.55, color);
+      g.addColorStop(1, shadeHex(color, 22));
+      gradientCache.set(color, g);
+    }
+    return g;
+  };
 
   for (let i = 0; i < n; i++) {
     const start = -Math.PI / 2 + boundaries[i].start * Math.PI / 180;
     const end = -Math.PI / 2 + boundaries[i].end * Math.PI / 180;
+    const color = WHEEL_COLORS[i % WHEEL_COLORS.length];
+    const dimmed = highlighting && i !== highlightIndex;
+
     ctx.beginPath();
     ctx.moveTo(cx, cy);
     ctx.arc(cx, cy, r, start, end);
     ctx.closePath();
-    ctx.fillStyle = WHEEL_COLORS[i % WHEEL_COLORS.length];
+    ctx.fillStyle = segmentFill(color);
     ctx.fill();
+    if (dimmed) {
+      ctx.fillStyle = "rgba(9,12,22,0.68)";
+      ctx.fill();
+    }
     ctx.strokeStyle = "rgba(9,12,22,0.55)";
     ctx.lineWidth = n > 40 ? 1 : 2;
     ctx.stroke();
 
     const segDeg = boundaries[i].end - boundaries[i].start;
     const arcLen = (segDeg * Math.PI / 180) * r;
-    let fontSize = Math.max(8, Math.min(22, arcLen * 0.55));
+    if (arcLen < WHEEL_LABEL_MIN_ARC_PX && !(highlighting && i === highlightIndex)) continue;
+
+    // Round while animating so glyph sizes don't shimmer between frames.
+    let fontSize = Math.max(9, Math.min(22, arcLen * 0.55));
     if (animating) fontSize = Math.round(fontSize);
     const maxChars = Math.max(4, Math.min(28, Math.floor((r * 0.66) / (fontSize * 0.56))));
 
@@ -105,20 +149,55 @@ function drawWheelSegments(canvas, items, dpr, boundaries, {animating = false} =
     ctx.translate(cx, cy);
     ctx.rotate((start + end) / 2);
     ctx.textAlign = "right";
-    ctx.fillStyle = "#fff";
+    ctx.textBaseline = "middle";
     ctx.font = `700 ${fontSize}px Manrope, sans-serif`;
-    if (!animating) {
-      ctx.shadowColor = "rgba(0,0,0,0.5)";
-      ctx.shadowBlur = 2;
-    }
     let label = items[i] || "";
     if (label.length > maxChars) label = label.slice(0, Math.max(maxChars - 1, 1)) + "…";
-    ctx.fillText(label, r - 10, fontSize * 0.32);
+    // A thin dark stroke gives the same legibility as shadowBlur at a
+    // fraction of the cost (shadowBlur is one of the slowest canvas ops).
+    ctx.lineJoin = "round";
+    ctx.lineWidth = Math.max(2, fontSize * 0.18);
+    ctx.strokeStyle = "rgba(9,12,22,0.55)";
+    ctx.strokeText(label, r - 12, 0);
+    ctx.fillStyle = dimmed ? "rgba(255,255,255,0.55)" : "#fff";
+    ctx.fillText(label, r - 12, 0);
     ctx.restore();
   }
 
+  if (highlighting) {
+    // Glow ring on the winner's outer edge.
+    const b = boundaries[highlightIndex];
+    const start = -Math.PI / 2 + b.start * Math.PI / 180;
+    const end = -Math.PI / 2 + b.end * Math.PI / 180;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, start, end);
+    ctx.closePath();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(255,255,255,0.9)";
+    ctx.stroke();
+  }
+
+  // Outer bevel: a soft light rim on top, darker at the bottom.
+  const rim = ctx.createLinearGradient(cx, cy - r, cx, cy + r);
+  rim.addColorStop(0, "rgba(255,255,255,0.28)");
+  rim.addColorStop(0.5, "rgba(255,255,255,0.04)");
+  rim.addColorStop(1, "rgba(0,0,0,0.35)");
   ctx.beginPath();
-  ctx.arc(cx, cy, Math.max(16, cssSize * 0.045), 0, Math.PI * 2);
+  ctx.arc(cx, cy, r - 1.5, 0, Math.PI * 2);
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = rim;
+  ctx.stroke();
+
+  // Hub: a slightly larger dark disc with an inner ring, so the hub media
+  // (which sits above it in the DOM) reads as set into the wheel.
+  const hubR = Math.max(16, cssSize * 0.045);
+  ctx.beginPath();
+  ctx.arc(cx, cy, hubR + 6, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(9,12,22,0.35)";
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx, cy, hubR, 0, Math.PI * 2);
   ctx.fillStyle = "#17132c";
   ctx.fill();
   ctx.strokeStyle = "#342a5c";

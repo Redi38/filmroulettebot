@@ -16,7 +16,9 @@ function getWheelStyle() {
   return typeof getWheelAppearance === "function" ? getWheelAppearance() : "classic";
 }
 
+// Render at the device's real pixel ratio, capped at 3. Forcing a minimum of
+// 2 (as before) quadrupled the pixel count on 1x displays for no visible gain.
 function getWheelDPR() {
   const raw = window.devicePixelRatio || 1;
-  return Math.min(3, Math.max(2, raw));
+  return Math.min(3, Math.max(1, raw));
 }

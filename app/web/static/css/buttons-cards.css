@@ -258,6 +258,11 @@ html.vt-section::view-transition-new(main-content) {
   transform: translateZ(0);
   contain: paint;
 }
+.list-row-poster {
+  width: 36px; height: 54px; object-fit: cover; border-radius: 6px; flex-shrink: 0;
+  background: rgba(255,255,255,0.06);
+}
+.list-row-poster-empty { display: flex; }
 .list-row.fade-in { animation: listRowIn 0.26s var(--ease-out); animation-fill-mode: backwards; }
 @media (prefers-reduced-motion: no-preference) {
   .list-row.fade-in { animation-delay: calc(var(--row-i, 0) * 12ms); }
@@ -305,8 +310,9 @@ html.vt-section::view-transition-new(main-content) {
 }
 .add-row input::placeholder { color: var(--muted); }
 .add-row input:focus {
-  outline: none; border-color: #34d399; background: rgba(52,211,153,0.1);
+  border-color: #34d399; background: rgba(52,211,153,0.1);
 }
+.add-row input:focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
 .search-row {
   display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
   background: rgba(var(--primary-rgb), 0.05); border: 1.5px solid rgba(var(--primary-rgb), 0.3); border-radius: 10px; padding: 9px 13px;
@@ -315,7 +321,7 @@ html.vt-section::view-transition-new(main-content) {
 .search-row svg { color: var(--primary); flex-shrink: 0; }
 .search-row:focus-within { border-color: var(--primary); background: rgba(var(--primary-rgb), 0.09); }
 .search-row input {
-  flex: 1; background: none; border: none; outline: none; color: var(--text);
+  flex: 1; background: none; border: none; color: var(--text);
   font-size: 0.95rem; font-family: inherit;
 }
 .search-row input::placeholder { color: var(--muted); }

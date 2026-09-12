@@ -341,7 +341,8 @@ body.dock-ready .wheel-audio-controls { opacity: 1; pointer-events: auto; }
 .spin-speed-control input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none; margin: 0;
 }
-.spin-speed-control input[type="number"]:focus { outline: none; border-color: var(--primary); }
+.spin-speed-control input[type="number"]:focus { border-color: var(--primary); }
+.spin-speed-control input[type="number"]:focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
 .spin-speed-control .spin-speed-unit { font-size: 13px; color: var(--muted); }
 
 .wheel-wrap {

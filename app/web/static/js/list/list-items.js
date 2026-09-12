@@ -63,9 +63,11 @@ async function loadList(page) {
     if (countEl) countEl.textContent = `Всего: ${data.total_count}`;
     let liveCount = data.total_count;
     container.innerHTML = "";
-    for (const [idx, {id, title}] of data.items.entries()) {
+    for (const [idx, {id, title, poster_url}] of data.items.entries()) {
       const cat = currentCat;
       const row = createEditableRow(title, {
+        posterUrl: poster_url,
+        showPosterSlot: true,
         searchEndpoint: `/api/${cat}/search-suggest`,
         onRename: (newTitle) => api(`/api/${cat}/rename`, {
           method: "POST", headers: {"Content-Type": "application/json"},

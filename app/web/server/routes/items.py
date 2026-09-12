@@ -31,6 +31,7 @@ from ..shared import (
     _check_category,
     _validate_rename_by_id,
 )
+from ..shared.posters import lookup_poster_url
 
 router = APIRouter()
 
@@ -43,6 +44,10 @@ async def api_items(cat: str, page: int = 1, q: str = "") -> dict:
     if q:
         items = [i for i in items if q in i["title"].lower()]
     page_items, page, total_pages = paginate(items, page, page_size=LIST_PAGE_SIZE)
+    # Cache-only lookup (see shared/posters.py) — a title never resolved
+    # elsewhere just renders without a thumbnail, no TMDb call here.
+    for item in page_items:
+        item["poster_url"] = await lookup_poster_url(cat, item["title"])
     return {"items": page_items, "page": page, "total_pages": total_pages, "total_count": len(items)}
 
 

@@ -14,6 +14,7 @@ async function loadHome() {
     try {
       const data = await api("/api/home/collection");
       renderHomeMarquee(data.posters || []);
+      setHeroBackdrop(data.posters || []);
     } catch (e) {
       block.style.display = "none";
     } finally {
@@ -23,6 +24,17 @@ async function loadHome() {
   } else {
     syncMarqueeSize();
   }
+}
+
+// Picks one poster from the collection at random as a blurred hero backdrop
+// (css/home.css handles the blur/gradient via --hero-backdrop). Left unset
+// if there's no collection yet, so the hero just shows its plain gradient.
+function setHeroBackdrop(posters) {
+  if (!posters.length) return;
+  const hero = document.querySelector(".home-hero");
+  if (!hero) return;
+  const pick = posters[Math.floor(Math.random() * posters.length)];
+  if (pick && pick.poster_url) hero.style.setProperty("--hero-backdrop", `url("${pick.poster_url}")`);
 }
 
 function renderHomeMarquee(posters) {
@@ -108,14 +120,18 @@ window.addEventListener("orientationchange", () => {
 function fillMarqueeTrack(track, posters) {
   const frag = document.createDocumentFragment();
   for (const item of [...posters, ...posters]) {
+    const wrap = document.createElement("div");
+    wrap.className = "marquee-poster-item";
+
     const img = document.createElement("img");
     img.className = "marquee-poster";
     img.src = item.poster_url;
     img.alt = item.title || "";
     img.draggable = false;
-    img.title = item.title || "";
     img.onclick = () => openPosterInfoModal(item.category, item.original_title || item.title);
-    frag.appendChild(img);
+    wrap.appendChild(img);
+
+    frag.appendChild(wrap);
   }
   track.innerHTML = "";
   track.appendChild(frag);

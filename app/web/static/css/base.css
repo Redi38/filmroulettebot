@@ -7,8 +7,6 @@
   --primary-rgb: 242, 169, 59; --primary-2-rgb: 255, 59, 129; --on-primary: #1a1108;
   --border: #2c2620; --glow: rgba(var(--primary-rgb), 0.32); --glow-2: rgba(var(--primary-2-rgb), 0.32);
   --sidebar-w: 260px; --header-h: 63px; --sidebar-bg: #17151b;
-  /* Clears header + search/filter row above content so the error-toast
-     stack (feedback-history.css) doesn't sit on top of them. */
   --error-toast-offset: 135px;
 
   /* Motion system: every press/hover/enter animation in the app should use
@@ -26,6 +24,8 @@
   --radius-sm: 12px; --radius-md: 16px; --radius-lg: 18px;
   --shadow-1: 0 8px 24px rgba(0, 0, 0, 0.25);  /* dock, resting cards */
   --shadow-2: 0 12px 40px rgba(0, 0, 0, 0.4);  /* modals */
+
+  --focus-ring: 2px solid var(--primary);
 }
 
 /* One switch for the whole app. Individual components no longer need their
@@ -54,6 +54,15 @@ body[data-studio="dc"] {
 * { box-sizing: border-box; }
 button {
   -webkit-appearance: none; appearance: none; margin: 0; outline: none;
+}
+/* button's outline: none above only kills the default (mouse-click) ring;
+   :focus-visible has higher specificity and restores a visible ring for
+   keyboard/assistive-tech focus on every interactive element, not just
+   buttons. Previously only .wheel-hub-media had a :focus-visible rule, so
+   keyboard users lost focus tracking everywhere else. */
+:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
 }
 html {
   overflow-x: hidden;
@@ -95,11 +104,6 @@ header {
   background: linear-gradient(90deg, rgba(var(--primary-rgb), 0.14), rgba(var(--primary-2-rgb), 0.08));
 }
 header h1 { margin: 0; font-size: 1.15rem; font-weight: 800; }
-
-/* The page title is deliberately left out of the section View Transition and
-   has no entrance animation of its own: a label that flies in on every tab
-   change draws the eye away from the content that actually changed. It swaps
-   in place while the body below it transitions. */
 
 #burger-btn {
   background: var(--card); border: 1px solid var(--border); color: var(--text);

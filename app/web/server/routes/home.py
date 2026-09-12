@@ -15,32 +15,16 @@ import random
 
 from fastapi import APIRouter, HTTPException
 
-from app.db.database import get_items, get_tmdb_cache, item_exists
+from app.db.database import get_items, item_exists
 
 from ..shared import _card_data, _check_category
+from ..shared.posters import FRANCHISE_CATEGORIES, lookup_poster_info
 
 router = APIRouter()
 
 COLLECTION_CATEGORIES = ("movies", "cartoons", "series")
-FRANCHISE_CATEGORIES = ("dc", "marvel")
 
-_POSTER_CACHE_TTL = 365 * 24 * 3600
 _MAX_POSTERS = 80
-
-
-async def _cached_poster(cache_key: str) -> dict | None:
-    info = await get_tmdb_cache(cache_key, _POSTER_CACHE_TTL)
-    return info if (info or {}).get("poster_url") else None
-
-
-async def _lookup_poster(cat: str, title: str) -> dict | None:
-    key = title.strip().lower()
-    if cat == "series":
-        return await _cached_poster(f"series_info:{key}")
-    if cat in FRANCHISE_CATEGORIES:
-        info = await _cached_poster(f"movie_info:{key}")
-        return info or await _cached_poster(f"series_info:{key}")
-    return await _cached_poster(f"movie_info:{key}")
 
 
 @router.get("/api/home/collection")
@@ -57,7 +41,7 @@ async def api_home_collection() -> dict:
     for cat, title in pairs:
         if len(posters) >= _MAX_POSTERS:
             break
-        info = await _lookup_poster(cat, title)
+        info = await lookup_poster_info(cat, title)
         if not info:
             continue
         posters.append({

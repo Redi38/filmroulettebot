@@ -3,11 +3,29 @@
 .home-content-wrap { max-width: 640px; width: 100%; margin: 0 auto; }
 
 .home-hero {
+  position: relative; overflow: hidden;
   display: flex; flex-direction: column; gap: 16px; align-items: flex-start;
   padding: 22px 20px; margin-bottom: 22px;
-  background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.16), rgba(var(--primary-2-rgb), 0.07));
   border: 1px solid var(--border); border-radius: var(--radius-lg);
 }
+/* Blurred backdrop from a random poster of the user's collection, set via
+   --hero-backdrop in home.js once /api/home/collection resolves. Falls back
+   to transparent (just the gradient below) until then, or if the collection
+   is empty. */
+.home-hero::before {
+  content: ""; position: absolute; inset: -20px; z-index: 0;
+  background-image: var(--hero-backdrop, none);
+  background-size: cover; background-position: center;
+  filter: blur(28px) brightness(0.5) saturate(1.15);
+  transform: scale(1.15);
+}
+.home-hero::after {
+  content: ""; position: absolute; inset: 0; z-index: 0;
+  background:
+    linear-gradient(135deg, rgba(var(--primary-rgb), 0.28), rgba(var(--primary-2-rgb), 0.14)),
+    linear-gradient(0deg, rgba(9, 8, 16, 0.55), rgba(9, 8, 16, 0.2));
+}
+.home-hero-text, .home-cta { position: relative; z-index: 1; }
 @keyframes home-stagger-in {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -26,6 +44,18 @@
 .home-hero-text p { margin: 0; color: var(--muted); font-size: 0.95rem; line-height: 1.55; }
 .home-cta { width: 100%; font-size: 1.02rem; padding: 14px 18px; }
 
+/* Desktop: the hero used to sit at a fixed 640px in a sea of empty dark
+   space. Widen the wrap and let the hero breathe with more padding instead
+   of floating as a small card. */
+@media (min-width: 900px) {
+  .home-content-wrap { max-width: 1100px; }
+  .home-hero { padding: 48px 56px; min-height: 260px; justify-content: center; }
+  .home-hero-text h2 { font-size: 1.7rem; }
+  .home-hero-text { align-self: stretch; }
+  .home-hero-text p { font-size: 1.02rem; }
+  .home-cta { width: auto; padding: 14px 34px; }
+}
+
 .home-collection-block {
   margin-bottom: 24px;
   margin-left: -16px; margin-right: -16px;
@@ -37,6 +67,9 @@
 
 .marquee {
   position: relative; overflow: hidden; width: 100%;
+  /* padding-top reserves room inside the clip box for the hover lift below;
+     the matching negative margin cancels it out so layout doesn't shift. */
+  padding-top: 10px; margin-top: -10px;
   -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%);
   mask-image: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%);
   margin-bottom: 10px;
@@ -51,14 +84,25 @@
   animation-play-state: paused;
 }
 
-.marquee-poster {
+.marquee-poster-item {
+  position: relative; display: inline-block; flex-shrink: 0;
   width: var(--marquee-poster-w, 140px); height: var(--marquee-poster-h, 210px);
-  object-fit: cover; border-radius: 14px; flex-shrink: 0;
-  margin-right: 14px; background: var(--card); border: 1px solid var(--border);
+  margin-right: 14px;
+}
+.marquee-poster-item:hover { z-index: 1; }
+.marquee-poster {
+  width: 100%; height: 100%; margin-right: 0;
+  object-fit: cover; border-radius: 14px;
+  background: var(--card); border: 1px solid var(--border);
   box-shadow: 0 8px 22px rgba(0,0,0,0.5);
   -webkit-user-drag: none;
-  cursor: pointer; transition: transform 0.15s ease;
+  cursor: pointer; transition: transform 0.18s var(--ease-spring), box-shadow 0.18s ease;
 }
+.marquee-poster-item:hover .marquee-poster {
+  transform: translateY(-6px);
+  box-shadow: 0 16px 34px rgba(0,0,0,0.6);
+}
+.marquee-poster-item:active .marquee-poster,
 .marquee-poster:active { transform: scale(0.96); }
 
 @media (min-width: 640px) {

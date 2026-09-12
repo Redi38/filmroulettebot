@@ -2,6 +2,13 @@
 // upcoming-list.js, and the tracked-series add button in showcase.js all
 // call openAddSearchModal() instead of adding the typed text straight away.
 
+function _addSearchTypeBadge(searchEndpoint, isSeries) {
+  const cat = (searchEndpoint.match(/^\/api\/([^/]+)\//) || [])[1];
+  if (cat === "series" || cat === "tracked-series") return "Сериал";
+  if (cat === "movies" || cat === "cartoons" || cat === "upcoming") return "Фильм";
+  return isSeries ? "Сериал" : "Фильм";
+}
+
 async function openAddSearchModal(searchEndpoint, query, {onPick, onFallback}) {
   const overlay = document.getElementById("add-search-overlay");
   const resultsEl = document.getElementById("add-search-results");
@@ -38,7 +45,7 @@ async function openAddSearchModal(searchEndpoint, query, {onPick, onFallback}) {
       const poster = r.poster_url
         ? `<img class="add-search-poster" src="${r.poster_url}" alt="">`
         : `<div class="add-search-poster add-search-poster-empty"></div>`;
-      row.innerHTML = `${poster}<span class="add-search-row-title">${escapeHtml(r.title)}${r.year ? ` <span class="add-search-year">(${escapeHtml(r.year)})</span>` : ""}</span>`;
+      row.innerHTML = `${poster}<span class="add-search-row-title">${escapeHtml(r.title)}${r.year ? ` <span class="add-search-year">(${escapeHtml(r.year)})</span>` : ""}</span><span class="add-search-row-badge">${_addSearchTypeBadge(searchEndpoint, r.is_series)}</span>`;
       row.onclick = () => { close(); onPick(r.title, r); };
       resultsEl.appendChild(row);
     }

@@ -46,12 +46,18 @@ body[data-studio="marvel"] {
   --glow: rgba(var(--primary-rgb), 0.32); --glow-2: rgba(var(--primary-2-rgb), 0.32);
   --on-primary: #ffffff;
   --border: rgba(var(--primary-rgb), 0.4);
+  /* --focus-ring embeds var(--primary), but a custom property's var()
+     references resolve at the point where the property is DECLARED, not
+     where it's used — so without redeclaring it here it stays frozen at
+     :root's orange forever, no matter what --primary is on this element. */
+  --focus-ring: 2px solid var(--primary);
 }
 body[data-studio="dc"] {
   --primary: #1e7fe0; --primary-2: #5ec8ff; --primary-rgb: 30, 127, 224; --primary-2-rgb: 94, 200, 255;
   --glow: rgba(var(--primary-rgb), 0.32); --glow-2: rgba(var(--primary-2-rgb), 0.32);
   --on-primary: #ffffff;
   --border: rgba(var(--primary-rgb), 0.4);
+  --focus-ring: 2px solid var(--primary);
 }
 * { box-sizing: border-box; }
 button {
@@ -106,11 +112,6 @@ header {
   background: linear-gradient(90deg, rgba(var(--primary-rgb), 0.14), rgba(var(--primary-2-rgb), 0.08));
 }
 header h1 { margin: 0; font-size: 1.15rem; font-weight: 800; }
-
-/* The page title is deliberately left out of the section View Transition and
-   has no entrance animation of its own: a label that flies in on every tab
-   change draws the eye away from the content that actually changed. It swaps
-   in place while the body below it transitions. */
 
 #burger-btn {
   background: var(--card); border: 1px solid var(--border); color: var(--text);

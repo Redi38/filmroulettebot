@@ -27,7 +27,7 @@ async function loadList(page) {
   }
 
   const isFeaturedCat = currentCat === "marvel" || currentCat === "dc";
-  const featuredPromise = isFeaturedCat
+  const featuredPromise = (isFeaturedCat && isFreshView)
     ? api(`/api/${currentCat}/featured`).catch(() => null)
     : Promise.resolve(null);
   const q = currentListQuery.trim();
@@ -40,13 +40,13 @@ async function loadList(page) {
   try {
     const [featuredCard, data] = await Promise.all([featuredPromise, itemsPromise]);
 
-    if (isFeaturedCat) {
+    if (isFeaturedCat && isFreshView) {
       await fadeOut(featured);
       featured.innerHTML = featuredCard
         ? `<div class="featured-label">🎲 Первый в списке</div>` + renderCard(featuredCard, {actions: false})
         : "";
       fadeIn(featured);
-    } else if (featured.innerHTML) {
+    } else if (!isFeaturedCat && featured.innerHTML) {
       featured.innerHTML = "";
     }
 

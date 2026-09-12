@@ -324,6 +324,8 @@ html.vt-section::view-transition-new(main-content) {
   flex: 1; background: none; border: none; color: var(--text);
   font-size: 0.95rem; font-family: inherit;
 }
+.search-row input:focus,
+.search-row input:focus-visible { outline: none; }
 .search-row input::placeholder { color: var(--muted); }
 .list-count {
   color: var(--muted); font-size: 0.82rem; margin: 0 2px 8px; letter-spacing: 0.01em;

@@ -106,6 +106,21 @@ async def _migrate_skipped_titles_to_nocase(db: aiosqlite.Connection) -> None:
     logger.info("Migration: skipped_titles rebuilt with UNICODE_NOCASE (%d rows kept).", len(rows) - dropped)
 
 
+async def _migrate_add_is_series(db: aiosqlite.Connection, table: str) -> None:
+    """Add an is_series column (NULL = unknown/legacy row) to a category
+    table if it's missing. Lets add/rename persist which TMDb result type
+    the user actually picked, so poster lookups for dc/marvel — which can
+    have both a movie and a series sharing the same title (e.g. "Фонари")
+    — read the cache entry the user chose instead of always guessing
+    movie-first (see posters.py lookup_poster_info)."""
+    async with db.execute(f"PRAGMA table_info({table})") as cur:
+        cols = {row[1] async for row in cur}
+    if not cols or "is_series" in cols:
+        return
+    logger.info("Migration: adding is_series to %r…", table)
+    await db.execute(f"ALTER TABLE {table} ADD COLUMN is_series INTEGER")
+
+
 async def init_db() -> None:
     """Create tables and run migrations."""
     async with conn() as db:
@@ -129,6 +144,8 @@ async def init_db() -> None:
         for table in NOCASE_TABLES:
             await _migrate_to_nocase(db, table)
         await _migrate_skipped_titles_to_nocase(db)
+        for table in NOCASE_TABLES:
+            await _migrate_add_is_series(db, table)
         await db.commit()
 
         await db.executescript(
@@ -145,13 +162,13 @@ async def init_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_history_user_category_ts
                 ON history (user_id, category, timestamp);
 
-            CREATE TABLE IF NOT EXISTS movies        (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE);
-            CREATE TABLE IF NOT EXISTS cartoons      (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE);
-            CREATE TABLE IF NOT EXISTS series        (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE);
-            CREATE TABLE IF NOT EXISTS dc            (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE);
-            CREATE TABLE IF NOT EXISTS marvel        (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE);
-            CREATE TABLE IF NOT EXISTS upcoming_movies (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE);
-            CREATE TABLE IF NOT EXISTS tracked_series  (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE);
+            CREATE TABLE IF NOT EXISTS movies        (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE, is_series INTEGER);
+            CREATE TABLE IF NOT EXISTS cartoons      (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE, is_series INTEGER);
+            CREATE TABLE IF NOT EXISTS series        (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE, is_series INTEGER);
+            CREATE TABLE IF NOT EXISTS dc            (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE, is_series INTEGER);
+            CREATE TABLE IF NOT EXISTS marvel        (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE, is_series INTEGER);
+            CREATE TABLE IF NOT EXISTS upcoming_movies (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE, is_series INTEGER);
+            CREATE TABLE IF NOT EXISTS tracked_series  (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE, is_series INTEGER);
 
             CREATE TABLE IF NOT EXISTS tmdb_cache (
                 cache_key TEXT PRIMARY KEY,

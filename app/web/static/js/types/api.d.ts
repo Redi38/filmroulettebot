@@ -795,6 +795,10 @@ export interface components {
             id: number;
             /** New Title */
             new_title: string;
+            /** Tmdb Id */
+            tmdb_id?: number | null;
+            /** Is Series */
+            is_series?: boolean | null;
         };
         /** ResolveBody */
         ResolveBody: {
@@ -838,6 +842,10 @@ export interface components {
         TitleBody: {
             /** Title */
             title: string;
+            /** Tmdb Id */
+            tmdb_id?: number | null;
+            /** Is Series */
+            is_series?: boolean | null;
         };
         /** ValidationError */
         ValidationError: {

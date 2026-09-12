@@ -39,29 +39,44 @@ async def _cached_poster(cache_key: str) -> dict | None:
     return info if (info or {}).get("poster_url") else None
 
 
-async def lookup_poster_info(cat: str, title: str) -> dict | None:
+async def lookup_poster_info(cat: str, title: str, is_series: bool | None = None) -> dict | None:
     """Cache-only cached-info dict (poster_url, resolved title, etc.) for
-    `title` in category `cat`, or None if it was never resolved elsewhere."""
+    `title` in category `cat`, or None if it was never resolved elsewhere.
+
+    For dc/marvel, a title can legitimately have both a movie_info and a
+    series_info cache entry (e.g. "Фонари" is both a 2026 film and the
+    "Lanterns" TV series) — when `is_series` is known (the stored value on
+    the item row, set from whichever TMDb result the user actually picked
+    in the add-search modal), it decides which cache entry to prefer so
+    the poster matches what was picked instead of always guessing movie
+    first, which could silently show the wrong title's poster."""
     key = title.strip().lower()
     if cat == "series":
         return await _cached_poster(f"series_info:{key}")
     if cat in FRANCHISE_CATEGORIES:
+        if is_series is True:
+            return await _cached_poster(f"series_info:{key}") or await _cached_poster(f"movie_info:{key}")
+        if is_series is False:
+            return await _cached_poster(f"movie_info:{key}") or await _cached_poster(f"series_info:{key}")
+        # Legacy row added before is_series was tracked — fall back to the
+        # old best-effort guess (movie first).
         return await _cached_poster(f"movie_info:{key}") or await _cached_poster(f"series_info:{key}")
     return await _cached_poster(f"movie_info:{key}")
 
 
-async def lookup_poster_url(cat: str, title: str) -> str | None:
+async def lookup_poster_url(cat: str, title: str, is_series: bool | None = None) -> str | None:
     """Cache-only poster URL for `title` in category `cat`, or None if it
     was never resolved elsewhere."""
-    info = await lookup_poster_info(cat, title)
+    info = await lookup_poster_info(cat, title, is_series)
     return info["poster_url"] if info else None
 
 
-def schedule_poster_backfill(cat: str, title: str) -> None:
+def schedule_poster_backfill(cat: str, title: str, is_series: bool | None = None) -> None:
     """Fire-and-forget a real TMDb resolve for a title with no cached
     poster, mirroring card_data._fetch_tmdb_info's movie-then-series
-    order for dc/marvel. Never awaited by the caller — callers must stay
-    cache-only/fast; this only warms the cache for the *next* load.
+    order for dc/marvel (or the known is_series, when the row has one —
+    see lookup_poster_info). Never awaited by the caller — callers must
+    stay cache-only/fast; this only warms the cache for the *next* load.
     Deduplicates so a page of 30 misses (or two tabs open at once)
     doesn't fire the same title's lookup twice concurrently."""
     key = (cat, title.strip().lower())
@@ -74,7 +89,13 @@ def schedule_poster_backfill(cat: str, title: str) -> None:
             if cat == "series":
                 await get_series_info(title)
             elif cat in FRANCHISE_CATEGORIES:
-                if not await get_movie_info(title):
+                if is_series is True:
+                    if not await get_series_info(title):
+                        await get_movie_info(title)
+                elif is_series is False:
+                    if not await get_movie_info(title):
+                        await get_series_info(title)
+                elif not await get_movie_info(title):
                     await get_series_info(title)
             else:
                 await get_movie_info(title)

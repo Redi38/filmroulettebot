@@ -45,9 +45,10 @@ async def api_items(cat: str, page: int = 1, q: str = "") -> dict:
         items = [i for i in items if q in i["title"].lower()]
     page_items, page, total_pages = paginate(items, page, page_size=LIST_PAGE_SIZE)
     for item in page_items:
-        item["poster_url"] = await lookup_poster_url(cat, item["title"])
+        is_series = item.pop("is_series", None)
+        item["poster_url"] = await lookup_poster_url(cat, item["title"], is_series)
         if not item["poster_url"]:
-            schedule_poster_backfill(cat, item["title"])
+            schedule_poster_backfill(cat, item["title"], is_series)
     return {"items": page_items, "page": page, "total_pages": total_pages, "total_count": len(items)}
 
 
@@ -77,7 +78,7 @@ async def api_add(cat: str, body: TitleBody) -> dict:
         raise HTTPException(400, "Title can't be empty")
     if await item_exists(cat, title):
         raise HTTPException(409, f"Не добавлено — «{title}» уже есть в «{CATEGORIES.get(cat, cat)}»")
-    await add_item(cat, title)
+    await add_item(cat, title, body.is_series)
     if body.tmdb_id is not None:
         await cache_info_by_id(title, body.tmdb_id, bool(body.is_series))
     return {"ok": True}
@@ -112,7 +113,7 @@ async def api_rename(cat: str, body: RenameByIdBody) -> dict:
         conflict_msg=f"Не изменено — «{new_title}» уже есть в «{CATEGORIES.get(cat, cat)}»",
     ):
         return {"ok": True}
-    if not await rename_item_by_id(cat, body.id, new_title):
+    if not await rename_item_by_id(cat, body.id, new_title, body.is_series):
         raise HTTPException(404, "Тайтл не найден — возможно, уже удалён в другой вкладке")
     if body.tmdb_id is not None:
         await cache_info_by_id(new_title, body.tmdb_id, bool(body.is_series))

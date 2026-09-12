@@ -39,7 +39,7 @@ async function openAddSearchModal(searchEndpoint, query, {onPick, onFallback}) {
         ? `<img class="add-search-poster" src="${r.poster_url}" alt="">`
         : `<div class="add-search-poster add-search-poster-empty"></div>`;
       row.innerHTML = `${poster}<span class="add-search-row-title">${escapeHtml(r.title)}${r.year ? ` <span class="add-search-year">(${escapeHtml(r.year)})</span>` : ""}</span>`;
-      row.onclick = () => { close(); onPick(r.title); };
+      row.onclick = () => { close(); onPick(r.title, r); };
       resultsEl.appendChild(row);
     }
   } catch (e) {

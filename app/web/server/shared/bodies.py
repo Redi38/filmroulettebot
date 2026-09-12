@@ -6,6 +6,8 @@ from pydantic import BaseModel
 
 class TitleBody(BaseModel):
     title: str
+    tmdb_id: int | None = None
+    is_series: bool | None = None
 
 
 class RenameBody(BaseModel):
@@ -20,6 +22,8 @@ class DeleteByIdBody(BaseModel):
 class RenameByIdBody(BaseModel):
     id: int
     new_title: str
+    tmdb_id: int | None = None
+    is_series: bool | None = None
 
 
 class MoveBody(BaseModel):

@@ -96,7 +96,9 @@ async def test_items_endpoint_exposes_ids(client):
     r = client.get("/api/movies/items")
     assert r.status_code == 200
     items = r.json()["items"]
-    assert items and set(items[0].keys()) == {"id", "title"}
+    # poster_url is a cache-only lookup (see shared/posters.py) — with no
+    # TMDb cache entry for this title in tests, it's just None.
+    assert items and set(items[0].keys()) == {"id", "title", "poster_url"}
 
 
 async def test_upcoming_rename_by_id_survives_a_stale_title(client):

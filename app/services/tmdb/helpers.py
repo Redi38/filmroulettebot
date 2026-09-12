@@ -100,6 +100,7 @@ def format_search_suggestions(results: list[dict], is_series: bool) -> list[dict
             "title": title,
             "year": (r.get(date_field) or "")[:4],
             "poster_url": poster(r),
+            "is_series": is_series,
         })
         if len(out) >= 6:
             break

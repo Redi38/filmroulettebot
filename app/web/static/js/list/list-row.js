@@ -34,9 +34,9 @@ function createEditableRow(title, opts) {
   edit.onclick = (ev) => {
     ev.stopPropagation();
     openRenameModal(title, async (newTitle) => {
-      const save = async (finalTitle) => {
+      const save = async (finalTitle, suggestion) => {
         try {
-          await opts.onRename(finalTitle);
+          await opts.onRename(finalTitle, suggestion);
           opts.onReload();
         } catch (e) {
           showToast(e.message || "Не удалось изменить название", "error");
@@ -73,9 +73,6 @@ function createEditableRow(title, opts) {
         }
       }, opts.onUndoSettled);
     };
-    // The pill is inserted while the row is still collapsing so the two
-    // heights trade places in one motion — inserting it after the row was
-    // removed made the gap snap back open.
     removeRowOptimistically(row, opts.onDelete, () => {
       if (opts.onCountChange) opts.onCountChange(-1);
     }, {onCollapseStart: showUndo});

@@ -69,9 +69,12 @@ async function loadList(page) {
         posterUrl: poster_url,
         showPosterSlot: true,
         searchEndpoint: `/api/${cat}/search-suggest`,
-        onRename: (newTitle) => api(`/api/${cat}/rename`, {
+        onRename: (newTitle, suggestion) => api(`/api/${cat}/rename`, {
           method: "POST", headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({id, new_title: newTitle}),
+          body: JSON.stringify({
+            id, new_title: newTitle,
+            ...(suggestion ? {tmdb_id: suggestion.tmdb_id, is_series: suggestion.is_series} : {}),
+          }),
         }),
         onDelete: () => api(`/api/${cat}/delete`, {
           method: "POST", headers: {"Content-Type": "application/json"},
@@ -140,9 +143,6 @@ function paginationRow(page, totalPages, onNav) {
   const row = document.createElement("div");
   row.className = "pagination-row";
 
-  // Tell the container this row sits in which way the reader is travelling,
-  // so its fade out/in becomes a slide in that direction (see fadeOut() and
-  // fadeIn() in core/utils.js).
   const navigate = (targetPage, dir) => {
     setNavDirection(row.parentNode, dir);
     onNav(targetPage);
@@ -174,14 +174,17 @@ async function handleAddTitle() {
   const input = document.getElementById("add-input");
   const title = input.value.trim();
   if (!title) return;
-  const doAdd = async (finalTitle) => {
+  const doAdd = async (finalTitle, suggestion) => {
     try {
       await api(`/api/${currentCat}/add`, {
         method: "POST", headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({title: finalTitle}),
+        body: JSON.stringify({
+          title: finalTitle,
+          ...(suggestion ? {tmdb_id: suggestion.tmdb_id, is_series: suggestion.is_series} : {}),
+        }),
       });
       input.value = "";
-      loadList();
+      loadList(currentListPage);
     } catch (e) { showToast(e.message, "error"); }
   };
   openAddSearchModal(`/api/${currentCat}/search-suggest`, title, {

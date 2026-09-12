@@ -45,11 +45,13 @@ body[data-studio="marvel"] {
   --primary: #e8232c; --primary-2: #ff6b57; --primary-rgb: 232, 35, 44; --primary-2-rgb: 255, 107, 87;
   --glow: rgba(var(--primary-rgb), 0.32); --glow-2: rgba(var(--primary-2-rgb), 0.32);
   --on-primary: #ffffff;
+  --border: rgba(var(--primary-rgb), 0.4);
 }
 body[data-studio="dc"] {
   --primary: #1e7fe0; --primary-2: #5ec8ff; --primary-rgb: 30, 127, 224; --primary-2-rgb: 94, 200, 255;
   --glow: rgba(var(--primary-rgb), 0.32); --glow-2: rgba(var(--primary-2-rgb), 0.32);
   --on-primary: #ffffff;
+  --border: rgba(var(--primary-rgb), 0.4);
 }
 * { box-sizing: border-box; }
 button {
@@ -104,6 +106,11 @@ header {
   background: linear-gradient(90deg, rgba(var(--primary-rgb), 0.14), rgba(var(--primary-2-rgb), 0.08));
 }
 header h1 { margin: 0; font-size: 1.15rem; font-weight: 800; }
+
+/* The page title is deliberately left out of the section View Transition and
+   has no entrance animation of its own: a label that flies in on every tab
+   change draws the eye away from the content that actually changed. It swaps
+   in place while the body below it transitions. */
 
 #burger-btn {
   background: var(--card); border: 1px solid var(--border); color: var(--text);

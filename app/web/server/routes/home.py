@@ -15,7 +15,7 @@ import random
 
 from fastapi import APIRouter, HTTPException
 
-from app.db.database import get_items, item_exists
+from app.db.database import get_items_with_ids, item_exists
 
 from ..shared import _card_data, _check_category
 from ..shared.posters import FRANCHISE_CATEGORIES, lookup_poster_info
@@ -29,19 +29,24 @@ _MAX_POSTERS = 80
 
 @router.get("/api/home/collection")
 async def api_home_collection() -> dict:
-    pairs: list[tuple[str, str]] = []
+    # get_items_with_ids rather than get_items for the sake of each row's
+    # is_series flag: a dc/marvel title can exist as both a film and a show
+    # ("Фонари"), and without the flag lookup_poster_info guesses movie
+    # first — which put the film's poster on the Афиша for a row the user
+    # had picked the series for.
+    pairs: list[tuple[str, str, bool | None]] = []
     for cat in (*COLLECTION_CATEGORIES, *FRANCHISE_CATEGORIES):
-        for title in await get_items(cat):
-            pairs.append((cat, title))
+        for item in await get_items_with_ids(cat):
+            pairs.append((cat, item["title"], item.get("is_series")))
 
     total_items = len(pairs)
     random.shuffle(pairs)
 
     posters: list[dict] = []
-    for cat, title in pairs:
+    for cat, title, is_series in pairs:
         if len(posters) >= _MAX_POSTERS:
             break
-        info = await lookup_poster_info(cat, title)
+        info = await lookup_poster_info(cat, title, is_series)
         if not info:
             continue
         posters.append({

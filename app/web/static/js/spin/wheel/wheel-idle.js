@@ -51,9 +51,31 @@ function positionWheelHoverLabel(canvas, clientX, clientY, text) {
     holder.appendChild(label);
   }
   const rect = holder.getBoundingClientRect();
-  label.textContent = text;
-  label.style.left = `${clientX - rect.left}px`;
+  if (label.textContent !== text) {
+    label.textContent = text;
+    // Measure from the left edge, where the full holder width is available:
+    // if `width: max-content` is not honoured, the box falls back to
+    // shrink-to-fit and its width would otherwise depend on where it was
+    // last placed. Only on a text change — reading offsetWidth forces a
+    // synchronous layout, and this runs on every pointermove.
+    label.style.left = "0px";
+    label._plaqueHalfWidth = label.offsetWidth / 2;
+  }
   label.style.top = `${clientY - rect.top}px`;
+
+  // The plaque is centred on the cursor (translateX(-50%)), so near either
+  // rim half of it would hang outside the holder. Slide it back in rather
+  // than let it clip — the pointer is the cursor itself, so the plaque does
+  // not have to stay perfectly centred under it.
+  const halfWidth = label._plaqueHalfWidth || 0;
+  const margin = 6;
+  const min = halfWidth + margin;
+  const max = rect.width - halfWidth - margin;
+  let left = clientX - rect.left;
+  // max < min means the plaque is wider than the holder; centre it and let
+  // it overhang evenly rather than snapping it to one side.
+  left = max >= min ? Math.min(Math.max(left, min), max) : rect.width / 2;
+  label.style.left = `${left}px`;
   label.classList.add("visible");
 }
 

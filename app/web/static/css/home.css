@@ -53,7 +53,12 @@
   .home-hero-text h2 { font-size: 1.7rem; }
   .home-hero-text { align-self: stretch; }
   .home-hero-text p { font-size: 1.02rem; }
-  .home-cta { width: auto; padding: 14px 34px; }
+  /* Full hero width, like it already is on mobile — the hero is the only
+     thing on the screen above the marquee, so a button hugging its label in
+     the corner of a 1100px card reads as an afterthought rather than the
+     one action the page is for. align-self because .home-hero is a column
+     flex with align-items: flex-start. */
+  .home-cta { width: 100%; align-self: stretch; padding: 16px 34px; }
 }
 
 .home-collection-block {

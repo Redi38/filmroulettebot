@@ -459,6 +459,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/{cat}/reorder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Api Reorder
+         * @description Swap a title's rank with its neighbour above/below — in the full
+         *     list, across page boundaries, not just the current page of /items.
+         *     Position doubles as the weighted-roulette weight (see title_weights()
+         *     in app/services/titles.py), so this is how a user makes a title more
+         *     or less likely to come up.
+         */
+        post: operations["api_reorder_api__cat__reorder_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/{cat}/delete-by-title": {
         parameters: {
             query?: never;
@@ -799,6 +823,13 @@ export interface components {
             tmdb_id?: number | null;
             /** Is Series */
             is_series?: boolean | null;
+        };
+        /** ReorderBody */
+        ReorderBody: {
+            /** Id */
+            id: number;
+            /** Direction */
+            direction: string;
         };
         /** ResolveBody */
         ResolveBody: {
@@ -1647,6 +1678,43 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["DeleteByIdBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    api_reorder_api__cat__reorder_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cat: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReorderBody"];
             };
         };
         responses: {

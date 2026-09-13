@@ -11,6 +11,7 @@ import time
 
 from aiogram import Router
 
+from app.db.database import get_item_is_series
 from app.services.card_data import resolve_card_data
 from app.services.titles import pick_title
 from app.utils import esc
@@ -63,7 +64,11 @@ def _star_bar(rating) -> str:
 
 
 async def _build_card(category: str, title: str) -> tuple[str, str, str | None]:
-    data = await resolve_card_data(category, title)
+    # Same reason as the web card (app/web/server/shared/_card_data): a
+    # dc/marvel row can be a film or a show under one name, so pass the flag
+    # the user's pick recorded rather than letting the lookup guess.
+    is_series = await get_item_is_series(category, title) if category in ("dc", "marvel") else None
+    data = await resolve_card_data(category, title, is_series)
     info = data["info"]
     display_title = data["title"]
     link = data["watch_link"]

@@ -1,13 +1,38 @@
-// List rendering for movies/cartoons/series categories: load, search, pagination, add/delete.
+// List rendering for every category: load, search, pagination, add/delete.
+//
+// There is one list screen rather than one per category — the chip row at the
+// top of it is what switches between Фильмы / Сериалы / Marvel / DC / …
 
 let currentListPage = 1;
 let currentListCat = null;
 let currentListQuery = "";
 
+function renderListCatChips() {
+  renderCatChips("list-cat-select", {
+    options: listCats().map((code) => {
+      const count = categoryCounts ? categoryCounts[code] : null;
+      const label = LIST_CATS[code] || code;
+      // The count doubles as the empty-category signal — a category showing
+      // 0 is exactly the one the roulette has stopped offering.
+      return [code, count === null || count === undefined ? label : `${label} · ${count}`];
+    }),
+    value: currentCat,
+    onChange: (code) => switchListCat(code),
+  });
+}
+
+// Rewrapping the chip row (five categories, narrow screen) moves the chips
+// out from under the sliding thumb, so re-measure it after a resize.
+window.addEventListener("resize", debounce(() => {
+  if (currentView !== "list") return;
+  positionCatChipThumb(document.getElementById("list-cat-select"), null, false);
+}, 150));
+
 async function loadList(page) {
   if (page) currentListPage = page;
   else currentListPage = 1;
 
+  renderListCatChips();
   document.getElementById("add-row").style.display = "flex";
   const featured = document.getElementById("list-featured");
   const container = document.getElementById("list-container");
@@ -51,6 +76,13 @@ async function loadList(page) {
     }
 
     await fadeOut(container);
+    // Keep the cached counts (and therefore the chips, and therefore which
+    // categories the roulette offers) honest after an add or a delete.
+    if (!q && categoryCounts && categoryCounts[currentCat] !== data.total_count) {
+      categoryCounts[currentCat] = data.total_count;
+      renderListCatChips();
+      if (typeof renderSpinCatChips === "function") renderSpinCatChips();
+    }
     const countEl = document.getElementById("list-count");
     if (!data.total_count) {
       if (countEl) countEl.textContent = "";

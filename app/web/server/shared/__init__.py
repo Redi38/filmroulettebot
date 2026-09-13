@@ -13,6 +13,7 @@ Everything is re-exported here under its *original* name so existing
 """
 from __future__ import annotations
 
+from app.db.database import get_item_is_series
 from app.services.card_data import resolve_card_data
 
 from .bodies import (
@@ -43,6 +44,7 @@ from .constants import (
     WEB_USER_ID,
     WHEEL_POOL_SIZE,
 )
+from .posters import FRANCHISE_CATEGORIES
 from .spin_state import _SPIN_STATE_MAX_ENTRIES, _BoundedDict, _last_spin_at, _last_spin_title
 from .spin_state import build_wheel_pool as _build_wheel_pool
 from .spin_state import check_spin_cooldown as _check_spin_cooldown
@@ -61,8 +63,16 @@ async def _card_data(cat: str, title: str, history_timestamp: float | None = Non
     it inside a helper module) so tests can monkeypatch
     `app.web.server.shared.resolve_card_data` directly, as before this file
     was split into a package.
+
+    dc/marvel rows carry a movie-vs-series flag (whichever the user picked
+    in the add/rename search); pass it through so a title that exists as
+    both a film and a show resolves to the one the row actually means,
+    instead of always guessing the film. Only those two categories can be
+    ambiguous — everywhere else the category already settles it — so this
+    is the only case worth an extra DB read.
     """
-    data = await resolve_card_data(cat, title)
+    is_series = await get_item_is_series(cat, title) if cat in FRANCHISE_CATEGORIES else None
+    data = await resolve_card_data(cat, title, is_series)
     info = data["info"]
     display_title = data["title"]
     link = data["watch_link"]

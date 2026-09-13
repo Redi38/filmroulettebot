@@ -60,7 +60,7 @@ function getWheelColors() {
 }
 
 const WHEEL_HUB_GIF_URL = "";
-const WHEEL_WRAP_IDS = ["random-wheel-wrap", "spin-wheel-wrap"];
+const WHEEL_WRAP_IDS = ["spin-wheel-wrap"];
 
 function getWheelStyle() {
   return typeof getWheelAppearance === "function" ? getWheelAppearance() : "classic";

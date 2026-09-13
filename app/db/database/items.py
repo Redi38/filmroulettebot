@@ -52,6 +52,28 @@ async def get_items_with_ids(table: str) -> list[dict]:
             ]
 
 
+async def get_item_is_series(table: str, title: str) -> bool | None:
+    """The stored movie-vs-series flag for a single row, matched by title.
+
+    dc/marvel lists hold films and shows side by side, and a franchise can
+    have both under the same name ("Фонари" is a 2026 film *and* the
+    "Lanterns" series), so which one a row means is not derivable from the
+    title — it is whichever TMDb result the user picked in the add/rename
+    search. Callers that resolve a title into a card need that flag or they
+    fall back to guessing movie-first. None means the row predates the
+    column, or the category does not track it.
+    """
+    check_table(table)
+    async with conn() as db:
+        async with db.execute(
+            f"SELECT is_series FROM {table} WHERE title = ? LIMIT 1", (title,)
+        ) as cur:
+            row = await cur.fetchone()
+    if row is None or row[0] is None:
+        return None
+    return bool(row[0])
+
+
 async def item_exists(table: str, title: str) -> bool:
     """Case-insensitive existence check (relies on COLLATE UNICODE_NOCASE on
     the column — see connection.py for why the built-in NOCASE isn't enough)."""

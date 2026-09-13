@@ -24,7 +24,7 @@ def resolve_calls(monkeypatch):
 
     calls = {"n": 0}
 
-    async def _fake_resolve(category, title):
+    async def _fake_resolve(category, title, is_series=None):
         calls["n"] += 1
         return {
             "category": category,

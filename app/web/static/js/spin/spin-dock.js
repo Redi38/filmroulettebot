@@ -1,3 +1,7 @@
+// The roulette dock. There used to be two of these — one for the "Наугад"
+// view and an identical one for the per-category spin view — kept in sync by
+// rendering every setting twice. There is a single roulette now, so there is
+// a single dock, with a category picker at the top of it.
 function renderSpinDockRow(prefix, { spinBtnId, spinBtnClass }) {
   return `
     <div class="spin-dock-row">
@@ -6,6 +10,10 @@ function renderSpinDockRow(prefix, { spinBtnId, spinBtnClass }) {
         <div id="${prefix}-sound-theme-toggle"></div>
       </div>
       <div class="spin-controls-dock">
+        <div class="spin-section">
+          <p class="spin-caption">Категория</p>
+          <div id="${prefix}-cat-select"></div>
+        </div>
         <div class="spin-section">
           <p class="spin-caption">Режим</p>
           <div id="${prefix}-mode-toggle"></div>
@@ -32,14 +40,8 @@ function renderSpinDockRow(prefix, { spinBtnId, spinBtnClass }) {
 }
 
 function mountSpinDocks() {
-  const docks = [
-    { mountId: "random-dock-mount", prefix: "random", spinBtnId: "random-spin-btn", spinBtnClass: "btn-success" },
-    { mountId: "spin-dock-mount", prefix: "spin", spinBtnId: "spin-btn", spinBtnClass: "btn-primary" },
-  ];
-  for (const { mountId, prefix, spinBtnId, spinBtnClass } of docks) {
-    const mount = document.getElementById(mountId);
-    if (!mount) continue;
-    mount.outerHTML = renderSpinDockRow(prefix, { spinBtnId, spinBtnClass });
-  }
+  const mount = document.getElementById("spin-dock-mount");
+  if (!mount) return;
+  mount.outerHTML = renderSpinDockRow("spin", { spinBtnId: "spin-btn", spinBtnClass: "btn-primary" });
 }
 mountSpinDocks();

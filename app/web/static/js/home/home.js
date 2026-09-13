@@ -140,4 +140,4 @@ function fillMarqueeTrack(track, posters) {
   track.style.setProperty("--marquee-duration", `${seconds}s`);
 }
 
-document.getElementById("home-roulette-btn").onclick = () => switchView("random");
+document.getElementById("home-roulette-btn").onclick = () => switchView("spin");

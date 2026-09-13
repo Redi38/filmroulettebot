@@ -2,7 +2,6 @@
 
 const SPIN_RESULT_MAX_WIDTH = 860;
 const SPIN_RESULT_PAIRS = [
-  { sectionId: "random-spin-section", resultId: "random-spin-result" },
   { sectionId: "spin-section", resultId: "spin-result" },
 ];
 
@@ -113,7 +112,7 @@ if (typeof ResizeObserver !== "undefined") {
   const wheelLayoutObserver = new ResizeObserver(() => {
     debouncedRefreshWheelLayoutForObserver();
   });
-  for (const sectionId of ["random-spin-section", "spin-section"]) {
+  for (const sectionId of ["spin-section"]) {
     const section = document.getElementById(sectionId);
     const dock = section && section.querySelector(".spin-controls-dock");
     if (dock) wheelLayoutObserver.observe(dock);

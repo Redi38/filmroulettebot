@@ -41,9 +41,8 @@ let dockLocked = false;
 
 function setDockLocked(locked) {
   dockLocked = locked;
-  for (const dockId of ["random-spin-section", "spin-section"]) {
-    const dock = document.querySelector(`#${dockId} .spin-controls-dock`);
-    if (!dock) continue;
+  const dock = document.querySelector("#spin-section .spin-controls-dock");
+  if (dock) {
     dock.querySelectorAll("button, input").forEach((el) => {
       if (el.classList.contains("wheel-mute-btn")) return;
       el.disabled = locked;
@@ -55,17 +54,27 @@ function setDockLocked(locked) {
 function applySpinButtonLockState() {
   const cooldownActive = spinCooldownUntil > Date.now();
   const disabled = dockLocked || cooldownActive;
-  for (const btn of [document.getElementById("random-spin-btn"), document.getElementById("spin-btn")]) {
-    if (btn) btn.disabled = disabled;
-  }
+  const btn = document.getElementById("spin-btn");
+  if (btn) btn.disabled = disabled;
 }
 
-const RANDOM_CATEGORY_ORDER = ["movies", "cartoons", "series"];
+// The pre-spin wheel that "Наугад" shows to reveal *which* category it landed
+// on. Built from the categories the picker is currently offering, so a list
+// that has been emptied out (no cartoons left to watch, say) is not shown as a
+// segment the spin could never land on — the server skips empty categories in
+// /api/random-spin for the same reason.
+function randomCategoryOrder(category) {
+  const cats = spinnableCats();
+  if (category && !cats.includes(category)) cats.push(category);
+  return cats.length ? cats : Object.keys(CATS);
+}
 
 async function spinCategoryWheel(wheelWrapId, category) {
-  const labels = RANDOM_CATEGORY_ORDER.map((c) => (typeof CATS !== "undefined" && CATS[c]) || c);
-  let winnerIndex = RANDOM_CATEGORY_ORDER.indexOf(category);
+  const order = randomCategoryOrder(category);
+  const labels = order.map((c) => CATS[c] || c);
+  let winnerIndex = order.indexOf(category);
   if (winnerIndex === -1) winnerIndex = 0;
+  if (labels.length < 2) return; // nothing to reveal — one category is all there is
 
   const canvas = buildWheel(wheelWrapId, labels);
   await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
@@ -78,9 +87,8 @@ async function doWheelSpin(cat, isRandom) {
   if (spinCooldownUntil > Date.now()) return;
   cancelAutoWatchOpen();
   primeWheelAudio();
-  const prefix = isRandom ? "random" : "spin";
-  const result = isRandom ? document.getElementById("random-spin-result") : resultEl();
-  const wheelWrapId = `${prefix}-wheel-wrap`;
+  const result = resultEl();
+  const wheelWrapId = "spin-wheel-wrap";
   const prevResultHtml = result.innerHTML;
   const wrap = document.getElementById(wheelWrapId);
   const prevWrapHtml = wrap.innerHTML;
@@ -188,31 +196,27 @@ function applySpinCooldown(seconds) {
 }
 
 function startSpinCooldownAnim(seconds) {
-  const randomBtn = document.getElementById("random-spin-btn");
   const spinBtn = document.getElementById("spin-btn");
   clearTimeout(spinCooldownTimer);
-  for (const btn of [randomBtn, spinBtn]) {
-    btn.disabled = true;
-    btn.classList.remove("wipe");
-    btn.style.setProperty("--cooldown-duration", seconds + "s");
-    void btn.offsetWidth;
-    btn.classList.add("cooldown-anim", "wipe");
-  }
+  if (!spinBtn) return;
+  spinBtn.disabled = true;
+  spinBtn.classList.remove("wipe");
+  spinBtn.style.setProperty("--cooldown-duration", seconds + "s");
+  void spinBtn.offsetWidth;
+  spinBtn.classList.add("cooldown-anim", "wipe");
   spinCooldownTimer = setTimeout(() => {
-    for (const btn of [randomBtn, spinBtn]) {
-      btn.classList.remove("wipe");
-    }
+    spinBtn.classList.remove("wipe");
     applySpinButtonLockState();
   }, seconds * 1000);
 }
 function resultEl() {
-  return document.getElementById(currentView === "random" ? "random-spin-result" : "spin-result");
+  return document.getElementById("spin-result");
 }
 
 async function doClassicSpin(cat, isRandom) {
   if (spinCooldownUntil > Date.now()) return;
   cancelAutoWatchOpen();
-  const result = isRandom ? document.getElementById("random-spin-result") : resultEl();
+  const result = resultEl();
   const prevHtml = result.innerHTML;
   result.innerHTML = skeletonCardHtml();
   applySpinCooldown(SPIN_COOLDOWN_SECONDS);
@@ -235,13 +239,12 @@ async function doClassicSpin(cat, isRandom) {
   }
 }
 
-function doSpin(cat) {
-  return spinMode === "wheel" ? doWheelSpin(cat, false) : doClassicSpin(cat, false);
+// One entry point for the one roulette: the picked category decides whether
+// this is a random spin or a per-category one.
+function doSpin() {
+  const isRandom = isRandomSpin();
+  const cat = isRandom ? null : spinCat;
+  return spinMode === "wheel" ? doWheelSpin(cat, isRandom) : doClassicSpin(cat, isRandom);
 }
 
-function doRandomSpin() {
-  return spinMode === "wheel" ? doWheelSpin(null, true) : doClassicSpin(null, true);
-}
-
-document.getElementById("spin-btn").onclick = () => doSpin(currentCat);
-document.getElementById("random-spin-btn").onclick = doRandomSpin;
+document.getElementById("spin-btn").onclick = () => doSpin();

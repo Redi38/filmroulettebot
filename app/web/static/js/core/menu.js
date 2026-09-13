@@ -2,9 +2,10 @@ const sideMenu = document.getElementById("side-menu");
 const sideMenuScroll = document.getElementById("side-menu-scroll");
 const overlay = document.getElementById("overlay");
 
-const MENU_LABELS = {movies: "Фильмы", cartoons: "Мульты", series: "Сериалы"};
-const REF_MENU_LABELS = {marvel: "Marvel", dc: "DC"};
-
+// /api/categories is the single source of truth for both the wording on the
+// category chips and how many items each category holds. The counts are what
+// let the roulette picker drop a category that has been fully watched off
+// (see spinnableCats() in core/state.js).
 (async () => {
   let data;
   try {
@@ -12,14 +13,21 @@ const REF_MENU_LABELS = {marvel: "Marvel", dc: "DC"};
   } catch (e) {
     return;
   }
-  let changed = false;
-  for (const labels of [MENU_LABELS, REF_MENU_LABELS]) {
+  for (const labels of [CATS, REF_CATS, ALL_CATS, LIST_CATS]) {
     for (const code of Object.keys(labels)) {
       const label = data[code] && data[code].short_label;
-      if (label && labels[code] !== label) { labels[code] = label; changed = true; }
+      if (label) labels[code] = label;
     }
   }
-  if (changed) renderMenu();
+  categoryCounts = {};
+  for (const [code, info] of Object.entries(data)) categoryCounts[code] = info.count;
+  // A category may have just vanished from (or reappeared in) the roulette
+  // picker, and the menu/list labels may have changed.
+  if (isCatEmpty(spinCat)) { spinCat = RANDOM_CAT; saveState(); }
+  renderMenu();
+  renderSpinCatChips();
+  if (currentView === "list") renderListCatChips();
+  updateHeaderTitle();
 })();
 
 const ICONS = {
@@ -92,23 +100,19 @@ function renderMenu() {
 
   addGroup("Главное");
   addItem("home", "Афиша", () => switchView("home"), currentView === "home");
-  addItem("shuffle", "Наугад", () => switchView("random"), currentView === "random");
+  // One roulette and one list for every category — you pick the category on
+  // the screen itself (the chip rows), not by walking the menu.
+  addItem("shuffle", "Рулетка", () => switchView("spin"), currentView === "spin");
+  addItem("list", "Списки", () => switchView("list"), currentView === "list");
 
   addGroup("Кино и сериалы");
   addItem("theaters", "В прокате", () => switchView("theaters"), currentView === "theaters");
   addItem("premiere", "Премьеры сериалов", () => switchView("series_releases"), currentView === "series_releases");
   addItem("bell", "Отслеживание сериалов", () => switchView("tracked_series"), currentView === "tracked_series");
 
-  addGroup("Рулетка по категориям");
-  for (const [code, label] of Object.entries(MENU_LABELS)) {
-    addItem(code, label, () => switchCat(code, "spin"), currentView === "spin" && currentCat === code);
-    addItem("list", "Список", () => switchCat(code, "list"), currentView === "list" && currentCat === code, true);
-  }
-
   addGroup("Подборки");
-  for (const [code, label] of Object.entries(REF_MENU_LABELS)) {
-    addItem(code, label, () => switchCat(code, "showcase"), currentView === "showcase" && currentCat === code);
-    addItem("list", "Список", () => switchCat(code, "list"), currentView === "list" && currentCat === code, true);
+  for (const code of Object.keys(REF_CATS)) {
+    addItem(code, REF_CATS[code], () => switchCat(code, "showcase"), currentView === "showcase" && currentCat === code);
   }
 
   addGroup("Прочее");
@@ -154,16 +158,45 @@ function switchCat(code, view) {
   pushViewToHistory(view, code);
   showSection();
 }
+
+// Category switch *within* the single roulette view — no section swap, just a
+// fresh idle wheel and a cleared result.
+function switchSpinCat(code) {
+  if (spinCat === code) return;
+  spinCat = code;
+  saveState();
+  renderSpinCatChips();
+  updateHeaderTitle();
+  pushViewToHistory("spin", code);
+  resetWheelWraps();
+  resetSpinResult();
+  currentCardData = null;
+  if (spinMode === "wheel" && !isRandomSpin()) showIdleWheel(spinCat);
+  if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
+}
+
+// Category switch within the single list view.
+function switchListCat(code) {
+  if (currentCat === code) return;
+  currentCat = code;
+  saveState();
+  renderListCatChips();
+  renderMenu();
+  applyStudioTheme();
+  updateHeaderTitle();
+  pushViewToHistory("list", code);
+  loadList();
+}
 function switchView(view) {
   currentView = view;
   saveState(); renderMenu();
-  pushViewToHistory(view, currentCat);
+  pushViewToHistory(view, hashCatFor(view));
   showSection();
 }
 
 const SECTION_IDS = {
   home: "home-section",
-  random: "random-spin-section", spin: "spin-section", list: "list-section",
+  spin: "spin-section", list: "list-section",
   upcoming: "upcoming-section", history: "history-section", showcase: "showcase-section",
   theaters: "theaters-section", series_releases: "series-releases-section",
   tracked_series: "tracked-series-section",
@@ -177,13 +210,18 @@ function applyStudioTheme() {
 }
 
 const VIEW_TITLES = {
-  home: "Афиша", random: "Наугад", upcoming: "Ожидаемые", history: "История",
+  home: "Афиша", upcoming: "Ожидаемые", history: "История",
   theaters: "В прокате", series_releases: "Премьеры сериалов",
   tracked_series: "Отслеживание сериалов",
 };
 
 function currentViewTitle() {
-  if (currentView === "spin" || currentView === "list") return `${ALL_CATS[currentCat] || ""}`;
+  // The chip row under the header already names the selected category, so the
+  // header itself names the screen instead of repeating it.
+  if (currentView === "spin") {
+    return isRandomSpin() ? "Рулетка" : `Рулетка — ${CATS[spinCat] || ""}`;
+  }
+  if (currentView === "list") return `Списки — ${LIST_CATS[currentCat] || ""}`;
   if (currentView === "showcase") return `${ALL_CATS[currentCat] || ""} — скоро`;
   return VIEW_TITLES[currentView] || "";
 }
@@ -236,20 +274,12 @@ async function showSection() {
   if (typeof updateWheelScrollLock === "function") updateWheelScrollLock();
 
   if (currentView === "home") loadHome();
-  if (currentView === "random") {
-    renderAllDockControls("random");
-    resetWheelWraps();
-    document.getElementById("random-spin-result").innerHTML = placeholderHtml("Нажми «Крутить», и рулетка выберет фильм, сериал или мультфильм 🍿");
-    currentCardData = null;
-  }
   if (currentView === "spin") {
     renderAllDockControls("spin");
     resetWheelWraps();
-    document.getElementById("spin-result").innerHTML = placeholderHtml("Нажми «Крутить», чтобы узнать, что посмотреть 🎬");
+    resetSpinResult();
     currentCardData = null;
-    if (spinMode === "wheel") showIdleWheel(currentCat);
-  }
-  if (currentView === "random" || currentView === "spin") {
+    if (spinMode === "wheel" && !isRandomSpin()) showIdleWheel(spinCat);
     if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
   }
   if (currentView === "list") loadList();

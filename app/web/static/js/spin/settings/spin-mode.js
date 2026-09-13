@@ -25,15 +25,11 @@ function renderSpinModeToggle(containerId) {
 
         if (currentCardData) return;
 
-        if (spinMode === "wheel" && currentView === "spin") {
-          showIdleWheel(currentCat);
-        } else if (currentView === "spin") {
-          document.getElementById("spin-result").innerHTML =
-            placeholderHtml("Нажми «Крутить», чтобы узнать, что посмотреть 🎬");
-        } else if (currentView === "random") {
-          document.getElementById("random-spin-result").innerHTML =
-            placeholderHtml("Нажми «Крутить», и рулетка выберет фильм, сериал или мультфильм 🍿");
-        }
+        if (currentView !== "spin") return;
+        // "Наугад" has no single list to preview, so it stays on the
+        // placeholder until the spin picks a category for you.
+        if (spinMode === "wheel" && !isRandomSpin()) showIdleWheel(spinCat);
+        else resetSpinResult();
       });
     },
   });

@@ -23,6 +23,7 @@ from .items import (
     add_item,
     delete_item,
     delete_item_by_id,
+    get_item_is_series,
     get_items,
     get_items_with_ids,
     item_exists,
@@ -48,6 +49,7 @@ from .upcoming import (
 __all__ = [
     "init_db",
     "close_db",
+    "get_item_is_series",
     "get_items",
     "get_items_with_ids",
     "item_exists",

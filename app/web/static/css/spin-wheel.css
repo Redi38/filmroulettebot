@@ -1,16 +1,16 @@
 /* Spin mode toggle, spin speed control, and the roulette wheel (canvas). */
 
-#random-spin-section, #spin-section { position: relative; }
+#spin-section { position: relative; }
 
-#random-spin-section.section-fade-in, #spin-section.section-fade-in {
+#spin-section.section-fade-in {
   animation-name: fadeInOpacityOnly;
 }
 @keyframes fadeInOpacityOnly { from { opacity: 0; } to { opacity: 1; } }
-#random-spin-section.section-leaving, #spin-section.section-leaving {
+#spin-section.section-leaving {
   animation-name: sectionLeaveOpacityOnly;
 }
 @keyframes sectionLeaveOpacityOnly { from { opacity: 1; } to { opacity: 0; } }
-#random-spin-section.active, #spin-section.active {
+#spin-section.active {
   display: flex; flex-direction: column; align-items: center;
 }
 
@@ -41,7 +41,7 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
 }
 .spin-dock-row ~ .spin-result { padding-top: 0; }
 
-#random-spin-result, #spin-result { container-type: inline-size; }
+#spin-result { container-type: inline-size; }
 
 @media (min-width: 900px) {
   .spin-dock-row {
@@ -78,26 +78,26 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
 }
 
 @container (min-width: 620px) {
-  #random-spin-result .placeholder, #spin-result .placeholder {
+  #spin-result .placeholder {
     padding: 60px 30px; font-size: 1.08rem;
   }
-  #random-spin-result .placeholder .big, #spin-result .placeholder .big { font-size: 2.9rem; }
-  #random-spin-result .card, #spin-result .card { padding: 24px; }
-  #random-spin-result .card .title, #spin-result .card .title { font-size: 1.4rem; }
-  #random-spin-result .card .meta, #spin-result .card .meta { font-size: 0.98rem; }
-  #random-spin-result .card .overview, #spin-result .card .overview { font-size: 1.02rem; line-height: 1.6; }
-  #random-spin-result .card .poster, #spin-result .card .poster { max-width: 320px; }
+  #spin-result .placeholder .big { font-size: 2.9rem; }
+  #spin-result .card { padding: 24px; }
+  #spin-result .card .title { font-size: 1.4rem; }
+  #spin-result .card .meta { font-size: 0.98rem; }
+  #spin-result .card .overview { font-size: 1.02rem; line-height: 1.6; }
+  #spin-result .card .poster { max-width: 320px; }
 }
 @container (min-width: 760px) {
-  #random-spin-result .placeholder, #spin-result .placeholder {
+  #spin-result .placeholder {
     padding: 76px 34px; font-size: 1.18rem;
   }
-  #random-spin-result .placeholder .big, #spin-result .placeholder .big { font-size: 3.4rem; }
-  #random-spin-result .card, #spin-result .card { padding: 30px; }
-  #random-spin-result .card .title, #spin-result .card .title { font-size: 1.6rem; }
-  #random-spin-result .card .meta, #spin-result .card .meta { font-size: 1.05rem; }
-  #random-spin-result .card .overview, #spin-result .card .overview { font-size: 1.1rem; line-height: 1.65; }
-  #random-spin-result .card .poster, #spin-result .card .poster { max-width: 360px; }
+  #spin-result .placeholder .big { font-size: 3.4rem; }
+  #spin-result .card { padding: 30px; }
+  #spin-result .card .title { font-size: 1.6rem; }
+  #spin-result .card .meta { font-size: 1.05rem; }
+  #spin-result .card .overview { font-size: 1.1rem; line-height: 1.65; }
+  #spin-result .card .poster { max-width: 360px; }
 }
 
 .spin-mode-toggle-wrap { display: flex; justify-content: center; margin: 0; }
@@ -353,7 +353,7 @@ body.dock-ready .wheel-audio-controls { opacity: 1; pointer-events: auto; }
   display: none; flex-direction: column; align-items: center; justify-content: center;
   position: relative; width: 100%; min-height: 60vh; margin-top: 8px; margin-bottom: 0;
 }
-#random-spin-result, #spin-result { width: 100%; max-width: 640px; margin: 0 auto; }
+#spin-result { width: 100%; max-width: 640px; margin: 0 auto; }
 .wheel-current-title {
   min-height: 1.4em; margin-bottom: 22px; padding: 6px 16px;
   font-weight: 700; font-size: 1.05rem; text-align: center; color: #fff;
@@ -543,9 +543,23 @@ body.dock-ready .wheel-audio-controls { opacity: 1; pointer-events: auto; }
 .wheel-hover-label {
   position: absolute; z-index: 4; pointer-events: none;
   transform: translate(-50%, calc(-100% - 12px));
-  padding: 5px 10px; max-width: 220px;
+  padding: 5px 10px;
+  /* `width: max-content` is load-bearing: an absolutely positioned box with
+     only `left` set is shrink-to-fit, so its available width is whatever is
+     left between `left` and the holder's right edge. Over on the right-hand
+     side of the wheel that is a few dozen pixels, and the title wrapped one
+     letter per line into a vertical strip. Sizing to the text instead frees
+     it from the holder's edge; wheel-idle.js then clamps `left` so the
+     plaque still lands inside the holder. */
+  width: max-content; max-width: min(320px, 72vw);
   font-size: 0.85rem; font-weight: 700; line-height: 1.25; color: #fff;
-  text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  text-align: center;
+  /* The segment label on the wheel is truncated to fit its wedge — this
+     hover plaque is the place that shows the title in full, so it wraps
+     onto as many lines as it needs instead of ellipsing a second time.
+     break-word rather than anywhere: anywhere would feed the per-character
+     wrap opportunities back into the max-content size above. */
+  white-space: normal; overflow-wrap: break-word;
   background: rgba(9, 12, 22, 0.88);
   border: 1px solid rgba(var(--primary-rgb), 0.45);
   border-radius: 10px;
@@ -559,4 +573,66 @@ body.dock-ready .wheel-audio-controls { opacity: 1; pointer-events: auto; }
 }
 @media (prefers-reduced-motion: reduce) {
   .wheel-hover-label { transition: none; }
+}
+
+/* ---- category pickers ---------------------------------------------------
+   The controls that replaced the per-category menu entries. Two homes with
+   very different widths, so two shapes: a wrapping pill row above the
+   watchlist, and a dropdown inside the narrow fixed roulette dock.
+
+   The pills are plain `.showcase-filter-btn`s — the app's standard pill,
+   used by the showcase filters and every dock toggle — so they pick up the
+   same Manrope weight/size as everything else, and the selected gradient
+   runs edge to edge instead of being ringed by a border of its own. */
+.cat-select-row {
+  position: relative; /* the sliding thumb is absolutely positioned in here */
+  display: flex; flex-wrap: wrap; gap: 8px;
+  justify-content: center; align-items: center;
+  margin: 0 0 16px;
+}
+.cat-select-row .cat-chip { padding: 8px 16px; }
+
+/* The roulette's dropdown. Same markup and metrics as the wheel's
+   sound-theme dropdown sitting next to it in the dock. */
+/* Left-aligned rather than centred in the dock column, so its left edge
+   lines up with the "Категория" caption above it (.spin-caption is
+   align-self: flex-start) instead of floating half a chip to the right. */
+.cat-select-wrap { display: flex; justify-content: flex-start; align-self: flex-start; margin: 0; }
+.cat-select-dropdown { position: relative; }
+.cat-select-btn {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  width: 128px; padding: 7px 14px;
+  background: var(--bg-c); border: 1px solid var(--border); border-radius: 999px;
+  color: var(--text); cursor: pointer;
+  font-family: inherit; font-size: 0.85rem; font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.cat-select-btn-label { overflow: hidden; text-overflow: ellipsis; }
+.cat-select-btn:hover { border-color: var(--primary); }
+.cat-select-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.cat-select-chevron { display: flex; align-items: center; transition: transform 0.15s ease; }
+.cat-select-chevron svg { width: 14px; height: 14px; display: block; }
+.cat-select-dropdown.open .cat-select-chevron { transform: rotate(180deg); }
+.cat-select-dropdown.open .cat-select-btn { border-color: var(--primary); }
+.cat-select-menu {
+  display: none; flex-direction: column;
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 10;
+  min-width: 100%; padding: 6px;
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-1);
+}
+.cat-select-dropdown.open .cat-select-menu { display: flex; }
+.cat-select-item {
+  display: block; width: 100%; text-align: left;
+  padding: 8px 10px; border-radius: 8px; border: none;
+  background: transparent; color: var(--text); cursor: pointer;
+  font-family: inherit; font-size: 0.85rem; font-weight: 600; white-space: nowrap;
+}
+.cat-select-item:hover { background: var(--bg-c); }
+.cat-select-item.active { color: var(--primary); }
+
+@media (min-width: 900px) {
+  .cat-select-btn { width: 176px; padding: 11px 18px; font-size: 1.05rem; border-radius: 999px; }
+  .cat-select-item { font-size: 1.05rem; padding: 10px 14px; }
 }

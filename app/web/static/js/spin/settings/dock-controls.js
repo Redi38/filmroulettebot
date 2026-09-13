@@ -1,5 +1,5 @@
 // Shared render plumbing for every dock setting toggle: the two spin
-// docks (random/spin) that every setting renders itself onto, and the
+// dock that every setting renders itself onto, and the
 // two generic toggle-button renderers (choice row / single icon button)
 // that each individual setting file in spin/settings/ builds on.
 
@@ -8,9 +8,12 @@ let spinCooldownUntil = 0;
 let spinCooldownTimer = null;
 
 // ---- shared dock render helpers ------------------------------------------
-const DOCK_PREFIXES = ["random", "spin"];
+// One roulette, one dock. Kept as a list so the per-setting files can keep
+// calling renderControlOnAllDocks() unchanged.
+const DOCK_PREFIXES = ["spin"];
 
 function renderAllDockControls(prefix) {
+  renderSpinCatChips();
   renderSpinModeToggle(`${prefix}-mode-toggle`);
   renderWeightToggle(`${prefix}-weight-toggle`);
   renderAutoWatchToggle(`${prefix}-watch-toggle`);

@@ -34,16 +34,18 @@ Browser-based frontend (FastAPI + plain HTML/CSS/JS) backed by TMDB
 data and the same SQLite database as the bot:
 
 - 🏠 **Home feed** — a curated poster feed across everything tracked.
-- 🌀 **Spin wheel** — animated wheel-of-fortune roulette per category
-  (movies / series / cartoons) or fully random across all of them,
-  with weighted spins and a customizable center-hub image.
+- 🌀 **Spin wheel** — a single animated wheel-of-fortune roulette. The
+  category picker on the dock switches between one list (movies /
+  series / cartoons) and "Наугад", which picks the category for you
+  too. Weighted spins and a customizable center-hub image.
 - 🎟 **In theaters** — what's currently playing and what's coming to
   theaters next, paginated.
 - 📺 **Series premieres** — upcoming season/episode premiere dates.
 - 🔔 **Series tracking** — search and follow specific shows to keep
   an eye on new releases.
-- 📋 **Watchlists per category** — browsable, searchable lists for
-  movies/series/cartoons with add, rename, and delete.
+- 📋 **Watchlists** — one searchable list screen with a category
+  picker (movies / series / cartoons / Marvel / DC), showing each
+  category's item count, with add, rename, reorder, and delete.
 - 🦇🕷 **Marvel & DC showcases** — dedicated studio collections, with
   the option to add titles straight to your list.
 - 🕰 **Upcoming** — a personal list of anticipated titles not out yet.

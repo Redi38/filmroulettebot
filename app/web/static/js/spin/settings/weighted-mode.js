@@ -43,14 +43,14 @@ async function resizeIdleWheelForWeightedMode(weighted) {
       resetWheelWraps();
       if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
       if (currentCardData) return;
-      if (spinMode === "wheel" && currentView === "spin") showIdleWheel(currentCat);
+      if (spinMode === "wheel" && currentView === "spin" && !isRandomSpin()) showIdleWheel(spinCat);
     });
     return;
   }
 
   const token = ++weightResizeToken;
   try {
-    const data = await api(`/api/${currentCat}/wheel-weights`, {
+    const data = await api(`/api/${spinCat}/wheel-weights`, {
       method: "POST", headers: {"Content-Type": "application/json"},
       body: JSON.stringify({pool, weighted}),
     });
@@ -62,6 +62,6 @@ async function resizeIdleWheelForWeightedMode(weighted) {
     if (token !== weightResizeToken) return;
     resetWheelWraps();
     if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
-    if (!currentCardData && spinMode === "wheel" && currentView === "spin") showIdleWheel(currentCat);
+    if (!currentCardData && spinMode === "wheel" && currentView === "spin" && !isRandomSpin()) showIdleWheel(spinCat);
   }
 }

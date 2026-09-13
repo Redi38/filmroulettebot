@@ -132,7 +132,7 @@
   main > #showcase-section.active { max-width: 900px; }
   #showcase-section #showcase-filters { margin-bottom: 20px; }
 
-  main > #random-spin-section.active, main > #spin-section.active {
+  main > #spin-section.active {
     max-width: none;
   }
 

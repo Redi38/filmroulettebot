@@ -8,7 +8,7 @@ from .connection import check_table, conn, retry_on_lock
 async def get_items(table: str) -> list[str]:
     check_table(table)
     async with conn() as db:
-        async with db.execute(f"SELECT title FROM {table} ORDER BY id") as cur:
+        async with db.execute(f"SELECT title FROM {table} ORDER BY position, id") as cur:
             return [row[0] async for row in cur]
 
 
@@ -34,11 +34,17 @@ async def get_items_with_ids(table: str) -> list[dict]:
     flips that choice back. That's what happened here: the two functions
     drifted out of sync with each other, and both drifted away from
     insertion order. Pin the order explicitly so it can't silently move
-    again as columns get added to either query in the future."""
+    again as columns get added to either query in the future.
+
+    Ordered by `position` (falling back to `id` for a tie, which only
+    happens for legacy rows never touched by move_item) rather than plain
+    `id` so a user can reorder rows — see move_item() below — independently
+    of when they were added; the weighted roulette mode reads a title's
+    odds straight off this order (title_weights() in app/services/titles.py)."""
     check_table(table)
     async with conn() as db:
         async with db.execute(
-            f"SELECT id, title, is_series FROM {table} ORDER BY id"
+            f"SELECT id, title, is_series FROM {table} ORDER BY position, id"
         ) as cur:
             return [
                 {"id": row[0], "title": row[1], "is_series": None if row[2] is None else bool(row[2])}
@@ -74,9 +80,12 @@ async def add_item(table: str, title: str, is_series: bool | None = None) -> Non
     if not title:
         raise ValueError("Title cannot be empty.")
     async with conn() as db:
+        async with db.execute(f"SELECT COALESCE(MAX(position), 0) FROM {table}") as cur:
+            row = await cur.fetchone()
+        next_position = (row[0] if row else 0) + 1
         await db.execute(
-            f"INSERT OR IGNORE INTO {table} (title, is_series) VALUES (?, ?)",
-            (title, None if is_series is None else int(is_series)),
+            f"INSERT OR IGNORE INTO {table} (title, is_series, position) VALUES (?, ?, ?)",
+            (title, None if is_series is None else int(is_series), next_position),
         )
         await db.commit()
 
@@ -130,3 +139,35 @@ async def rename_item_by_id(table: str, item_id: int, new_title: str, is_series:
             )
         await db.commit()
         return cur.rowcount > 0
+
+
+@retry_on_lock
+async def move_item(table: str, item_id: int, direction: str) -> bool:
+    """Swap a row's rank with its immediate neighbour in the full list
+    (not just the current page — the caller in items.py resolves which
+    page the row ends up on afterwards). `direction` is "up" (swap with
+    the previous row) or "down" (swap with the next one).
+
+    Reordering here is exactly how a user tunes weighted-roulette odds:
+    position IS the weight (see title_weights() in app/services/titles.py),
+    so moving a title up simply makes it more likely to be picked.
+
+    Returns False if item_id doesn't exist or is already at that end of
+    the list (nothing to swap with)."""
+    check_table(table)
+    if direction not in ("up", "down"):
+        raise ValueError(f"Invalid direction: {direction!r}")
+    async with conn() as db:
+        async with db.execute(f"SELECT id, position FROM {table} ORDER BY position, id") as cur:
+            rows = [(row[0], row[1]) async for row in cur]
+        idx = next((i for i, (rid, _) in enumerate(rows) if rid == item_id), None)
+        if idx is None:
+            return False
+        other_idx = idx - 1 if direction == "up" else idx + 1
+        if other_idx < 0 or other_idx >= len(rows):
+            return False
+        (id_a, pos_a), (id_b, pos_b) = rows[idx], rows[other_idx]
+        await db.execute(f"UPDATE {table} SET position = ? WHERE id = ?", (pos_b, id_a))
+        await db.execute(f"UPDATE {table} SET position = ? WHERE id = ?", (pos_a, id_b))
+        await db.commit()
+        return True

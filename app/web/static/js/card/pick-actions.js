@@ -1,4 +1,4 @@
-// Post-pick actions: confirm/sequel/delete flow after a spin result.
+// Post-pick actions: confirm/sequel/delete/watched flow after a spin result.
 
 function confirmPick() {
   const prompt = document.getElementById("sequel-prompt");
@@ -7,10 +7,11 @@ function confirmPick() {
     <div class="card-actions">
       <button class="btn btn-success btn" onclick="sequelYes()">Да, сиквел</button>
       <button class="btn btn-danger btn" onclick="sequelNo()">Нет, удалить</button>
+      <button class="btn btn-primary btn" onclick="pickWatched()" title="Просмотрено — без сиквела и без удаления из списка">Подтвердить</button>
     </div>`;
   prompt.style.display = "block";
   prompt.classList.remove("fade-in");
-  void prompt.offsetWidth; // restart animation if confirmPick() is ever called twice
+  void prompt.offsetWidth;
   prompt.classList.add("fade-in");
 }
 
@@ -53,6 +54,17 @@ async function sequelNo() {
     fadeIn(container);
     currentCardData = null;
   } catch (e) { showToast(e.message); }
+}
+
+async function pickWatched() {
+  if (!currentCardData) return;
+  markCurrentPickResolved({ type: "watched" });
+  const container = resultEl();
+  await fadeOut(container);
+  container.innerHTML =
+    `<div class="card card-simple"><div class="title">✅ ${escapeHtml(currentCardData.original_title)} просмотрено</div></div>`;
+  fadeIn(container);
+  currentCardData = null;
 }
 
 function rerollPick(cat) { doSpin(cat); }

@@ -47,7 +47,7 @@ async def test_rename_by_id_survives_a_stale_title(client):
     assert r2.status_code == 200
 
     items = await get_items_with_ids("movies")
-    assert items == [{"id": item_id, "title": "Матрица (1999) Remastered"}]
+    assert items == [{"id": item_id, "title": "Матрица (1999) Remastered", "is_series": None}]
 
 
 async def test_rename_by_id_404s_if_row_was_deleted_meanwhile(client):
@@ -112,7 +112,7 @@ async def test_upcoming_rename_by_id_survives_a_stale_title(client):
     assert r2.status_code == 200
 
     items = await get_upcoming_movies_with_ids()
-    assert items == [{"id": item_id, "title": "Дюна: Мессия (2026)"}]
+    assert items == [{"id": item_id, "title": "Дюна: Мессия (2026)", "is_series": None}]
 
 
 async def test_upcoming_delete_by_id_is_idempotent(client):

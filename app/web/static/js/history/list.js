@@ -55,6 +55,9 @@ function resolvedOutcomeLabel(title, outcome) {
   if (outcome.type === "delete") {
     return `❌ Удалено`;
   }
+  if (outcome.type === "watched") {
+    return `✅ Просмотрено`;
+  }
   return `Обработано ✅`;
 }
 
@@ -82,6 +85,19 @@ function histConfirm(idx) {
   actionsEl.innerHTML = `
     <button class="btn btn-success" onclick="histSequel(${idx})">Сиквел</button>
     <button class="btn btn-danger" onclick="histDelete(${idx})">Удалить</button>
+    <button class="btn btn-primary" onclick="histWatched(${idx})" title="Просмотрено — без сиквела и без удаления из списка">Просмотрено</button>
+    <button class="btn btn-danger hist-clear-entry-btn" onclick="histClearEntry(${idx})" title="Удалить эту запись из истории">Очистить</button>`;
+}
+
+async function histWatched(idx) {
+  const actionsEl = document.getElementById(`hist-actions-${idx}`);
+  const div = actionsEl.closest(".hist-item");
+  const {category, title, timestamp, key} = div.dataset;
+  markResolved(key, { type: "watched" });
+  resolveOnServer(category, title, timestamp, "watched", null);
+  div.classList.add("resolved");
+  actionsEl.innerHTML = `
+    <span class="muted">${resolvedOutcomeLabel(title, { type: "watched" })}</span>
     <button class="btn btn-danger hist-clear-entry-btn" onclick="histClearEntry(${idx})" title="Удалить эту запись из истории">Очистить</button>`;
 }
 

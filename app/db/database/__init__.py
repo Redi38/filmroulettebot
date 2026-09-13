@@ -27,6 +27,7 @@ from .items import (
     get_items_with_ids,
     item_exists,
     item_exists_other_id,
+    move_item,
     rename_item,
     rename_item_by_id,
 )
@@ -56,6 +57,7 @@ __all__ = [
     "delete_item_by_id",
     "rename_item",
     "rename_item_by_id",
+    "move_item",
     "get_tmdb_cache",
     "set_tmdb_cache",
     "load_history",

@@ -107,11 +107,11 @@ html.vt-section::view-transition-new(main-content) {
   background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-md);
   padding: 18px; margin-bottom: 14px; box-shadow: var(--shadow-1);
 }
-/* `aspect-ratio` reserves the poster's box before the image bytes arrive, so
-   the meta lines below it don't jump down once it loads. Until then the box
-   shows the same shimmer the skeletons use. */
 .poster { width: 100%; max-width: min(280px, 100%); aspect-ratio: 2 / 3; max-height: 44vh; object-fit: cover; border-radius: 12px; display: block; margin: 0 auto 14px;
   box-shadow: 0 6px 24px var(--glow); background: rgba(255,255,255,0.04); }
+@supports (height: 1svh) {
+  .poster { max-height: 44svh; }
+}
 .poster.img-pending {
   background-image: linear-gradient(100deg, rgba(255,255,255,0.02) 30%, rgba(var(--primary-rgb), 0.12) 50%, rgba(255,255,255,0.02) 70%);
   background-size: 250% 100%;
@@ -200,10 +200,12 @@ html.vt-section::view-transition-new(main-content) {
   .watch-link:hover { filter: brightness(1.1); }
 }
 .watch-link.btn-neon-pulse { animation: watchLinkNeonPulse 0.48s ease-out; }
+/* Was hardcoded to rgb(139,124,246) — this app's old purple-theme primary,
+   left behind when the palette moved to orange/pink. */
 @keyframes watchLinkNeonPulse {
-  0% { box-shadow: 0 0 0 0 rgba(139,124,246,0), 0 4px 14px rgba(0,0,0,0.25); }
-  55% { box-shadow: 0 0 24px 8px rgba(139,124,246,0.55), 0 4px 14px rgba(0,0,0,0.25); }
-  100% { box-shadow: 0 0 0 0 rgba(139,124,246,0), 0 4px 14px rgba(0,0,0,0.25); }
+  0% { box-shadow: 0 0 0 0 rgba(var(--primary-rgb),0), 0 4px 14px rgba(0,0,0,0.25); }
+  55% { box-shadow: 0 0 24px 8px rgba(var(--primary-rgb),0.55), 0 4px 14px rgba(0,0,0,0.25); }
+  100% { box-shadow: 0 0 0 0 rgba(var(--primary-rgb),0), 0 4px 14px rgba(0,0,0,0.25); }
 }
 .card-actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; justify-content: center; }
 .sequel-prompt { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); text-align: center; }
@@ -288,6 +290,18 @@ html.vt-section::view-transition-new(main-content) {
   padding: 5px 11px; cursor: pointer; flex-shrink: 0;
   display: inline-flex; align-items: center; justify-content: center;
 }
+.move-btn-group { display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; }
+.move-btn {
+  background: rgba(var(--primary-rgb), 0.12); color: var(--text); border: none; border-radius: 6px;
+  padding: 2px 6px; cursor: pointer; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: transform var(--dur-fast) var(--ease-spring), filter var(--dur-fast) ease, opacity 0.15s ease;
+}
+.move-btn:disabled { opacity: 0.28; cursor: default; }
+.move-btn:active:not(:disabled) { transform: scale(0.88); }
+@media (hover: hover) and (pointer: fine) {
+  .move-btn:hover:not(:disabled) { filter: brightness(1.2); background: rgba(var(--primary-rgb), 0.2); }
+}
 .list-row button.del-btn, button.del-btn,
 .list-row button.edit-btn, button.edit-btn {
   transition: transform var(--dur-fast) var(--ease-spring), filter var(--dur-fast) ease;
@@ -324,6 +338,9 @@ html.vt-section::view-transition-new(main-content) {
   flex: 1; background: none; border: none; color: var(--text);
   font-size: 0.95rem; font-family: inherit;
 }
+/* .search-row itself already shows focus via :focus-within (border-color
+   change on the pill), so the default :focus-visible ring on the bare
+   input just overlays a second, harsher rectangle on top of it. */
 .search-row input:focus,
 .search-row input:focus-visible { outline: none; }
 .search-row input::placeholder { color: var(--muted); }

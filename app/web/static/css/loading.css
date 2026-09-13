@@ -65,6 +65,16 @@
   .skel-card-poster { margin: 0; max-height: clamp(220px, 42vh, 420px); }
 }
 
+/* Same pull-to-refresh growth as .poster in buttons-cards.css — see the
+   comment there. These skeletons are exactly what's on screen *during*
+   that reload, so they're the most visible place this ever showed up. */
+@supports (height: 1svh) {
+  .skel-card-poster { max-height: 44svh; }
+  @container (min-width: 560px) {
+    .skel-card-poster { max-height: clamp(220px, 42svh, 420px); }
+  }
+}
+
 /* Modal search results: poster thumb + one title line. */
 .skel-search-row {
   display: flex; align-items: center; gap: 12px;
@@ -96,10 +106,6 @@
   border-radius: 50%; border: 4px solid var(--border);
 }
 
-/* Crossfading one block of content into another inside a fixed box (the
-   poster modal swapping its skeleton for the loaded card). The outgoing copy
-   is lifted out of the flow so the box is sized by the incoming content for
-   the whole transition and nothing reflows mid-fade. */
 .xfade-host { position: relative; }
 .xfade-layer { transition: opacity var(--dur-base) var(--ease-standard); }
 .xfade-host > .xfade-out {

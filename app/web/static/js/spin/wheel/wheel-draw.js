@@ -114,7 +114,8 @@ function drawWheelSegments(canvas, items, dpr, boundaries, {animating = false, h
 
   // Rendering is identical whether or not we're mid-animation: switching
   // fills/strokes on and off between frames reads as flicker. Gradients are
-  // shared per palette colour, so at most WHEEL_COLORS.length are built.
+  // shared per palette colour, so at most wheelColors.length are built.
+  const wheelColors = getWheelColors();
   const gradientCache = new Map();
   const segmentFill = (color) => {
     let g = gradientCache.get(color);
@@ -131,7 +132,7 @@ function drawWheelSegments(canvas, items, dpr, boundaries, {animating = false, h
   for (let i = 0; i < n; i++) {
     const start = -Math.PI / 2 + boundaries[i].start * Math.PI / 180;
     const end = -Math.PI / 2 + boundaries[i].end * Math.PI / 180;
-    const color = WHEEL_COLORS[i % WHEEL_COLORS.length];
+    const color = wheelColors[i % wheelColors.length];
     const dimmed = highlighting && i !== highlightIndex;
 
     ctx.beginPath();
@@ -202,7 +203,14 @@ function drawWheelSegments(canvas, items, dpr, boundaries, {animating = false, h
   ctx.stroke();
 
   // Hub: a slightly larger dark disc with an inner ring, so the hub media
-  // (which sits above it in the DOM) reads as set into the wheel.
+  // (which sits above it in the DOM) reads as set into the wheel. Pulled
+  // from the live theme (--card / --primary-rgb) instead of the old fixed
+  // dark-navy-purple — those hex codes were this app's card/border colors
+  // back when the whole theme was purple, and never got updated when it
+  // moved to the current orange/pink palette.
+  const rootStyle = getComputedStyle(document.documentElement);
+  const hubFill = rootStyle.getPropertyValue("--card").trim() || "#1e1c23";
+  const hubRingRgb = rootStyle.getPropertyValue("--primary-rgb").trim() || "242, 169, 59";
   const hubR = Math.max(16, cssSize * 0.045);
   ctx.beginPath();
   ctx.arc(cx, cy, hubR + 6, 0, Math.PI * 2);
@@ -210,9 +218,9 @@ function drawWheelSegments(canvas, items, dpr, boundaries, {animating = false, h
   ctx.fill();
   ctx.beginPath();
   ctx.arc(cx, cy, hubR, 0, Math.PI * 2);
-  ctx.fillStyle = "#17132c";
+  ctx.fillStyle = hubFill;
   ctx.fill();
-  ctx.strokeStyle = "#342a5c";
+  ctx.strokeStyle = `rgba(${hubRingRgb}, 0.55)`;
   ctx.lineWidth = 2;
   ctx.stroke();
 }

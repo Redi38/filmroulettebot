@@ -77,11 +77,6 @@
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 .add-search-row:hover { background: rgba(var(--primary-rgb), 0.14); border-color: rgba(var(--primary-rgb), 0.4); }
-/* Themed ring (orange normally, red/blue under body[data-studio="marvel"/"dc"]
-   via --focus-ring -> --primary). outline-offset is negative so the ring is
-   drawn inside the row instead of 2px outside it — #add-search-results
-   scrolls with overflow-y:auto, so a positive offset got clipped flat on
-   the first/last row instead of showing a full ring. */
 .add-search-row:focus,
 .add-search-row:focus-visible {
   outline: var(--focus-ring); outline-offset: -2px; border-color: var(--primary);
@@ -159,6 +154,10 @@
   .showcase-poster-placeholder { font-size: 2rem; }
   .showcase-title { font-size: 1.15rem; white-space: normal; }
   .showcase-date { font-size: 0.92rem; margin-top: 5px; }
+  /* Keep the loading placeholder in step with the poster size bumped above —
+     otherwise the skeleton (still 46x68) visibly resizes to 74x110 the
+     moment real rows land. */
+  .skel-showcase-poster { width: 74px; height: 110px; border-radius: 10px; }
 
   #add-search-box {
     max-width: 560px; padding: 28px;

@@ -13,6 +13,7 @@ from app.db.database import (
     get_items_with_ids,
     item_exists,
     item_exists_other_id,
+    move_item,
     rename_item_by_id,
 )
 from app.services.tmdb import (
@@ -27,6 +28,7 @@ from ..shared import (
     LIST_PAGE_SIZE,
     DeleteByIdBody,
     RenameByIdBody,
+    ReorderBody,
     TitleBody,
     _check_category,
     _validate_rename_by_id,
@@ -88,6 +90,21 @@ async def api_add(cat: str, body: TitleBody) -> dict:
 async def api_delete(cat: str, body: DeleteByIdBody) -> dict:
     _check_category(cat)
     await delete_item_by_id(cat, body.id)
+    return {"ok": True}
+
+
+@router.post("/api/{cat}/reorder")
+async def api_reorder(cat: str, body: ReorderBody) -> dict:
+    """Swap a title's rank with its neighbour above/below — in the full
+    list, across page boundaries, not just the current page of /items.
+    Position doubles as the weighted-roulette weight (see title_weights()
+    in app/services/titles.py), so this is how a user makes a title more
+    or less likely to come up."""
+    _check_category(cat)
+    if body.direction not in ("up", "down"):
+        raise HTTPException(400, "direction must be 'up' or 'down'")
+    if not await move_item(cat, body.id, body.direction):
+        raise HTTPException(409, "Уже с краю списка — дальше двигать некуда")
     return {"ok": True}
 
 

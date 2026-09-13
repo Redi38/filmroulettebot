@@ -19,6 +19,11 @@ class DeleteByIdBody(BaseModel):
     id: int
 
 
+class ReorderBody(BaseModel):
+    id: int
+    direction: str
+
+
 class RenameByIdBody(BaseModel):
     id: int
     new_title: str

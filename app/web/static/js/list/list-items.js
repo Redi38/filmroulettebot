@@ -63,6 +63,8 @@ async function loadList(page) {
     if (countEl) countEl.textContent = `Всего: ${data.total_count}`;
     let liveCount = data.total_count;
     container.innerHTML = "";
+    const canReorder = !q; // filtered view skips a title's real neighbours, so
+                           // "up"/"down" here wouldn't mean what it looks like
     for (const [idx, {id, title, poster_url}] of data.items.entries()) {
       const cat = currentCat;
       const row = createEditableRow(title, {
@@ -91,6 +93,10 @@ async function loadList(page) {
           liveCount += delta;
           countEl.textContent = `Всего: ${liveCount}`;
         },
+        onMoveUp: canReorder ? () => moveListItem(cat, id, "up", data.page, idx, data.total_pages, data.items.length) : undefined,
+        onMoveDown: canReorder ? () => moveListItem(cat, id, "down", data.page, idx, data.total_pages, data.items.length) : undefined,
+        canMoveUp: canReorder && !(data.page === 1 && idx === 0),
+        canMoveDown: canReorder && !(data.page === data.total_pages && idx === data.items.length - 1),
       });
       row.style.setProperty("--row-i", Math.min(idx, 6));
       container.appendChild(row);
@@ -113,6 +119,24 @@ function checkListEmpty(container) {
   container.innerHTML = q
     ? placeholderHtml(`Ничего не найдено по «${escapeHtml(q)}»`, "🔍")
     : placeholderHtml("Пока здесь пусто — добавь первый тайтл выше 🍿", "📭");
+}
+
+async function moveListItem(cat, id, direction, page, idx, totalPages, itemsOnPage) {
+  // The swap happens against the item's neighbour in the FULL list, not
+  // just this page (see move_item() server-side) — so moving the first
+  // row on a page "up" pulls it onto the end of the previous page, and
+  // moving the last row "down" pushes it onto the start of the next one.
+  // Follow it there instead of re-showing this page with a gap.
+  let targetPage = page;
+  if (direction === "up" && idx === 0 && page > 1) targetPage = page - 1;
+  if (direction === "down" && idx === itemsOnPage - 1 && page < totalPages) targetPage = page + 1;
+  try {
+    await api(`/api/${cat}/reorder`, {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({id, direction}),
+    });
+    if (currentCat === cat) loadList(targetPage);
+  } catch (e) { showToast(e.message); }
 }
 
 document.getElementById("search-input").addEventListener("input", debounce((ev) => {

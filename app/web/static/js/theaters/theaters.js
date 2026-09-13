@@ -87,7 +87,9 @@ async function loadTheaters(trigger) {
   renderTheatersFilters();
   if (!theatersLoaded) {
     container.style.opacity = "1";
-    container.innerHTML = skeletonShowcaseHtml();
+    container.innerHTML = `
+      <div class="theaters-col theaters-col-now">${skeletonShowcaseHtml()}</div>
+      <div class="theaters-col theaters-col-upcoming">${skeletonShowcaseHtml()}</div>`;
   }
   try {
     const data = await api(`/api/theaters?now_playing_page=${theatersNowPlayingPage}&upcoming_page=${theatersUpcomingPage}&added=${theatersAddedFilter}`);

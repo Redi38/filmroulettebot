@@ -27,6 +27,35 @@ function createEditableRow(title, opts) {
   span.onclick = () => copyToClipboard(title, span);
   row.appendChild(span);
 
+  if (opts.onMoveUp || opts.onMoveDown) {
+    // Reordering a row IS how a user tunes its weighted-roulette odds —
+    // position doubles as weight (see title_weights() in
+    // app/services/titles.py) — so these only show up where the caller
+    // opts in (list-items.js, and only outside an active search filter).
+    const moveGroup = document.createElement("div");
+    moveGroup.className = "move-btn-group";
+
+    const up = document.createElement("button");
+    up.className = "move-btn move-btn-up";
+    up.innerHTML = ARROW_UP_ICON_SVG;
+    up.setAttribute("aria-label", "Поднять выше — повышает вес в весовой рулетке");
+    up.title = "Поднять выше — повышает вес в весовой рулетке";
+    up.disabled = !opts.canMoveUp;
+    up.onclick = (ev) => { ev.stopPropagation(); if (opts.onMoveUp) opts.onMoveUp(); };
+    moveGroup.appendChild(up);
+
+    const down = document.createElement("button");
+    down.className = "move-btn move-btn-down";
+    down.innerHTML = ARROW_DOWN_ICON_SVG;
+    down.setAttribute("aria-label", "Опустить ниже — понижает вес в весовой рулетке");
+    down.title = "Опустить ниже — понижает вес в весовой рулетке";
+    down.disabled = !opts.canMoveDown;
+    down.onclick = (ev) => { ev.stopPropagation(); if (opts.onMoveDown) opts.onMoveDown(); };
+    moveGroup.appendChild(down);
+
+    row.appendChild(moveGroup);
+  }
+
   const edit = document.createElement("button");
   edit.className = "edit-btn";
   edit.innerHTML = PENCIL_ICON_SVG;

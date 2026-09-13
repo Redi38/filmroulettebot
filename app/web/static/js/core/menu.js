@@ -168,10 +168,11 @@ function switchSpinCat(code) {
   renderSpinCatChips();
   updateHeaderTitle();
   pushViewToHistory("spin", code);
-  resetWheelWraps();
-  resetSpinResult();
   currentCardData = null;
+  // Same as showSection(): the outgoing wheel stays put until the incoming
+  // one is ready, so switching category is a swap rather than a blank gap.
   if (spinMode === "wheel" && !isRandomSpin()) showIdleWheel(spinCat);
+  else { resetWheelWraps(); resetSpinResult(); }
   if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
 }
 
@@ -246,6 +247,10 @@ async function showSection() {
   const hasViewTransitions = !reduceMotion && typeof document.startViewTransition === "function";
   const useViewTransition = isSwap && hasViewTransitions;
 
+  // Anything leaving the screen is about to be display:none'd, which cancels
+  // its CSS animations — the marquee banks its progress before that happens.
+  if (currentView !== "home" && typeof pauseHomeMarquee === "function") pauseHomeMarquee();
+
   const applyDom = () => {
     window.scrollTo(0, 0);
     for (const [view, id] of Object.entries(SECTION_IDS)) {
@@ -276,10 +281,14 @@ async function showSection() {
   if (currentView === "home") loadHome();
   if (currentView === "spin") {
     renderAllDockControls("spin");
-    resetWheelWraps();
-    resetSpinResult();
     currentCardData = null;
+    // Tearing the wheel down here and rebuilding it after the preview lands
+    // is what made re-entering the tab flicker: the old wheel vanished, the
+    // "Нажми «Крутить»" placeholder flashed, then a skeleton, then the new
+    // wheel. showIdleWheel() keeps whatever is on screen until it knows
+    // whether it can reuse it, and resets things itself if it cannot.
     if (spinMode === "wheel" && !isRandomSpin()) showIdleWheel(spinCat);
+    else { resetWheelWraps(); resetSpinResult(); }
     if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
   }
   if (currentView === "list") loadList();

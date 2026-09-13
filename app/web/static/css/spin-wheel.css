@@ -534,6 +534,21 @@ body.dock-ready .wheel-audio-controls { opacity: 1; pointer-events: auto; }
   padding: 10px 14px; border-radius: 10px; background: var(--primary); color: var(--on-primary);
   border: none; cursor: pointer; font-family: inherit; font-weight: 700;
 }
+/* The wheel is sized from the layout, and on the first frame after the
+   roulette tab opens the layout is not settled yet — so it is built,
+   re-measured, and only revealed once it is at its final size, with the
+   loading skeleton standing in until then. `visibility` rather than
+   `display` or `opacity` on the real wheel: it must keep its box so the
+   measurement is of the real thing, and must not be paintable while it is
+   wrong. See buildSettledWheel() in spin/wheel/wheel-build.js. */
+.wheel-wrap--settling > *:not(.wheel-settle-skeleton) { visibility: hidden; }
+.wheel-settle-skeleton {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+/* Only ever visible while settling — never left in the DOM afterwards. */
+.wheel-wrap:not(.wheel-wrap--settling) .wheel-settle-skeleton { display: none; }
+
 .wheel-wrap.wheel-done .wheel-holder { animation: wheelPop 0.4s var(--ease-spring); }
 @keyframes wheelPop { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
 

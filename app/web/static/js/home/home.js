@@ -24,6 +24,67 @@ async function loadHome() {
   } else {
     syncMarqueeSize();
   }
+  resumeHomeMarquee();
+}
+
+// A CSS animation is cancelled outright when its element goes `display: none`
+// — which is what .section does on every view switch — so the marquee started
+// over from the left edge each time the user came back to Афиша.
+//
+// The fix is to record where each row had got to on the way out and seek the
+// fresh animation back there on the way in. Web Animations is what makes that
+// exact: `currentTime` is the animation's own clock, so it survives a hover
+// pause and needs no duration arithmetic. Wall-clock accounting is kept as a
+// fallback for browsers without getAnimations().
+let marqueeShownAt = 0;
+
+function marqueeAnimationOf(track) {
+  if (typeof track.getAnimations !== "function") return null;
+  const running = track.getAnimations();
+  return running.length ? running[0] : null;
+}
+
+function pauseHomeMarquee() {
+  if (!marqueeShownAt) return;
+  const elapsed = performance.now() - marqueeShownAt;
+  marqueeShownAt = 0;
+  for (const track of document.querySelectorAll(".marquee-track")) {
+    const anim = marqueeAnimationOf(track);
+    track._marqueeTime = anim && typeof anim.currentTime === "number"
+      ? anim.currentTime
+      : (track._marqueeTime || 0) + elapsed;
+  }
+}
+
+function seekMarqueeTrack(track) {
+  const saved = track._marqueeTime || 0;
+  if (!saved) return true;
+  const anim = marqueeAnimationOf(track);
+  if (anim) {
+    try {
+      anim.currentTime = saved;
+      return true;
+    } catch (e) {
+      // fall through to the delay fallback
+    }
+  }
+  const duration = parseFloat(getComputedStyle(track).animationDuration);
+  if (!duration) return false;
+  // Each row carries its own --marquee-duration, so the offset is taken
+  // modulo that row's cycle rather than a shared one.
+  track.style.animationDelay = `-${(saved / 1000) % duration}s`;
+  return true;
+}
+
+function resumeHomeMarquee() {
+  if (marqueeShownAt) return;
+  marqueeShownAt = performance.now();
+  for (const track of document.querySelectorAll(".marquee-track")) {
+    // The section may only have become visible this tick, in which case the
+    // new animation does not exist yet — retry once on the next frame rather
+    // than leaving the row stuck at the start.
+    if (!seekMarqueeTrack(track)) requestAnimationFrame(() => seekMarqueeTrack(track));
+  }
 }
 
 // Picks one poster from the collection at random as a blurred hero backdrop

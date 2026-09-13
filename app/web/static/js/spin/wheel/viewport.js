@@ -63,14 +63,23 @@ function onRealResize(handler) {
   };
 }
 
+// Every input the wheel is sized from moves during the first moments of a
+// page load — fonts, the dock, scrollbars. Rather than guess when that
+// settles, note when the layout was last disturbed and let wheel-build.js
+// wait for a quiet window before it measures anything.
+let wheelLayoutTouchedAt = performance.now();
+function touchWheelLayout() { wheelLayoutTouchedAt = performance.now(); }
+function wheelLayoutQuietFor() { return performance.now() - wheelLayoutTouchedAt; }
+
 function refreshWheelLayout() {
+  touchWheelLayout();
   rebuildVisibleWheels();
   syncSpinResultClearance();
 }
 const debouncedRefreshWheelLayout = typeof debounce === "function"
   ? debounce(refreshWheelLayout, 150)
   : refreshWheelLayout;
-window.addEventListener("resize", onRealResize(debouncedRefreshWheelLayout));
+window.addEventListener("resize", onRealResize(() => { touchWheelLayout(); debouncedRefreshWheelLayout(); }));
 window.addEventListener("orientationchange", debouncedRefreshWheelLayout);
 
 let dockRevealToken = 0;
@@ -110,6 +119,7 @@ if (typeof ResizeObserver !== "undefined") {
     ? debounce(refreshWheelLayout, 150)
     : refreshWheelLayout;
   const wheelLayoutObserver = new ResizeObserver(() => {
+    touchWheelLayout();
     debouncedRefreshWheelLayoutForObserver();
   });
   for (const sectionId of ["spin-section"]) {

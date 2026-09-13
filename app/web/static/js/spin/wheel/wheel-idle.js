@@ -123,19 +123,23 @@ function startWheelIdle(canvas) {
 function attachWheelHover(canvas, mask) {
   if (!canvas || !mask) return;
 
+  const isLocked = () => wheelSpinActive || canvas._hoverLocked;
+
   const clear = () => {
     canvas._idleHovering = false;
     if (canvas._idleHoverIdx !== -1) {
       canvas._idleHoverIdx = -1;
-      if (!wheelSpinActive) wheelIdleRedraw(canvas, -1);
+      // Not while locked: that redraw would wipe the winner's highlight the
+      // moment the cursor left the wheel.
+      if (!isLocked()) wheelIdleRedraw(canvas, -1);
     }
-    hideWheelHoverLabel(canvas);
+    if (!isLocked()) hideWheelHoverLabel(canvas);
   };
 
   canvas._idleHoverIdx = -1;
 
   mask.addEventListener("pointermove", (ev) => {
-    if (wheelSpinActive || ev.pointerType === "touch") return;
+    if (isLocked() || ev.pointerType === "touch") return;
     const idx = wheelIdleSegmentAt(canvas, ev.clientX, ev.clientY);
     if (idx === -1) { clear(); return; }
     // Pausing the drift while a segment is being read keeps the label from

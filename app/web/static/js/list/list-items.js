@@ -8,14 +8,13 @@ let currentListCat = null;
 let currentListQuery = "";
 
 function renderListCatChips() {
+  // Labels only. The counts used to ride along here, but they come from
+  // /api/categories, which resolves after the first render — so on a reload
+  // the chips drew bare and stayed that way, and the number looked like it
+  // came and went at random. The count for the category you are actually
+  // looking at is already on the line below the search box.
   renderCatChips("list-cat-select", {
-    options: listCats().map((code) => {
-      const count = categoryCounts ? categoryCounts[code] : null;
-      const label = LIST_CATS[code] || code;
-      // The count doubles as the empty-category signal — a category showing
-      // 0 is exactly the one the roulette has stopped offering.
-      return [code, count === null || count === undefined ? label : `${label} · ${count}`];
-    }),
+    options: listCats().map((code) => [code, LIST_CATS[code] || code]),
     value: currentCat,
     onChange: (code) => switchListCat(code),
   });
@@ -78,9 +77,10 @@ async function loadList(page) {
     await fadeOut(container);
     // Keep the cached counts (and therefore the chips, and therefore which
     // categories the roulette offers) honest after an add or a delete.
+    // The roulette picker drops categories that have nothing left in them,
+    // so its idea of the counts has to keep up with adds and deletes.
     if (!q && categoryCounts && categoryCounts[currentCat] !== data.total_count) {
       categoryCounts[currentCat] = data.total_count;
-      renderListCatChips();
       if (typeof renderSpinCatChips === "function") renderSpinCatChips();
     }
     const countEl = document.getElementById("list-count");

@@ -23,7 +23,10 @@ function renderCatChips(containerId, { options, value, onChange, extraClass }) {
     + (extraClass ? " " + extraClass : "");
   el.setAttribute("role", "tablist");
 
-  const keys = options.map(([val]) => String(val)).join("|");
+  // Keyed on labels as well as values: /api/categories can rename a chip
+  // ("Мультфильмы" -> "Мульты") after the first render, and without the
+  // label in the key the row would keep the stale text forever.
+  const keys = options.map(([val, label]) => `${val}:${label}`).join("|");
   // Rebuild only when the set of options actually changed (a category going
   // empty, counts arriving) — otherwise just move the thumb, which is the
   // whole point of keeping the DOM around.

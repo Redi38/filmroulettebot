@@ -23,6 +23,9 @@ function wheelSpinEase(t) {
 }
 
 function setCanvasRotation(canvas, deg) {
+  // Kept alongside the style so a rebuild can carry the angle over without
+  // parsing it back out of a computed matrix.
+  canvas._rotationDeg = deg;
   canvas.style.transform = `rotate(${deg}deg)`;
 }
 
@@ -64,6 +67,21 @@ function spinWheelTo(canvas, n, winnerIndex, durationMs) {
   if (typeof stopWheelIdle === "function") stopWheelIdle(canvas);
   if (typeof hideWheelHoverLabel === "function") hideWheelHoverLabel(canvas);
   canvas._idleHovering = false;
+  // Hover highlighting is for browsing a resting wheel. Once a spin starts,
+  // the highlight belongs to the result: `wheelSpinActive` covers the spin
+  // itself, but it is already false while highlightWheelWinner() holds the
+  // winner lit, so moving the mouse then would repaint the highlight onto
+  // whatever segment the cursor happened to be over. This flag outlives the
+  // spin — the lock lifts when a fresh wheel is built, which creates a new
+  // canvas without it.
+  canvas._hoverLocked = true;
+  // Locking is not enough on its own: if the cursor was resting on a segment
+  // when "Крутить" was pressed, that segment is already drawn highlighted,
+  // and with hover now locked nothing would ever repaint it — so it stayed
+  // lit, rotating, for the whole spin. Clear it here; the only highlight
+  // from now until the next wheel is the winner's.
+  canvas._idleHoverIdx = -1;
+  if (typeof wheelIdleRedraw === "function") wheelIdleRedraw(canvas, -1);
   return new Promise((resolve) => {
     const boundaries = canvas._wheelBoundaries || Array.from({length: n}, (_, i) => ({start: i * (360 / n), end: (i + 1) * (360 / n)}));
     const seg = boundaries[winnerIndex];
@@ -142,14 +160,20 @@ function highlightWheelWinner(canvas, winnerIndex) {
   return new Promise((r) => setTimeout(r, hold));
 }
 
+// Both go through buildSettledWheel rather than buildWheel: a rebuild is a
+// re-measurement, and painting the result before checking it is exactly how
+// the wheel ended up visibly growing on screen. The wheel is hidden for the
+// frame or two the check takes, and its rotation carries over, so a rebuild
+// at the same size is invisible.
 function rebuildVisibleWheels() {
   if (wheelSpinActive) return;
   for (const id of WHEEL_WRAP_IDS) {
     const wrap = document.getElementById(id);
     if (!wrap || wrap.style.display === "none" || !wrap._wheelPool) continue;
+    if (wrap.classList.contains("wheel-wrap--settling")) continue; // already re-measuring
     const predicted = predictWheelSize(wrap);
     if (Math.abs(predicted - (wrap._wheelBuiltSize || 0)) < 3) continue;
-    buildWheel(id, wrap._wheelPool, wrap._wheelWeights);
+    buildSettledWheel(id, wrap._wheelPool, wrap._wheelWeights);
   }
 }
 
@@ -158,7 +182,7 @@ function forceRebuildVisibleWheels() {
   for (const id of WHEEL_WRAP_IDS) {
     const wrap = document.getElementById(id);
     if (!wrap || wrap.style.display === "none" || !wrap._wheelPool) continue;
-    buildWheel(id, wrap._wheelPool, wrap._wheelWeights);
+    buildSettledWheel(id, wrap._wheelPool, wrap._wheelWeights);
   }
 }
 

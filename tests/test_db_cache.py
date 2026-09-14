@@ -41,8 +41,12 @@ async def test_cache_entry_expires_after_its_ttl(monkeypatch):
 async def test_cache_survives_independently_per_key():
     await set_tmdb_cache("featured:movies:Матрица", {"title": "Матрица"})
     await set_tmdb_cache("featured:series:Клан Сопрано", {"title": "Клан Сопрано"})
-    assert (await get_tmdb_cache("featured:movies:Матрица", 3600))["title"] == "Матрица"
-    assert (await get_tmdb_cache("featured:series:Клан Сопрано", 3600))["title"] == "Клан Сопрано"
+    movies_entry = await get_tmdb_cache("featured:movies:Матрица", 3600)
+    series_entry = await get_tmdb_cache("featured:series:Клан Сопрано", 3600)
+    assert movies_entry is not None
+    assert series_entry is not None
+    assert movies_entry["title"] == "Матрица"
+    assert series_entry["title"] == "Клан Сопрано"
 
 
 async def test_cache_survives_a_fresh_read_after_write_without_reusing_process_state():

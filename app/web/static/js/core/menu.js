@@ -247,6 +247,16 @@ async function showSection() {
     for (const [view, id] of Object.entries(SECTION_IDS)) {
       document.getElementById(id).classList.toggle("active", currentView === view);
     }
+    // Must happen inside this same DOM update, not after showSection()'s
+    // await below: when a View Transition drives the section swap, it
+    // snapshots the "after" state right after applyDom() runs. If the wheel
+    // wrap isn't already hidden behind its skeleton by then, the transition
+    // crossfades in the stale, wrong-sized wheel for the length of the
+    // animation — a small wheel, then a jump cut to skeleton once
+    // showIdleWheel() finally runs, then the real wheel.
+    if (currentView === "spin" && spinMode === "wheel" && !isRandomSpin()) {
+      prepIdleWheelSkeleton(spinCat);
+    }
     updateHeaderTitle();
     if (resumeHomeMarqueeInline) {
       syncMarqueeSize();
@@ -277,11 +287,10 @@ async function showSection() {
   if (currentView === "spin") {
     renderAllDockControls("spin");
     currentCardData = null;
-    // Tearing the wheel down here and rebuilding it after the preview lands
-    // is what made re-entering the tab flicker: the old wheel vanished, the
-    // "Нажми «Крутить»" placeholder flashed, then a skeleton, then the new
-    // wheel. showIdleWheel() keeps whatever is on screen until it knows
-    // whether it can reuse it, and resets things itself if it cannot.
+    // prepIdleWheelSkeleton() above (inside applyDom) already hid the stale
+    // wheel behind the skeleton before the section became visible;
+    // showIdleWheel() here just picks up from there — fetches the preview
+    // and decides whether to reuse the existing wheel or rebuild it.
     if (spinMode === "wheel" && !isRandomSpin()) showIdleWheel(spinCat);
     else { resetWheelWraps(); resetSpinResult(); }
     if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();

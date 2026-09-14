@@ -74,7 +74,7 @@ app.add_middleware(GZipMiddleware, minimum_size=1024)
 
 
 @app.middleware("http")
-async def _static_cache_headers(request: Request, call_next):  # type: ignore[no-untyped-def]
+async def _static_cache_headers(request: Request, call_next):
     """Cache policy for /static. Bundles under dist/ are requested with the
     content hash index.html stamped onto them (see shared/assets.py), so a
     given URL never changes meaning and can be cached forever; everything

@@ -64,6 +64,18 @@ async function api(path, opts) {
     if (e instanceof Error && e.name === "AbortError") {
       throw new ApiError("Сервер не отвечает. Проверь соединение и попробуй ещё раз.", 0, true);
     }
+    // The browser throws a bare `TypeError` (message literally "Failed to
+    // fetch" in Chrome, "NetworkError when attempting to fetch resource."
+    // in Firefox, "Load failed" in Safari) whenever the request never got a
+    // response at all — no connection, DNS hiccup, or (the common case
+    // here) the server was mid-restart after a deploy/rebuild and dropped
+    // the connection. That raw message would otherwise bubble straight up
+    // to showToast/handleSpinError and get shown to the user verbatim in
+    // English, so translate it into the same kind of friendly message the
+    // timeout case gets above.
+    if (e instanceof TypeError) {
+      throw new ApiError("Не удалось подключиться к серверу. Возможно, сайт сейчас обновляется — подожди немного и попробуй снова.", 0);
+    }
     throw e;
   } finally {
     clearTimeout(timer);

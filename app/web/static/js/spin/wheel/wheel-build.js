@@ -27,7 +27,7 @@ function resetWheelWraps() {
     wrap._wheelPool = null;
     wrap._wheelWeights = null;
     wrap._wheelCat = null;
-    wrap._settleToken = (wrap._settleToken || 0) + 1; // cancel any settle loop
+    wrap._settleToken = (wrap._settleToken || 0) + 1;
   }
   updateWheelScrollLock();
 }
@@ -35,17 +35,6 @@ function resetWheelWraps() {
 function updateWheelScrollLock() {
 }
 
-// True when the wheel already on screen is the one we were about to build.
-// Leaving the roulette tab and coming back re-requests the same pool for the
-// same category more often than not, and rebuilding it from scratch is what
-// the user sees as a flicker.
-//
-// The wrap is shared by every category now (WHEEL_WRAP_IDS has a single
-// entry), so "the same pool is already showing" is not enough on its own —
-// it may have been measured for a layout (viewport size, dock height) that
-// no longer holds by the time this category comes back around. Reusing it
-// as-is then means showing a wrong-size wheel with no correction in sight,
-// since the caller skips the whole settle/rebuild path on a cache hit.
 function canReuseIdleWheel(wrap, cat, pool, weights) {
   if (!wrap.querySelector(".wheel-canvas")) return false;
   if (wrap.style.display === "none") return false;
@@ -59,19 +48,9 @@ function canReuseIdleWheel(wrap, cat, pool, weights) {
   return Math.abs(predicted - (wrap._wheelBuiltSize || 0)) < WHEEL_SETTLE_TOLERANCE_PX;
 }
 
-// body.dock-ready is the app's own "chrome has landed" signal (viewport.js
-// sets it once fonts have settled and the dock has been laid out). Measuring
-// the wheel before it flips means measuring against a layout that is still
-// moving — which is how the first build came out small and then had to be
-// redone at full size in front of the user. Capped so a page where the flag
-// never arrives still gets a wheel.
 const WHEEL_LAYOUT_READY_TIMEOUT_MS = 1500;
 const WHEEL_LAYOUT_QUIET_MS = 200;
 
-// Two conditions, because dock-ready alone was not enough: the flag flips as
-// soon as fonts settle, but the dock's own ResizeObserver is debounced by
-// 150ms behind it, so a measurement taken right after the flag could still be
-// invalidated a moment later — and the user watched the wheel grow.
 function awaitWheelLayoutReady() {
   return new Promise((resolve) => {
     const started = performance.now();
@@ -96,7 +75,6 @@ async function showIdleWheel(cat) {
     const data = await api(`/api/${cat}/wheel-preview?weighted=${weighted}`);
     const pool = data.wheel_pool;
     if (!pool || pool.length < 2) {
-      // Nothing to spin — fall back to the empty state the caller skipped.
       resetWheelWraps();
       if (typeof resetSpinResult === "function") resetSpinResult();
       return;
@@ -104,19 +82,13 @@ async function showIdleWheel(cat) {
     if (document.getElementById("spin-wheel-wrap") !== wrap || !wrap.isConnected) return;
     document.getElementById("spin-result").innerHTML = "";
     wrap.classList.remove("wheel-done");
+    await nextSettledFrame();
+    await awaitWheelLayoutReady();
+    if (!wrap.isConnected || document.getElementById("spin-wheel-wrap") !== wrap) return;
     if (canReuseIdleWheel(wrap, cat, pool, data.wheel_weights)) {
       if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
       return;
     }
-    await nextSettledFrame();
-    await awaitWheelLayoutReady();
-    if (!wrap.isConnected || document.getElementById("spin-wheel-wrap") !== wrap) return;
-    // canReuseIdleWheel() already ruled out "this is the same pool at the
-    // same size" — but that's not the same as "nothing usable is on screen".
-    // buildSettledWheel() itself tells a true cold start (wrap has never
-    // held a canvas) from a revisit/category-switch (it holds someone else's
-    // canvas) and only skeletons the former; the latter gets the quiet
-    // hidden-and-swapped treatment so repeat visits stay instant.
     buildSettledWheel("spin-wheel-wrap", pool, data.wheel_weights);
     wrap._wheelCat = cat;
     if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
@@ -126,14 +98,10 @@ async function showIdleWheel(cat) {
   }
 }
 
-function buildWheel(wrapId, items, weights) {
+function buildWheel(wrapId, items, weights, opts) {
+  const skipEnter = !!(opts && opts.skipEnter);
   const wrap = document.getElementById(wrapId);
 
-  // A rebuild (resize, DPR change, re-measure) throws the old canvas away and
-  // starts the new one at rotation 0. With the same titles in the same order
-  // that reads as the wedges having swapped places — the wheel visibly jumps
-  // back to where it started. Carry the angle over when the pool is unchanged
-  // so a rebuild is invisible; a genuinely different pool starts fresh.
   const prevCanvas = wrap.querySelector(".wheel-canvas");
   const prevPool = wrap._wheelPool;
   const samePool = !!prevCanvas && Array.isArray(prevPool)
@@ -171,7 +139,7 @@ function buildWheel(wrapId, items, weights) {
   wrap.appendChild(titleEl);
 
   const holder = document.createElement("div");
-  holder.className = "wheel-holder wheel-holder--enter wheel-holder--" + getWheelStyle();
+  holder.className = "wheel-holder" + (skipEnter ? "" : " wheel-holder--enter") + " wheel-holder--" + getWheelStyle();
   const pointer = document.createElement("div");
   pointer.className = "wheel-pointer";
   const canvasMask = document.createElement("div");
@@ -220,16 +188,12 @@ function buildWheel(wrapId, items, weights) {
   updatePointerTitle(canvas, carriedRotation);
   updateWheelScrollLock();
 
-  // The resting wheel drifts and responds to the cursor — see wheel-idle.js.
   if (typeof startWheelIdle === "function") {
     attachWheelHover(canvas, canvasMask);
     startWheelIdle(canvas);
   }
 
-  // While settling, buildSettledWheel() owns the reveal — otherwise the enter
-  // animation would play behind `visibility: hidden` and the wheel would
-  // simply pop into place at the end.
-  if (!wrap.classList.contains("wheel-wrap--settling")) {
+  if (!skipEnter && !wrap.classList.contains("wheel-wrap--settling")) {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => holder.classList.remove("wheel-holder--enter"));
     });
@@ -241,15 +205,17 @@ function buildWheel(wrapId, items, weights) {
 const WHEEL_SETTLE_MAX_ATTEMPTS = 3;
 const WHEEL_SETTLE_TOLERANCE_PX = 3;
 
-function buildSettledWheel(wrapId, items, weights, attempt = 0, token = null) {
+function buildSettledWheel(wrapId, items, weights, attempt = 0, token = null, skipEnter = null) {
   const wrap = document.getElementById(wrapId);
   if (!wrap) return null;
-  if (attempt === 0) token = wrap._settleToken = (wrap._settleToken || 0) + 1;
-  else if (token !== wrap._settleToken) return null;
+  if (attempt === 0) {
+    token = wrap._settleToken = (wrap._settleToken || 0) + 1;
+    skipEnter = !!wrap.querySelector(".wheel-canvas");
+  } else if (token !== wrap._settleToken) return null;
 
-  const hadWheel = !!wrap.querySelector(".wheel-canvas");
+  const hadWheel = attempt === 0 ? skipEnter : true;
   wrap.classList.add("wheel-wrap--settling");
-  const canvas = buildWheel(wrapId, items, weights);
+  const canvas = buildWheel(wrapId, items, weights, {skipEnter});
   if (!hadWheel) mountWheelSettleSkeleton(wrap);
 
   requestAnimationFrame(() => {
@@ -262,7 +228,7 @@ function buildSettledWheel(wrapId, items, weights, attempt = 0, token = null) {
       const predicted = predictWheelSize(wrap);
       const drift = Math.abs(predicted - (wrap._wheelBuiltSize || 0));
       if (drift >= WHEEL_SETTLE_TOLERANCE_PX && attempt < WHEEL_SETTLE_MAX_ATTEMPTS) {
-        buildSettledWheel(wrapId, items, weights, attempt + 1, token);
+        buildSettledWheel(wrapId, items, weights, attempt + 1, token, skipEnter);
         return;
       }
       revealSettledWheel(wrap);
@@ -288,7 +254,6 @@ function revealSettledWheel(wrap) {
   if (skel) skel.remove();
   const holder = wrap.querySelector(".wheel-holder");
   if (!holder) return;
-  // Play the entry animation now that there is something to see.
   requestAnimationFrame(() => {
     requestAnimationFrame(() => holder.classList.remove("wheel-holder--enter"));
   });

@@ -13,6 +13,7 @@ function renderSpinModeToggle(containerId) {
   renderChoiceToggle(containerId, {
     options: [["classic", "🎲 Классика"], ["wheel", "🎡 Колесо"]],
     value: spinMode,
+    containerClass: "spin-mode-toggle-outer",
     groupClass: "spin-mode-toggle--mode",
     onChange: (value) => {
       spinMode = value;
@@ -26,8 +27,6 @@ function renderSpinModeToggle(containerId) {
         if (currentCardData) return;
 
         if (currentView !== "spin") return;
-        // "Наугад" has no single list to preview, so it stays on the
-        // placeholder until the spin picks a category for you.
         if (spinMode === "wheel" && !isRandomSpin()) showIdleWheel(spinCat);
         else resetSpinResult();
       });

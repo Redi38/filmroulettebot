@@ -44,7 +44,7 @@ async def api_wheel_preview(cat: str, weighted: bool = False) -> dict:
         raise HTTPException(400, f"{cat} has no roulette — it's a reference list only")
     items = await get_items(cat)
     if not items:
-        raise HTTPException(404, "List is empty")
+        raise HTTPException(404, "Список пуст — добавь тайтлы, чтобы крутить")
     dummy = random.choice(items)
     pool, weights = _build_wheel_pool(items, dummy, weighted)
     return {"wheel_pool": pool, "wheel_weights": weights}
@@ -61,7 +61,7 @@ async def api_wheel_weights(cat: str, body: WheelWeightsBody) -> dict:
         raise HTTPException(400, f"{cat} has no roulette — it's a reference list only")
     items = await get_items(cat)
     if not items:
-        raise HTTPException(404, "List is empty")
+        raise HTTPException(404, "Список пуст — добавь тайтлы, чтобы крутить")
     weights = _pool_weights(items, body.pool, body.weighted)
     return {"wheel_weights": weights}
 
@@ -71,7 +71,7 @@ async def api_random_spin(request: Request, body: SpinBody = SpinBody()) -> dict
     _check_spin_cooldown(_client_ip(request))
     non_empty = [c for c in ROULETTE_CATEGORIES if await get_items(c)]
     if not non_empty:
-        raise HTTPException(404, "All three roulettes are empty")
+        raise HTTPException(404, "Все три списка пусты — сначала добавь тайтлы")
     cat = random.choice(non_empty)
     items = await get_items(cat)
     title = _pick_title(_client_ip(request), cat, items, body.weighted)
@@ -89,7 +89,7 @@ async def api_spin(cat: str, request: Request, body: SpinBody = SpinBody()) -> d
     _check_spin_cooldown(_client_ip(request))
     items = await get_items(cat)
     if not items:
-        raise HTTPException(404, "List is empty")
+        raise HTTPException(404, "Список пуст — добавь тайтлы, чтобы крутить")
     title = _pick_title(_client_ip(request), cat, items, body.weighted)
     ts = await save_history(WEB_USER_ID, cat, title)
     data = await _card_data(cat, title, ts)
@@ -102,7 +102,7 @@ async def api_featured(cat: str) -> dict:
     _check_category(cat)
     items = await get_items(cat)
     if not items:
-        raise HTTPException(404, "List is empty")
+        raise HTTPException(404, "Список пуст — добавь тайтлы, чтобы крутить")
     first = items[0]
 
     cache_key = f"featured:{cat}:{first}"

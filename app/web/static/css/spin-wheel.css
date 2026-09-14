@@ -15,6 +15,7 @@
 }
 
 .spin-controls-dock {
+  --pill-w: 128px;
   position: static; z-index: 5;
   margin: 0 auto 16px;
   display: flex; flex-direction: column; align-items: center;
@@ -61,7 +62,7 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
 
   .spin-controls-dock .showcase-filter-btn {
     padding: 11px 8px; font-size: 1.05rem; border-radius: 999px;
-    width: 176px;
+    width: var(--pill-w);
   }
   .confetti-toggle-wrap { width: auto; }
   .spin-toggle-row { gap: 16px; }
@@ -100,10 +101,16 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
   #spin-result .card .poster { max-width: 360px; }
 }
 
+.spin-mode-toggle-outer,
+.spin-weight-wrap,
+.auto-watch-toggle-wrap,
+.spin-toggle-row {
+  align-self: center;
+}
 .spin-mode-toggle-wrap { display: flex; justify-content: center; margin: 0; }
 .spin-mode-toggle { display: inline-flex; gap: 6px; position: relative; }
 .spin-controls-dock .showcase-filter-btn {
-  width: 128px; text-align: center;
+  width: var(--pill-w); text-align: center;
   padding-left: 6px; padding-right: 6px;
   overflow: hidden; text-overflow: ellipsis;
 }
@@ -189,10 +196,6 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
   100% { transform: scale(1); }
 }
 
-/* The neon wheel glow used to be hardcoded to this app's old purple theme
-   (#8b7cf6 primary / rgb(139,124,246), rgb(91,227,208) as its teal
-   secondary) and never got updated when the palette moved to orange/pink.
-   Tied to --primary/--primary-2 now so it follows whatever the theme is. */
 .wheel-holder--neon .wheel-canvas-mask {
   animation: wheel-neon-fade-in 0.6s ease-out, wheel-neon-glow 2.4s ease-in-out 0.6s infinite;
 }
@@ -257,6 +260,9 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
 .confetti-toggle-wrap.visible { display: flex; }
 
 .auto-watch-toggle-wrap { display: flex; justify-content: center; margin: 0; }
+.auto-watch-toggle-wrap .showcase-filter-btn {
+  width: calc(var(--pill-w) * 2 + 6px);
+}
 
 .wheel-audio-controls {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
@@ -398,8 +404,6 @@ body.dock-ready .wheel-audio-controls { opacity: 1; pointer-events: auto; }
   filter: drop-shadow(0 3px 6px rgba(0,0,0,0.5));
   transform-origin: 50% 14px;
 }
-/* One "peg hit" per segment crossing, triggered from spin.js. The pointer is
-   pushed back against the direction of travel and springs home. */
 .wheel-pointer.wheel-pointer--flick { animation: wheelPointerFlick 0.14s var(--ease-out); }
 @keyframes wheelPointerFlick {
   0% { transform: translateX(-50%) rotate(0deg); }
@@ -534,46 +538,23 @@ body.dock-ready .wheel-audio-controls { opacity: 1; pointer-events: auto; }
   padding: 10px 14px; border-radius: 10px; background: var(--primary); color: var(--on-primary);
   border: none; cursor: pointer; font-family: inherit; font-weight: 700;
 }
-/* The wheel is sized from the layout, and on the first frame after the
-   roulette tab opens the layout is not settled yet — so it is built,
-   re-measured, and only revealed once it is at its final size, with the
-   loading skeleton standing in until then. `visibility` rather than
-   `display` or `opacity` on the real wheel: it must keep its box so the
-   measurement is of the real thing, and must not be paintable while it is
-   wrong. See buildSettledWheel() in spin/wheel/wheel-build.js. */
 .wheel-wrap--settling > *:not(.wheel-settle-skeleton) { visibility: hidden; }
 .wheel-settle-skeleton {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
 }
-/* Only ever visible while settling — never left in the DOM afterwards. */
 .wheel-wrap:not(.wheel-wrap--settling) .wheel-settle-skeleton { display: none; }
 
 .wheel-wrap.wheel-done .wheel-holder { animation: wheelPop 0.4s var(--ease-spring); }
 @keyframes wheelPop { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
 
-/* The label for the segment under the cursor on a resting wheel. Positioned
-   by wheel-idle.js from the pointer coordinates; translated up and left of
-   the cursor so it never sits under the pointing finger. */
 .wheel-hover-label {
   position: absolute; z-index: 4; pointer-events: none;
   transform: translate(-50%, calc(-100% - 12px));
   padding: 5px 10px;
-  /* `width: max-content` is load-bearing: an absolutely positioned box with
-     only `left` set is shrink-to-fit, so its available width is whatever is
-     left between `left` and the holder's right edge. Over on the right-hand
-     side of the wheel that is a few dozen pixels, and the title wrapped one
-     letter per line into a vertical strip. Sizing to the text instead frees
-     it from the holder's edge; wheel-idle.js then clamps `left` so the
-     plaque still lands inside the holder. */
   width: max-content; max-width: min(320px, 72vw);
   font-size: 0.85rem; font-weight: 700; line-height: 1.25; color: #fff;
   text-align: center;
-  /* The segment label on the wheel is truncated to fit its wedge — this
-     hover plaque is the place that shows the title in full, so it wraps
-     onto as many lines as it needs instead of ellipsing a second time.
-     break-word rather than anywhere: anywhere would feed the per-character
-     wrap opportunities back into the max-content size above. */
   white-space: normal; overflow-wrap: break-word;
   background: rgba(9, 12, 22, 0.88);
   border: 1px solid rgba(var(--primary-rgb), 0.45);
@@ -590,33 +571,19 @@ body.dock-ready .wheel-audio-controls { opacity: 1; pointer-events: auto; }
   .wheel-hover-label { transition: none; }
 }
 
-/* ---- category pickers ---------------------------------------------------
-   The controls that replaced the per-category menu entries. Two homes with
-   very different widths, so two shapes: a wrapping pill row above the
-   watchlist, and a dropdown inside the narrow fixed roulette dock.
-
-   The pills are plain `.showcase-filter-btn`s — the app's standard pill,
-   used by the showcase filters and every dock toggle — so they pick up the
-   same Manrope weight/size as everything else, and the selected gradient
-   runs edge to edge instead of being ringed by a border of its own. */
 .cat-select-row {
-  position: relative; /* the sliding thumb is absolutely positioned in here */
+  position: relative;
   display: flex; flex-wrap: wrap; gap: 8px;
   justify-content: center; align-items: center;
   margin: 0 0 16px;
 }
 .cat-select-row .cat-chip { padding: 8px 16px; }
 
-/* The roulette's dropdown. Same markup and metrics as the wheel's
-   sound-theme dropdown sitting next to it in the dock. */
-/* Left-aligned rather than centred in the dock column, so its left edge
-   lines up with the "Категория" caption above it (.spin-caption is
-   align-self: flex-start) instead of floating half a chip to the right. */
-.cat-select-wrap { display: flex; justify-content: flex-start; align-self: flex-start; margin: 0; }
+.cat-select-wrap { display: flex; justify-content: center; align-self: center; margin: 0; }
 .cat-select-dropdown { position: relative; }
 .cat-select-btn {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  width: 128px; padding: 7px 14px;
+  width: calc(var(--pill-w) * 2 + 6px); padding: 7px 14px;
   background: var(--bg-c); border: 1px solid var(--border); border-radius: 999px;
   color: var(--text); cursor: pointer;
   font-family: inherit; font-size: 0.85rem; font-weight: 600;
@@ -648,6 +615,6 @@ body.dock-ready .wheel-audio-controls { opacity: 1; pointer-events: auto; }
 .cat-select-item.active { color: var(--primary); }
 
 @media (min-width: 900px) {
-  .cat-select-btn { width: 176px; padding: 11px 18px; font-size: 1.05rem; border-radius: 999px; }
+  .cat-select-btn { padding: 11px 18px; font-size: 1.05rem; border-radius: 999px; }
   .cat-select-item { font-size: 1.05rem; padding: 10px 14px; }
 }

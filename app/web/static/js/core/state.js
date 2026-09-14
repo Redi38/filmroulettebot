@@ -1,14 +1,5 @@
-// Category vocabularies. CATS are the ones with their own roulette; REF_CATS
-// are reference-only showcases (no spin). LIST_CATS is what the single
-// "Списки" view lets you switch between.
-const CATS = {movies: "Фильмы", cartoons: "Мульты", series: "Сериалы"};
-const REF_CATS = {marvel: "Marvel", dc: "DC"};
-const ALL_CATS = {...CATS, ...REF_CATS};
-const LIST_CATS = {...CATS, ...REF_CATS};
-
-// The roulette is a single view now; RANDOM_CAT is the pseudo-category that
-// means "pick the category for me too" (POST /api/random-spin).
-const RANDOM_CAT = "random";
+// Category vocabularies (CATS, REF_CATS, ALL_CATS, LIST_CATS, RANDOM_CAT)
+// live in core/constants.js, which is also inlined into index.html.
 
 const STATE_KEY = "filmroulette_state";
 const RESOLVED_HIST_KEY = "filmroulette_resolved_history";

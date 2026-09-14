@@ -383,7 +383,9 @@ body.dock-ready .wheel-audio-controls { opacity: 1; pointer-events: auto; }
   transition: opacity 0.32s ease, transform 0.32s var(--ease-out);
 }
 .vt-spin-landing .wheel-holder { view-transition-name: spin-hero; }
-.wheel-holder--enter { opacity: 0; transform: scale(0.9); }
+/* Enter: mostly a fade. A larger scale step read as the wheel "growing"
+   when it replaced a same-size skeleton. */
+.wheel-holder--enter { opacity: 0; transform: scale(0.965); }
 .wheel-canvas-mask {
   position: relative; border-radius: 50%; overflow: hidden;
 }
@@ -539,10 +541,15 @@ body.dock-ready .wheel-audio-controls { opacity: 1; pointer-events: auto; }
   border: none; cursor: pointer; font-family: inherit; font-weight: 700;
 }
 .wheel-wrap--settling > *:not(.wheel-settle-skeleton) { visibility: hidden; }
+/* Overlays the (hidden) wheel while it is measured. `top` is set inline to
+   the dock clearance, so it is centred in the same box the wheel's own
+   title / holder / count-label column is centred in. */
 .wheel-settle-skeleton {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
 }
+/* Same box as .wheel-current-title, so the disc lands on the wheel. */
+.wheel-settle-skeleton .skel-wheel-title { font-size: 1.05rem; height: calc(1.4em + 12px); }
 .wheel-wrap:not(.wheel-wrap--settling) .wheel-settle-skeleton { display: none; }
 
 .wheel-wrap.wheel-done .wheel-holder { animation: wheelPop 0.4s var(--ease-spring); }
@@ -564,6 +571,8 @@ body.dock-ready .wheel-audio-controls { opacity: 1; pointer-events: auto; }
   transition: opacity var(--dur-fast) ease;
 }
 .wheel-hover-label.visible { opacity: 1; }
+.wheel-hover-odds { margin-top: 2px; }
+.wheel-hover-odds[hidden] { display: none; }
 @media (hover: none) and (pointer: coarse) {
   .wheel-hover-label { display: none; }
 }

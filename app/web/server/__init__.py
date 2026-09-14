@@ -15,7 +15,8 @@ import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.db.database import close_db, init_db
@@ -68,5 +69,25 @@ for _router_module in (
     media,
 ):
     app.include_router(_router_module.router)
+
+app.add_middleware(GZipMiddleware, minimum_size=1024)
+
+
+@app.middleware("http")
+async def _static_cache_headers(request: Request, call_next):  # type: ignore[no-untyped-def]
+    """Cache policy for /static. Bundles under dist/ are requested with the
+    content hash index.html stamped onto them (see shared/assets.py), so a
+    given URL never changes meaning and can be cached forever; everything
+    else under /static (favicons, fonts) gets a modest max-age and
+    revalidates."""
+    response = await call_next(request)
+    path = request.url.path
+    if path.startswith("/static/") and "Cache-Control" not in response.headers:
+        if "/dist/" in path and request.query_params.get("v"):
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        else:
+            response.headers["Cache-Control"] = "public, max-age=3600, must-revalidate"
+    return response
+
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")

@@ -5,9 +5,9 @@ function confirmPick() {
   prompt.innerHTML = `
     <p>Добавить продолжение (сиквел)?</p>
     <div class="card-actions">
-      <button class="btn btn-success btn" onclick="sequelYes()">Да, сиквел</button>
-      <button class="btn btn-danger btn" onclick="sequelNo()">Нет, удалить</button>
-      <button class="btn btn-primary btn" onclick="pickWatched()" title="Просмотрено — без сиквела и без удаления из списка">Подтвердить</button>
+      <button class="btn btn-success btn" data-card-action="sequel-yes">Да, сиквел</button>
+      <button class="btn btn-danger btn" data-card-action="sequel-no">Нет, удалить</button>
+      <button class="btn btn-primary btn" data-card-action="watched" title="Просмотрено — без сиквела и без удаления из списка">Подтвердить</button>
     </div>`;
   prompt.style.display = "block";
   prompt.classList.remove("fade-in");
@@ -67,4 +67,26 @@ async function pickWatched() {
   currentCardData = null;
 }
 
-function rerollPick(cat) { doSpin(cat); }
+function rerollPick() { doSpin(); }
+
+// Cards are rendered as HTML strings in several places (spin result, list
+// featured card, poster modal), so their buttons dispatch through one
+// delegated listener keyed on `data-card-action` rather than inline
+// handler attributes.
+const CARD_ACTIONS = {
+  "confirm": () => confirmPick(),
+  "reroll": () => rerollPick(),
+  "sequel-yes": () => sequelYes(),
+  "sequel-no": () => sequelNo(),
+  "watched": () => pickWatched(),
+  "copy-title": (el) => {
+    const card = el.closest(".card");
+    copyToClipboard(card ? card.dataset.title : el.textContent, el);
+  },
+};
+document.addEventListener("click", (ev) => {
+  const el = ev.target.closest("[data-card-action]");
+  if (!el) return;
+  const handler = CARD_ACTIONS[el.dataset.cardAction];
+  if (handler) handler(el);
+});

@@ -210,21 +210,10 @@ function applyStudioTheme() {
   document.body.dataset.studio = studio;
 }
 
-const VIEW_TITLES = {
-  home: "Афиша", upcoming: "Ожидаемые", history: "История",
-  theaters: "В прокате", series_releases: "Премьеры сериалов",
-  tracked_series: "Отслеживание сериалов",
-};
-
+// VIEW_TITLES and the title rule itself live in core/constants.js so the
+// pre-bundle header script in index.html shares them.
 function currentViewTitle() {
-  // The chip row under the header already names the selected category, so the
-  // header itself names the screen instead of repeating it.
-  if (currentView === "spin") {
-    return isRandomSpin() ? "Рулетка" : `Рулетка — ${CATS[spinCat] || ""}`;
-  }
-  if (currentView === "list") return `Списки — ${LIST_CATS[currentCat] || ""}`;
-  if (currentView === "showcase") return `${ALL_CATS[currentCat] || ""} — скоро`;
-  return VIEW_TITLES[currentView] || "";
+  return viewTitleFor(currentView, currentCat, spinCat);
 }
 
 function updateHeaderTitle() {

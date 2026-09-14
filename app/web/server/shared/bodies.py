@@ -40,6 +40,14 @@ class SequelBody(BaseModel):
     title: str
 
 
+class SequelResponse(BaseModel):
+    """Body of POST /api/{cat}/sequel — declared so OpenAPI (and the
+    frontend's generated api.d.ts) know `new_title` is a string."""
+
+    ok: bool = True
+    new_title: str
+
+
 class SpinBody(BaseModel):
     weighted: bool = False
 

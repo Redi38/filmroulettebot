@@ -33,20 +33,41 @@ function renderHistoryList() {
     div.dataset.title = e.title;
     div.dataset.timestamp = e.timestamp;
     div.dataset.key = key;
+    div.dataset.idx = String(idx);
     const date = new Date(e.timestamp * 1000).toLocaleString("ru-RU");
     const actionsHtml = isResolved
       ? `<span class="muted">${resolvedOutcomeLabel(e.title, outcome)}</span>`
-      : `<button class="btn btn-success" onclick="histConfirm(${idx})">Подтвердить</button>`;
+      : `<button class="btn btn-success" data-hist-action="confirm">Подтвердить</button>`;
     div.innerHTML = `
       <div class="hist-title">${escapeHtml(e.title)}</div>
       <div class="hist-meta">${date}</div>
-      <div class="hist-actions" id="hist-actions-${idx}">
+      <div class="hist-actions">
         ${actionsHtml}
-        <button class="btn btn-danger hist-clear-entry-btn" onclick="histClearEntry(${idx})" title="Удалить эту запись из истории">Очистить</button>
+        ${HIST_CLEAR_BTN}
       </div>`;
     list.appendChild(div);
   });
 }
+
+const HIST_CLEAR_BTN = `<button class="btn btn-danger hist-clear-entry-btn" data-hist-action="clear" title="Удалить эту запись из истории">Очистить</button>`;
+
+// One delegated listener instead of an inline handler per button: the
+// markup carries only a `data-hist-action`, the row it belongs to is found
+// by walking up to `.hist-item`. Keeps the templates CSP-friendly and means
+// the handlers no longer have to be globals.
+const HIST_ACTIONS = {
+  confirm: histConfirm, clear: histClearEntry,
+  sequel: histSequel, delete: histDelete, watched: histWatched,
+};
+// Listens on the static section: #history-list itself is created lazily by
+// history/shell.js the first time the view opens.
+document.getElementById("history-section").addEventListener("click", (ev) => {
+  const btn = ev.target.closest("[data-hist-action]");
+  if (!btn) return;
+  const row = btn.closest(".hist-item");
+  const handler = row && HIST_ACTIONS[btn.dataset.histAction];
+  if (handler) handler(row);
+});
 
 function resolvedOutcomeLabel(title, outcome) {
   if (outcome.type === "sequel" && outcome.newTitle) {
@@ -61,7 +82,8 @@ function resolvedOutcomeLabel(title, outcome) {
   return `Обработано ✅`;
 }
 
-async function histClearEntry(idx) {
+async function histClearEntry(row) {
+  const idx = Number(row.dataset.idx);
   const entry = historyItems[idx];
   if (!entry) return;
   try {
@@ -80,30 +102,27 @@ async function histClearEntry(idx) {
   } catch (e) { showToast(e.message); }
 }
 
-function histConfirm(idx) {
-  const actionsEl = document.getElementById(`hist-actions-${idx}`);
-  actionsEl.innerHTML = `
-    <button class="btn btn-success" onclick="histSequel(${idx})">Сиквел</button>
-    <button class="btn btn-danger" onclick="histDelete(${idx})">Удалить</button>
-    <button class="btn btn-primary" onclick="histWatched(${idx})" title="Просмотрено — без сиквела и без удаления из списка">Просмотрено</button>
-    <button class="btn btn-danger hist-clear-entry-btn" onclick="histClearEntry(${idx})" title="Удалить эту запись из истории">Очистить</button>`;
+function histConfirm(row) {
+  row.querySelector(".hist-actions").innerHTML = `
+    <button class="btn btn-success" data-hist-action="sequel">Сиквел</button>
+    <button class="btn btn-danger" data-hist-action="delete">Удалить</button>
+    <button class="btn btn-primary" data-hist-action="watched" title="Просмотрено — без сиквела и без удаления из списка">Просмотрено</button>
+    ${HIST_CLEAR_BTN}`;
 }
 
-async function histWatched(idx) {
-  const actionsEl = document.getElementById(`hist-actions-${idx}`);
-  const div = actionsEl.closest(".hist-item");
+async function histWatched(div) {
+  const actionsEl = div.querySelector(".hist-actions");
   const {category, title, timestamp, key} = div.dataset;
   markResolved(key, { type: "watched" });
   resolveOnServer(category, title, timestamp, "watched", null);
   div.classList.add("resolved");
   actionsEl.innerHTML = `
     <span class="muted">${resolvedOutcomeLabel(title, { type: "watched" })}</span>
-    <button class="btn btn-danger hist-clear-entry-btn" onclick="histClearEntry(${idx})" title="Удалить эту запись из истории">Очистить</button>`;
+    ${HIST_CLEAR_BTN}`;
 }
 
-async function histSequel(idx) {
-  const actionsEl = document.getElementById(`hist-actions-${idx}`);
-  const div = actionsEl.closest(".hist-item");
+async function histSequel(div) {
+  const actionsEl = div.querySelector(".hist-actions");
   const {category, title, timestamp, key} = div.dataset;
   try {
     const newTitle = await performSequel(category, title);
@@ -113,13 +132,12 @@ async function histSequel(idx) {
     div.classList.add("resolved");
     actionsEl.innerHTML = `
       <span class="muted">${resolvedOutcomeLabel(title, { type: "sequel", newTitle })}</span>
-      <button class="btn btn-danger hist-clear-entry-btn" onclick="histClearEntry(${idx})" title="Удалить эту запись из истории">Очистить</button>`;
+      ${HIST_CLEAR_BTN}`;
   } catch (e) { showToast(e.message); }
 }
 
-async function histDelete(idx) {
-  const actionsEl = document.getElementById(`hist-actions-${idx}`);
-  const div = actionsEl.closest(".hist-item");
+async function histDelete(div) {
+  const actionsEl = div.querySelector(".hist-actions");
   const {category, title, timestamp, key} = div.dataset;
   try {
     await performDelete(category, title);
@@ -129,6 +147,6 @@ async function histDelete(idx) {
     div.classList.add("resolved");
     actionsEl.innerHTML = `
       <span class="muted">${resolvedOutcomeLabel(title, { type: "delete" })}</span>
-      <button class="btn btn-danger hist-clear-entry-btn" onclick="histClearEntry(${idx})" title="Удалить эту запись из истории">Очистить</button>`;
+      ${HIST_CLEAR_BTN}`;
   } catch (e) { showToast(e.message); }
 }

@@ -41,18 +41,42 @@ function wheelIdleRedraw(canvas, highlightIndex) {
   });
 }
 
-function positionWheelHoverLabel(canvas, clientX, clientY, text) {
+// In weighted mode every segment has a different size, but a size on its
+// own is hard to read as odds; the hover plaque spells them out. Returns
+// "" in normal mode (equal segments — nothing to explain) and when the
+// wheel is mid-resize between the two modes.
+function wheelSegmentOddsText(canvas, idx) {
+  if (typeof isWeightedMode === "function" && !isWeightedMode()) return "";
+  const b = canvas._wheelBoundaries && canvas._wheelBoundaries[idx];
+  if (!b) return "";
+  const pct = ((b.end - b.start) / 360) * 100;
+  const shown = pct >= 10 ? pct.toFixed(0) : pct.toFixed(1);
+  return `${shown}%`;
+}
+
+function positionWheelHoverLabel(canvas, clientX, clientY, text, odds) {
   const holder = canvas.closest(".wheel-holder");
   if (!holder) return;
   let label = holder.querySelector(".wheel-hover-label");
   if (!label) {
     label = document.createElement("div");
     label.className = "wheel-hover-label";
+    const titleEl = document.createElement("div");
+    titleEl.className = "wheel-hover-title";
+    const oddsEl = document.createElement("div");
+    oddsEl.className = "wheel-hover-odds";
+    label.appendChild(titleEl);
+    label.appendChild(oddsEl);
     holder.appendChild(label);
   }
   const rect = holder.getBoundingClientRect();
-  if (label.textContent !== text) {
-    label.textContent = text;
+  const key = `${text}\u0000${odds || ""}`;
+  if (label._contentKey !== key) {
+    label._contentKey = key;
+    label.querySelector(".wheel-hover-title").textContent = text;
+    const oddsEl = label.querySelector(".wheel-hover-odds");
+    oddsEl.textContent = odds || "";
+    oddsEl.hidden = !odds;
     // Measure from the left edge, where the full holder width is available:
     // if `width: max-content` is not honoured, the box falls back to
     // shrink-to-fit and its width would otherwise depend on where it was
@@ -150,7 +174,7 @@ function attachWheelHover(canvas, mask) {
       wheelIdleRedraw(canvas, idx);
     }
     const items = canvas._wheelItems || [];
-    positionWheelHoverLabel(canvas, ev.clientX, ev.clientY, items[idx] || "");
+    positionWheelHoverLabel(canvas, ev.clientX, ev.clientY, items[idx] || "", wheelSegmentOddsText(canvas, idx));
   });
 
   mask.addEventListener("pointerleave", clear);

@@ -28,7 +28,7 @@ function renderCard(data, opts) {
   // (`aspect-ratio` in buttons-cards.css) until the bytes arrive, so the meta
   // lines below never shift down when the image finally paints.
   const poster = data.poster_url
-    ? `<img class="poster fade-in img-pending" src="${data.poster_url}" alt="" decoding="async" onload="this.classList.remove('img-pending')" onerror="this.classList.remove('img-pending')">`
+    ? `<img class="poster fade-in img-pending" src="${escapeHtml(data.poster_url)}" alt="" decoding="async">`
     : "";
   const ratingNum = parseFloat(data.rating);
   const rating = (data.rating !== "—" && !isNaN(ratingNum))
@@ -37,22 +37,22 @@ function renderCard(data, opts) {
   let extra = "";
   if (data.runtime) extra += metaLine("clock", `${data.runtime} мин.`);
   if (data.seasons) extra += metaLine("layers", `Сезонов: ${data.seasons}`) + metaLine("film", `Эпизодов: ${data.episodes ?? "—"}`);
-  const link = data.watch_link ? `<a class="watch-link" href="${data.watch_link}" target="_blank">Смотреть онлайн</a>` : "";
+  const link = data.watch_link ? `<a class="watch-link" href="${escapeHtml(data.watch_link)}" target="_blank" rel="noopener">Смотреть онлайн</a>` : "";
   const autoWatchOn = typeof isAutoWatchEnabled !== "function" || isAutoWatchEnabled();
   const autoWatchHint = (showActions && data.watch_link && autoWatchOn) ? `
       <div class="auto-watch-hint"><span class="auto-watch-hint-text"></span></div>` : "";
   const catLabel = (ALL_CATS[data.category] || data.category).replace(/^\S+\s+/, "");
   const actionsHtml = showActions ? `
       <div class="card-actions">
-        <button class="btn btn-success btn" onclick="confirmPick()">Подтвердить</button>
-        <button class="btn btn-reroll btn" onclick="rerollPick('${data.category}')">Перекрутить</button>
+        <button class="btn btn-success btn" data-card-action="confirm">Подтвердить</button>
+        <button class="btn btn-reroll btn" data-card-action="reroll">Перекрутить</button>
       </div>
       <div class="sequel-prompt" id="sequel-prompt" style="display:none"></div>` : "";
   return `
-    <div class="card card-stagger">
+    <div class="card card-stagger" data-category="${escapeHtml(data.category)}" data-title="${escapeHtml(data.title)}">
       ${poster}
       <div class="card-body">
-        <div class="title copy-title" onclick="copyToClipboard('${escapeAttr(data.title)}', this)" title="Нажмите, чтобы скопировать">${escapeHtml(data.title)}</div>
+        <div class="title copy-title" data-card-action="copy-title" title="Нажмите, чтобы скопировать">${escapeHtml(data.title)}</div>
         <span class="cat-badge">${CARD_ICON[CATEGORY_ICON[data.category] || "tag"]}${catLabel}</span>
         ${metaLine("star", rating)}
         ${metaLine("calendar", escapeHtml(humanizeShowcaseDate(String(data.release_date), false)))}
@@ -95,6 +95,16 @@ function animateRatingValue(el) {
   requestAnimationFrame(tick);
 }
 
+// Posters used to drop `img-pending` from an inline onload attribute; the
+// same observer that animates the rating now wires that up, so the templates
+// stay free of inline handlers (CSP-friendly).
+function settlePendingImage(img) {
+  const done = () => img.classList.remove("img-pending");
+  if (img.complete) { done(); return; }
+  img.addEventListener("load", done, {once: true});
+  img.addEventListener("error", done, {once: true});
+}
+
 if (typeof MutationObserver !== "undefined" && typeof document !== "undefined") {
   const ratingObserver = new MutationObserver((mutations) => {
     for (const m of mutations) {
@@ -102,6 +112,8 @@ if (typeof MutationObserver !== "undefined" && typeof document !== "undefined") 
         if (node.nodeType !== 1) continue;
         if (node.matches && node.matches(".rating-value")) animateRatingValue(node);
         if (node.querySelectorAll) node.querySelectorAll(".rating-value").forEach(animateRatingValue);
+        if (node.matches && node.matches("img.img-pending")) settlePendingImage(node);
+        if (node.querySelectorAll) node.querySelectorAll("img.img-pending").forEach(settlePendingImage);
       }
     }
   });

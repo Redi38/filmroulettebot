@@ -849,6 +849,20 @@ export interface components {
             /** Title */
             title: string;
         };
+        /**
+         * SequelResponse
+         * @description Body of POST /api/{cat}/sequel — declared so OpenAPI (and the
+         *     frontend's generated api.d.ts) know `new_title` is a string.
+         */
+        SequelResponse: {
+            /**
+             * Ok
+             * @default true
+             */
+            ok: boolean;
+            /** New Title */
+            new_title: string;
+        };
         /** SettingBody */
         SettingBody: {
             /** Value */
@@ -925,7 +939,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "text/html": string;
                 };
             };
         };
@@ -973,9 +987,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["SequelResponse"];
                 };
             };
             /** @description Validation Error */

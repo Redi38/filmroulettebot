@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/css/dist/bundle.min.css">
+<link rel="stylesheet" href="/static/css/dist/bundle.min.css?v={{CSS_BUNDLE_VERSION}}">
 </head>
 <body>
 
@@ -20,25 +20,17 @@
   <button id="burger-btn" aria-label="Меню"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="17" x2="20" y2="17"></line></svg></button>
   <h1 id="page-title">Афиша</h1>
   <script>
+    // Paint the right header before the bundle arrives, from the same
+    // constants the app uses: the server inlines js/core/constants.js here.
     (function () {
       try {
+        {{INLINE_CONSTANTS_JS}}
         var raw = localStorage.getItem("filmroulette_state");
         var s = raw ? JSON.parse(raw) : null;
         var view = (s && s.view) || "home";
         if (view === "random") view = "spin";
-        var cat = s && s.cat;
-        var ALL_CATS = {
-          movies: "Фильмы", cartoons: "Мульты", series: "Сериалы",
-          marvel: "Marvel", dc: "DC",
-        };
-        var titles = {
-          home: "Афиша", spin: "Рулетка", list: "Списки",
-          upcoming: "Ожидаемые", history: "История",
-          showcase: (ALL_CATS[cat] || "") + " — скоро",
-          theaters: "В прокате", series_releases: "Премьеры сериалов",
-          tracked_series: "Отслеживание сериалов",
-        };
-        if (view in titles) document.getElementById("page-title").textContent = titles[view];
+        var title = viewTitleFor(view, s && s.cat, s && s.spinCat);
+        if (title) document.getElementById("page-title").textContent = title;
       } catch (e) {}
     })();
   </script>
@@ -169,6 +161,6 @@
   </div>
 </div>
 
-<script defer src="/static/js/dist/bundle.min.js"></script>
+<script defer src="/static/js/dist/bundle.min.js?v={{JS_BUNDLE_VERSION}}"></script>
 </body>
 </html>

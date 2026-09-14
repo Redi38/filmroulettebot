@@ -120,21 +120,13 @@ function copyToClipboard(text, el) {
   }
 }
 
+// Safe in both text content and double- or single-quoted attribute values
+// (data-title="..."), so templates need only one escaper. The old
+// escapeAttr() that produced a JS string literal for inline onclick="..."
+// handlers is gone along with those handlers.
+const HTML_ESCAPES = {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"};
 function escapeHtml(s) {
-  const d = document.createElement("div");
-  d.textContent = s ?? "";
-  return d.innerHTML;
-}
-
-function escapeAttr(s) {
-  return String(s)
-    .replace(/\\/g, "\\\\")
-    .replace(/'/g, "\\'")
-    .replace(/\n/g, "\\n")
-    .replace(/\r/g, "\\r")
-    .replace(/"/g, "&quot;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+  return String(s ?? "").replace(/[&<>"']/g, (ch) => HTML_ESCAPES[ch]);
 }
 
 function placeholderHtml(text, icon) {

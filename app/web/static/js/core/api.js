@@ -105,12 +105,9 @@ async function performSequel(category, title) {
       body: JSON.stringify({title}),
     })
   );
-  // This route has no `response_model` on the backend (app/web/server/routes_core.py),
-  // so OpenAPI has no schema for its body and ApiResponseOf falls back to an
-  // untyped dict — hence the manual cast here. Adding a response_model there
-  // (e.g. a small `SequelResponse(BaseModel): new_title: str`) would let
-  // ApiResponseOf infer `new_title: string` for real, removing this cast.
-  return /** @type {string} */ (r.new_title);
+  // The route declares response_model=SequelResponse, so `new_title` is a
+  // real `string` in api.d.ts — no cast needed.
+  return r.new_title;
 }
 
 /**

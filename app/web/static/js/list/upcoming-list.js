@@ -84,8 +84,8 @@ document.getElementById("up-check-btn").onclick = async () => {
     } else {
       for (const e of data.released) {
         const est = e.estimated ? '<div class="estimated">(оценочно, точной даты нет)</div>' : "";
-        html += `<div class="check-item fade-in" data-title="${escapeAttr(e.title)}">🎬 ${escapeHtml(e.tmdb_title)} — ${escapeHtml(humanizeShowcaseDate(e.release_date))}
-          <div class="check-item-action"><button class="btn btn-primary btn-sm" onclick="moveUpcoming('${escapeAttr(e.title)}')">Перенести</button>${est}</div></div>`;
+        html += `<div class="check-item fade-in" data-title="${escapeHtml(e.title)}">🎬 ${escapeHtml(e.tmdb_title)} — ${escapeHtml(humanizeShowcaseDate(e.release_date))}
+          <div class="check-item-action"><button class="btn btn-primary btn-sm" data-up-action="move">Перенести</button>${est}</div></div>`;
       }
     }
     html += "</div>";
@@ -112,6 +112,12 @@ document.getElementById("up-check-btn").onclick = async () => {
     fadeIn(result);
   }
 };
+
+document.getElementById("up-check-result").addEventListener("click", (ev) => {
+  const btn = ev.target.closest("[data-up-action='move']");
+  const item = btn && btn.closest(".check-item");
+  if (item) moveUpcoming(item.dataset.title);
+});
 
 async function moveUpcoming(title) {
   openCategoryModal(`Куда перенести «${title}»?`, async (category) => {

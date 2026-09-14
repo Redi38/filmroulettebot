@@ -39,6 +39,13 @@ function updateWheelScrollLock() {
 // Leaving the roulette tab and coming back re-requests the same pool for the
 // same category more often than not, and rebuilding it from scratch is what
 // the user sees as a flicker.
+//
+// The wrap is shared by every category now (WHEEL_WRAP_IDS has a single
+// entry), so "the same pool is already showing" is not enough on its own —
+// it may have been measured for a layout (viewport size, dock height) that
+// no longer holds by the time this category comes back around. Reusing it
+// as-is then means showing a wrong-size wheel with no correction in sight,
+// since the caller skips the whole settle/rebuild path on a cache hit.
 function canReuseIdleWheel(wrap, cat, pool, weights) {
   if (!wrap.querySelector(".wheel-canvas")) return false;
   if (wrap.style.display === "none") return false;
@@ -47,7 +54,9 @@ function canReuseIdleWheel(wrap, cat, pool, weights) {
   const shown = wrap._wheelPool;
   if (!shown || shown.length !== pool.length) return false;
   if (shown.some((title, i) => title !== pool[i])) return false;
-  return JSON.stringify(wrap._wheelWeights || null) === JSON.stringify(weights || null);
+  if (JSON.stringify(wrap._wheelWeights || null) !== JSON.stringify(weights || null)) return false;
+  const predicted = predictWheelSize(wrap);
+  return Math.abs(predicted - (wrap._wheelBuiltSize || 0)) < WHEEL_SETTLE_TOLERANCE_PX;
 }
 
 // body.dock-ready is the app's own "chrome has landed" signal (viewport.js
@@ -102,6 +111,12 @@ async function showIdleWheel(cat) {
     await nextSettledFrame();
     await awaitWheelLayoutReady();
     if (!wrap.isConnected || document.getElementById("spin-wheel-wrap") !== wrap) return;
+    // canReuseIdleWheel() already ruled out "this is the same pool at the
+    // same size" — but that's not the same as "nothing usable is on screen".
+    // buildSettledWheel() itself tells a true cold start (wrap has never
+    // held a canvas) from a revisit/category-switch (it holds someone else's
+    // canvas) and only skeletons the former; the latter gets the quiet
+    // hidden-and-swapped treatment so repeat visits stay instant.
     buildSettledWheel("spin-wheel-wrap", pool, data.wheel_weights);
     wrap._wheelCat = cat;
     if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
@@ -223,43 +238,23 @@ function buildWheel(wrapId, items, weights) {
   return canvas;
 }
 
-// buildWheel() sizes the wheel from whatever the layout says at the moment it
-// runs. Opening the roulette tab, that moment is too early: the section has
-// only just been switched on and the dock has not settled, so the first
-// measurement comes out short and the wheel is built small — then the dock's
-// ResizeObserver fires, rebuildVisibleWheels() re-measures, and the user
-// watches the wheel jump to full size.
-//
-// Rather than chase every input that can still move (dock position, scroll
-// reset, font metrics), build it hidden, re-measure once the layout has
-// settled, and rebuild if the answer changed. Only the revealed size is ever
-// on screen. Capped at a few attempts so a layout that genuinely never
-// settles still shows a wheel instead of nothing.
 const WHEEL_SETTLE_MAX_ATTEMPTS = 3;
 const WHEEL_SETTLE_TOLERANCE_PX = 3;
 
 function buildSettledWheel(wrapId, items, weights, attempt = 0, token = null) {
   const wrap = document.getElementById(wrapId);
   if (!wrap) return null;
-  // A resize can start a second settle loop while the first is still running.
-  // The newest one wins; older ones notice their token is stale and bow out
-  // rather than revealing a wheel someone else has already replaced.
   if (attempt === 0) token = wrap._settleToken = (wrap._settleToken || 0) + 1;
   else if (token !== wrap._settleToken) return null;
 
   const hadWheel = !!wrap.querySelector(".wheel-canvas");
   wrap.classList.add("wheel-wrap--settling");
   const canvas = buildWheel(wrapId, items, weights);
-  // Only when there is nothing to stand in for. Re-settling a wheel that is
-  // already up (a resize) hides it for a frame or two; dropping a skeleton in
-  // for that long reads as a flash, not as loading.
   if (!hadWheel) mountWheelSettleSkeleton(wrap);
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       if (token !== wrap._settleToken) return;
-      // The view moved on (tab switched, category changed, spin started)
-      // while we were measuring — whoever did that owns the wrap now.
       if (!wrap.isConnected || wrap._wheelPool !== items) {
         revealSettledWheel(wrap);
         return;
@@ -277,10 +272,6 @@ function buildSettledWheel(wrapId, items, weights, attempt = 0, token = null) {
   return canvas;
 }
 
-// The measured-but-not-yet-shown wheel is a blank gap otherwise, which on a
-// slow first paint reads as "nothing happened". buildWheel() wipes the wrap
-// on every attempt, so this is re-mounted each time — with the group's
-// fade-in suppressed, so re-mounting does not restart it and flicker.
 function mountWheelSettleSkeleton(wrap) {
   if (typeof skeletonWheelHtml !== "function") return;
   const skel = document.createElement("div");

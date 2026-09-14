@@ -113,7 +113,7 @@
     position: fixed; top: 0; left: 0; width: var(--sidebar-w); height: var(--header-h);
     padding: 0 18px; box-sizing: border-box; font-weight: 800; font-size: 1.05rem; color: var(--text);
     background-color: var(--sidebar-bg);
-    background-image: linear-gradient(90deg, rgba(var(--primary-rgb), 0.14), rgba(var(--primary-2-rgb), 0.08));
+    background-image: linear-gradient(90deg, rgba(var(--primary-rgb), 0.14), rgba(var(--header-tint-2-rgb), 0.08));
     border-bottom: 1px solid var(--border); z-index: 12; white-space: nowrap;
   }
   header { margin-left: var(--sidebar-w); }

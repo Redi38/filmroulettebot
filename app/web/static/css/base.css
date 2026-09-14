@@ -7,6 +7,10 @@
   --primary-rgb: 242, 169, 59; --primary-2-rgb: 255, 59, 129; --on-primary: #1a1108;
   --border: #2c2620; --glow: rgba(var(--primary-rgb), 0.32); --glow-2: rgba(var(--primary-2-rgb), 0.32);
   --sidebar-w: 260px; --header-h: 63px; --sidebar-bg: #17151b;
+  /* Second color stop for the header/sidebar-brand gradient specifically.
+     Defaults to --primary-2 everywhere; only dc overrides it, so buttons,
+     glows, filter pills etc. all keep using --primary-2 untouched. */
+  --header-tint-2: var(--primary-2); --header-tint-2-rgb: var(--primary-2-rgb);
   --error-toast-offset: 135px;
 
   /* Motion system: every press/hover/enter animation in the app should use
@@ -54,6 +58,7 @@ body[data-studio="marvel"] {
 }
 body[data-studio="dc"] {
   --primary: #1e7fe0; --primary-2: #5ec8ff; --primary-rgb: 30, 127, 224; --primary-2-rgb: 94, 200, 255;
+  --header-tint-2: #eaf6ff; --header-tint-2-rgb: 234, 246, 255;
   --glow: rgba(var(--primary-rgb), 0.32); --glow-2: rgba(var(--primary-2-rgb), 0.32);
   --on-primary: #ffffff;
   --border: rgba(var(--primary-rgb), 0.4);
@@ -109,7 +114,7 @@ body::before {
 header {
   display: flex; align-items: center; justify-content: space-between;
   height: var(--header-h); padding: 14px 16px; border-bottom: 1px solid var(--border);
-  background: linear-gradient(90deg, rgba(var(--primary-rgb), 0.14), rgba(var(--primary-2-rgb), 0.08));
+  background: linear-gradient(90deg, rgba(var(--primary-rgb), 0.14), rgba(var(--header-tint-2-rgb), 0.08));
 }
 header h1 { margin: 0; font-size: 1.15rem; font-weight: 800; }
 

@@ -251,12 +251,18 @@ async function showSection() {
   // its CSS animations — the marquee banks its progress before that happens.
   if (currentView !== "home" && typeof pauseHomeMarquee === "function") pauseHomeMarquee();
 
+  const resumeHomeMarqueeInline = currentView === "home" && homeLoaded && useViewTransition;
+
   const applyDom = () => {
     window.scrollTo(0, 0);
     for (const [view, id] of Object.entries(SECTION_IDS)) {
       document.getElementById(id).classList.toggle("active", currentView === view);
     }
     updateHeaderTitle();
+    if (resumeHomeMarqueeInline) {
+      syncMarqueeSize();
+      resumeHomeMarquee();
+    }
   };
 
   if (useViewTransition) {
@@ -278,7 +284,7 @@ async function showSection() {
 
   if (typeof updateWheelScrollLock === "function") updateWheelScrollLock();
 
-  if (currentView === "home") loadHome();
+  if (currentView === "home" && !resumeHomeMarqueeInline) loadHome();
   if (currentView === "spin") {
     renderAllDockControls("spin");
     currentCardData = null;

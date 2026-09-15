@@ -36,19 +36,11 @@ function resetWheelWraps() {
 function updateWheelScrollLock() {
 }
 
-// A wrap that is on screen for real: connected, not display:none itself, and
-// not inside a hidden section. Measuring a wrap inside a display:none section
-// reads clientWidth 0 and "predicts" the 260px minimum, which is how the wheel
-// got rebuilt tiny while the user was on another tab.
 function isWheelWrapRendered(wrap) {
   return !!wrap && wrap.isConnected && wrap.style.display !== "none"
     && wrap.getClientRects().length > 0;
 }
 
-// The preview endpoint shuffles the pool on every call, so the same set of
-// titles comes back in a different order each time. Compare as a multiset,
-// with weights keyed by title, so an unchanged roulette keeps the wheel it
-// already shows instead of reshuffling the segments in place.
 function sameWheelContents(shownPool, shownWeights, pool, weights) {
   if (!shownPool || shownPool.length !== pool.length) return false;
   const weightOf = (arr, w, i) => (w && w.length === arr.length ? w[i] : 1);
@@ -78,11 +70,6 @@ function canReuseIdleWheel(wrap, cat, pool, weights) {
 
 const WHEEL_LAYOUT_READY_TIMEOUT_MS = 1500;
 const WHEEL_LAYOUT_QUIET_MS = 200;
-// The idle skeleton stays up at least this long. The preview request often
-// lands in a couple of frames and the layout is already quiet on re-entry,
-// so without a floor the skeleton flashed for ~30ms and the only thing the
-// eye caught was the wheel's enter animation, which read as a small wheel
-// growing rather than a placeholder being replaced.
 const WHEEL_SKELETON_MIN_MS = 450;
 
 function awaitWheelLayoutReady() {
@@ -101,17 +88,6 @@ function awaitWheelLayoutReady() {
   });
 }
 
-// Synchronous "hide the stale wheel" step. Adds .wheel-wrap--settling (which
-// hides every child except the skeleton via CSS) and mounts the skeleton.
-// Idempotent — a no-op once the skeleton is already up.
-//
-// MUST run before the spin section is actually revealed to the user —
-// including from *inside* the callback passed to a View Transition, before
-// it snapshots the "after" state. If it only runs from showIdleWheel(),
-// which is awaited after the transition finishes, the transition crossfades
-// in the stale, wrong-sized wheel for the length of the animation, and only
-// once that's done does the skeleton swap in — a small wheel, then a jump
-// cut to skeleton, then the real wheel.
 function prepIdleWheelSkeleton(cat) {
   const wrap = document.getElementById("spin-wheel-wrap");
   if (!wrap || wrap.querySelector(".wheel-settle-skeleton")) return;
@@ -120,21 +96,11 @@ function prepIdleWheelSkeleton(cat) {
     wrap.innerHTML = "";
     wrap.classList.remove("wheel-done");
     wrap.style.display = "flex";
-    // Same padding / min-height / size the real wheel will get, so the
-    // skeleton is placed once and the wheel simply replaces it. Measuring
-    // in the very tick the section became visible is unreliable (the
-    // dock, the section transition and fonts are all still moving), so on
-    // re-entry the metrics of the wheel that was on screen last time are
-    // reused — same viewport, same size — and only a true cold start
-    // measures fresh.
     if (wrap._wheelMetrics) applyWheelWrapMetrics(wrap, wrap._wheelMetrics);
     else applyWheelWrapMetrics(wrap);
     const result = document.getElementById("spin-result");
     if (result) result.innerHTML = "";
   }
-  // Hides whatever is still in the wrap (nothing, or the stale wheel)
-  // via the existing `.wheel-wrap--settling > *:not(.wheel-settle-skeleton)`
-  // rule — the wheel itself isn't touched here, just covered.
   wrap.classList.add("wheel-wrap--settling");
   mountWheelSettleSkeleton(wrap, {animate: !hadWheel});
   wrap._wheelSkeletonShownAt = performance.now();
@@ -143,8 +109,6 @@ function prepIdleWheelSkeleton(cat) {
 async function showIdleWheel(cat) {
   const wrap = document.getElementById("spin-wheel-wrap");
   if (!wrap) return;
-  // No-op if the caller (showSection()'s applyDom) already prepped this
-  // synchronously before the section became visible; otherwise does it now.
   prepIdleWheelSkeleton(cat);
   const skeletonShownAt = wrap._wheelSkeletonShownAt || 0;
   try {
@@ -166,10 +130,6 @@ async function showIdleWheel(cat) {
       if (remaining > 0) await new Promise((r) => setTimeout(r, remaining));
     }
     if (!wrap.isConnected || document.getElementById("spin-wheel-wrap") !== wrap) return;
-    // Drop the settling flag before checking reuse: canReuseIdleWheel()
-    // treats "currently settling" as "don't reuse", which is right while a
-    // rebuild is genuinely in flight but would always be true here since we
-    // just set it above ourselves.
     wrap.classList.remove("wheel-wrap--settling");
     if (canReuseIdleWheel(wrap, cat, pool, data.wheel_weights)) {
       revealSettledWheel(wrap);
@@ -185,9 +145,6 @@ async function showIdleWheel(cat) {
   }
 }
 
-// Measures the space the wheel gets and sets the wrap's padding (clearance
-// under an overlapping dock) and min-height for it. Shared by buildWheel()
-// and the early skeleton in showIdleWheel(), so both lay out identically.
 function applyWheelWrapMetrics(wrap, known) {
   wrap.style.minHeight = "";
   wrap.style.paddingTop = "";
@@ -206,6 +163,16 @@ function applyWheelWrapMetrics(wrap, known) {
   const viewportHeight = document.documentElement.clientHeight || window.innerHeight;
   const availableHeight = viewportHeight - top - pageBottomGap - dockClearance;
   const availableWidth = wrap.clientWidth;
+  if (availableWidth < WHEEL_MIN_SIZE) {
+    if (wrap._wheelMetrics) {
+      wrap.style.paddingTop = wrap._wheelMetrics.dockClearance + "px";
+      wrap.style.minHeight = (wrap._wheelMetrics.cssSize + wrap._wheelMetrics.dockClearance + WHEEL_VERTICAL_RESERVE) + "px";
+      return wrap._wheelMetrics;
+    }
+    wrap.style.paddingTop = "";
+    wrap.style.minHeight = "";
+    return null;
+  }
   const cssSize = computeWheelSize(availableWidth, availableHeight);
   const heightBudget = Math.max(0, viewportHeight - top - pageBottomGap);
   wrap.style.minHeight = Math.min(cssSize + dockClearance + WHEEL_VERTICAL_RESERVE, heightBudget) + "px";
@@ -233,7 +200,8 @@ function buildWheel(wrapId, items, weights, opts) {
   wrap._wheelPool = items;
   wrap._wheelWeights = weights;
 
-  const {cssSize} = applyWheelWrapMetrics(wrap);
+  const metrics = applyWheelWrapMetrics(wrap) || {cssSize: WHEEL_MIN_SIZE};
+  const cssSize = metrics.cssSize;
   wrap._wheelBuiltSize = cssSize;
 
   const titleEl = document.createElement("div");
@@ -347,12 +315,7 @@ function mountWheelSettleSkeleton(wrap, opts) {
   skel.className = "wheel-settle-skeleton";
   skel.innerHTML = skeletonWheelHtml();
   const group = skel.querySelector(".skel-wheel-wrap");
-  // Only the very first skeleton fades in; re-mounts during settle attempts
-  // must not replay the animation or the placeholder visibly blinks.
   if (group && !animate) group.style.animation = "none";
-  // Sit exactly where the wheel will: below the dock clearance, with the
-  // disc at the wheel's own size, instead of centred in whatever height the
-  // wrap happens to have at the moment.
   const metrics = wrap._wheelMetrics;
   if (metrics) {
     skel.style.top = metrics.dockClearance + "px";

@@ -33,7 +33,7 @@ from ..shared import (
     _check_category,
     _validate_rename_by_id,
 )
-from ..shared.posters import cache_info_by_id, lookup_poster_url, schedule_poster_backfill
+from ..shared.posters import cache_info_by_id, lookup_poster_info_many, schedule_poster_backfill
 
 router = APIRouter()
 
@@ -46,11 +46,17 @@ async def api_items(cat: str, page: int = 1, q: str = "") -> dict:
     if q:
         items = [i for i in items if q in i["title"].lower()]
     page_items, page, total_pages = paginate(items, page, page_size=LIST_PAGE_SIZE)
+    # One batched tmdb_cache lookup for the whole page instead of one (or
+    # two, for dc/marvel) awaited SELECT per row — each of which serialises
+    # on the shared connection's lock, so a page of 30 rows used to mean
+    # 30-60 sequential round trips.
+    is_series_by_title = {item["title"]: item.pop("is_series", None) for item in page_items}
+    poster_by_title = await lookup_poster_info_many(cat, list(is_series_by_title.items()))
     for item in page_items:
-        is_series = item.pop("is_series", None)
-        item["poster_url"] = await lookup_poster_url(cat, item["title"], is_series)
+        info = poster_by_title.get(item["title"])
+        item["poster_url"] = info["poster_url"] if info else None
         if not item["poster_url"]:
-            schedule_poster_backfill(cat, item["title"], is_series)
+            schedule_poster_backfill(cat, item["title"], is_series_by_title[item["title"]])
     return {"items": page_items, "page": page, "total_pages": total_pages, "total_count": len(items)}
 
 

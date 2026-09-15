@@ -7,7 +7,7 @@ old single-file app/db/database.py exposed, so `from app.db.database import
 """
 from __future__ import annotations
 
-from .cache import get_tmdb_cache, set_tmdb_cache
+from .cache import get_tmdb_cache, get_tmdb_cache_many, set_tmdb_cache
 from .connection import close_db
 from .history import (
     clear_all_history,
@@ -23,6 +23,7 @@ from .items import (
     add_item,
     delete_item,
     delete_item_by_id,
+    get_item_counts,
     get_item_is_series,
     get_items,
     get_items_with_ids,
@@ -49,6 +50,7 @@ from .upcoming import (
 __all__ = [
     "init_db",
     "close_db",
+    "get_item_counts",
     "get_item_is_series",
     "get_items",
     "get_items_with_ids",
@@ -61,6 +63,7 @@ __all__ = [
     "rename_item_by_id",
     "move_item",
     "get_tmdb_cache",
+    "get_tmdb_cache_many",
     "set_tmdb_cache",
     "load_history",
     "get_recent_history",

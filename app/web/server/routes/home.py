@@ -18,7 +18,7 @@ from fastapi import APIRouter, HTTPException
 from app.db.database import get_items_with_ids, item_exists
 
 from ..shared import _card_data, _check_category
-from ..shared.posters import FRANCHISE_CATEGORIES, lookup_poster_info
+from ..shared.posters import FRANCHISE_CATEGORIES, lookup_poster_info_many
 
 router = APIRouter()
 
@@ -34,27 +34,33 @@ async def api_home_collection() -> dict:
     # ("Фонари"), and without the flag lookup_poster_info guesses movie
     # first — which put the film's poster on the Афиша for a row the user
     # had picked the series for.
-    pairs: list[tuple[str, str, bool | None]] = []
+    pairs_by_cat: dict[str, list[tuple[str, bool | None]]] = {}
+    total_items = 0
     for cat in (*COLLECTION_CATEGORIES, *FRANCHISE_CATEGORIES):
-        for item in await get_items_with_ids(cat):
-            pairs.append((cat, item["title"], item.get("is_series")))
+        rows = [(item["title"], item.get("is_series")) for item in await get_items_with_ids(cat)]
+        pairs_by_cat[cat] = rows
+        total_items += len(rows)
 
-    total_items = len(pairs)
-    random.shuffle(pairs)
-
+    # One batched tmdb_cache lookup per category instead of one (or two,
+    # for dc/marvel) awaited SELECT per title — with every title in every
+    # list in play here, the old per-title loop was the single biggest
+    # contributor to this endpoint's latency.
     posters: list[dict] = []
-    for cat, title, is_series in pairs:
-        if len(posters) >= _MAX_POSTERS:
-            break
-        info = await lookup_poster_info(cat, title, is_series)
-        if not info:
-            continue
-        posters.append({
-            "title": info.get("title") or title,
-            "original_title": title,
-            "poster_url": info["poster_url"],
-            "category": cat,
-        })
+    for cat, rows in pairs_by_cat.items():
+        info_by_title = await lookup_poster_info_many(cat, rows)
+        for title, _is_series in rows:
+            info = info_by_title.get(title)
+            if not info:
+                continue
+            posters.append({
+                "title": info.get("title") or title,
+                "original_title": title,
+                "poster_url": info["poster_url"],
+                "category": cat,
+            })
+
+    random.shuffle(posters)
+    posters = posters[:_MAX_POSTERS]
 
     return {"posters": posters, "total_items": total_items}
 

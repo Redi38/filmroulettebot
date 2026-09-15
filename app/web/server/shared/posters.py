@@ -22,7 +22,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from app.db.database import get_tmdb_cache, set_tmdb_cache
+from app.db.database import get_tmdb_cache, get_tmdb_cache_many, set_tmdb_cache
 from app.services.tmdb import get_details_by_id, get_movie_info, get_series_info
 
 logger = logging.getLogger(__name__)
@@ -62,6 +62,55 @@ async def lookup_poster_info(cat: str, title: str, is_series: bool | None = None
         # old best-effort guess (movie first).
         return await _cached_poster(f"movie_info:{key}") or await _cached_poster(f"series_info:{key}")
     return await _cached_poster(f"movie_info:{key}")
+
+
+async def lookup_poster_info_many(
+    cat: str, rows: list[tuple[str, bool | None]]
+) -> dict[str, dict | None]:
+    """Batched counterpart of lookup_poster_info(): resolves a whole page's
+    worth of (title, is_series) pairs with one tmdb_cache query instead of
+    one (or two, for dc/marvel) per row. Same movie/series preference rule
+    as lookup_poster_info — worked out here in Python once the batch of
+    cache rows is back, instead of driving it with sequential awaits.
+
+    Returns a dict keyed by the original `title` (not the cache key), so
+    callers can just do `result[item["title"]]`.
+    """
+    if not rows:
+        return {}
+
+    keys_needed: set[str] = set()
+    for title, is_series in rows:
+        key = title.strip().lower()
+        if cat == "series":
+            keys_needed.add(f"series_info:{key}")
+        elif cat in FRANCHISE_CATEGORIES:
+            keys_needed.add(f"movie_info:{key}")
+            keys_needed.add(f"series_info:{key}")
+        else:
+            keys_needed.add(f"movie_info:{key}")
+
+    cached = await get_tmdb_cache_many(list(keys_needed), _POSTER_CACHE_TTL)
+
+    out: dict[str, dict | None] = {}
+    for title, is_series in rows:
+        key = title.strip().lower()
+        info = None
+        if cat == "series":
+            info = cached.get(f"series_info:{key}")
+        elif cat in FRANCHISE_CATEGORIES:
+            movie_info = cached.get(f"movie_info:{key}")
+            series_info = cached.get(f"series_info:{key}")
+            if is_series is True:
+                info = series_info or movie_info
+            elif is_series is False:
+                info = movie_info or series_info
+            else:
+                info = movie_info or series_info
+        else:
+            info = cached.get(f"movie_info:{key}")
+        out[title] = info if (info or {}).get("poster_url") else None
+    return out
 
 
 async def lookup_poster_url(cat: str, title: str, is_series: bool | None = None) -> str | None:

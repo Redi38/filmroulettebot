@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 from fastapi.responses import HTMLResponse
 
-from app.db.database import add_item, delete_item, get_items
+from app.db.database import add_item, delete_item, get_item_counts
 from app.services.titles import next_sequel_title
 
 from ..shared import CATEGORIES, CATEGORY_SHORT, SequelBody, SequelResponse, _check_category
@@ -24,10 +24,14 @@ async def index() -> HTMLResponse:
 
 @router.get("/api/categories")
 async def api_categories() -> dict:
+    # One UNION ALL COUNT(*) query for every category instead of a full
+    # `SELECT title FROM <table>` per category — this endpoint is fetched
+    # on every page load (menu.js bootstrap), so it used to mean 7 full
+    # table scans, whole-row results included, just to read off len().
+    counts = await get_item_counts(list(CATEGORIES.keys()))
     out = {}
     for code, ru in CATEGORIES.items():
-        items = await get_items(code)
-        out[code] = {"label": ru, "short_label": CATEGORY_SHORT.get(code, ru), "count": len(items)}
+        out[code] = {"label": ru, "short_label": CATEGORY_SHORT.get(code, ru), "count": counts.get(code, 0)}
     return out
 
 

@@ -5,6 +5,23 @@ from __future__ import annotations
 from .connection import check_table, conn, retry_on_lock
 
 
+async def get_item_counts(tables: list[str]) -> dict[str, int]:
+    """COUNT(*) for several tables in one round trip (one UNION ALL query)
+    instead of one `SELECT title FROM <table>` per table with the whole
+    result pulled into Python just to take len() of it — used by
+    /api/categories, which previously issued 7 full-table scans on every
+    call just to report how many rows each category has."""
+    for t in tables:
+        check_table(t)
+    if not tables:
+        return {}
+    union_sql = " UNION ALL ".join(f"SELECT '{t}' AS tbl, COUNT(*) AS n FROM {t}" for t in tables)
+    async with conn() as db:
+        async with db.execute(union_sql) as cur:
+            rows = await cur.fetchall()
+    return {row[0]: row[1] for row in rows}
+
+
 async def get_items(table: str) -> list[str]:
     check_table(table)
     async with conn() as db:

@@ -35,6 +35,45 @@ async def get_tmdb_cache(key: str, ttl_seconds: int) -> Any | None:
         return None
 
 
+async def get_tmdb_cache_many(keys: list[str], ttl_seconds: int) -> dict[str, Any]:
+    """Batched counterpart of get_tmdb_cache(): one SELECT ... WHERE cache_key
+    IN (...) instead of N round trips, each of which serializes on the shared
+    connection's lock (see connection.py). Callers that need many keys at
+    once (poster lookups for a whole page/collection) should always prefer
+    this over a loop of get_tmdb_cache() calls — with pages of 30-300 titles,
+    the loop was the dominant cost of those endpoints.
+
+    Returns only the keys that were present, unexpired, and valid JSON —
+    same "or treat it as a miss" semantics as get_tmdb_cache() for anything
+    else, so callers can keep doing `result.get(key)`.
+    """
+    if not keys:
+        return {}
+    out: dict[str, Any] = {}
+    now = time.time()
+    async with conn() as db:
+        # SQLite's default limit on bound parameters is 999; chunk so a
+        # large batch (e.g. a franchise category with hundreds of titles,
+        # queried under two key prefixes each) can't exceed it.
+        CHUNK = 400
+        for i in range(0, len(keys), CHUNK):
+            chunk = keys[i : i + CHUNK]
+            placeholders = ",".join("?" * len(chunk))
+            async with db.execute(
+                f"SELECT cache_key, payload, cached_at FROM tmdb_cache WHERE cache_key IN ({placeholders})",
+                chunk,
+            ) as cur:
+                rows = await cur.fetchall()
+            for cache_key, payload, cached_at in rows:
+                if now - cached_at > ttl_seconds:
+                    continue
+                try:
+                    out[cache_key] = json.loads(payload)
+                except (TypeError, ValueError):
+                    logger.warning("tmdb_cache: corrupted payload for key %r, ignoring", cache_key)
+    return out
+
+
 @retry_on_lock
 async def set_tmdb_cache(key: str, value: Any) -> None:
     payload = json.dumps(value, ensure_ascii=False)

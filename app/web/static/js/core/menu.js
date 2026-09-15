@@ -21,8 +21,6 @@ const overlay = document.getElementById("overlay");
   }
   categoryCounts = {};
   for (const [code, info] of Object.entries(data)) categoryCounts[code] = info.count;
-  // A category may have just vanished from (or reappeared in) the roulette
-  // picker, and the menu/list labels may have changed.
   if (isCatEmpty(spinCat)) { spinCat = RANDOM_CAT; saveState(); }
   renderMenu();
   renderSpinCatChips();
@@ -38,8 +36,8 @@ const ICONS = {
   series: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>`,
   premiere: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.36 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.36 12 2"></polygon></svg>`,
   list: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>`,
-  marvel: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="12" x2="12" y2="3"></line><line x1="12" y1="12" x2="19.8" y2="7.5"></line><line x1="12" y1="12" x2="19.8" y2="16.5"></line><line x1="12" y1="12" x2="12" y2="21"></line><line x1="12" y1="12" x2="4.2" y2="16.5"></line><line x1="12" y1="12" x2="4.2" y2="7.5"></line><polygon points="12 7 16.3 9.5 16.3 14.5 12 17 7.7 14.5 7.7 9.5"></polygon><polygon points="12 3 19.8 7.5 19.8 16.5 12 21 4.2 16.5 4.2 7.5"></polygon></svg>`,
-  dc: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12L5 8L8 11L12 7L16 11L19 8L23 12L19 16L16 13L12 17L8 13L5 16Z"></path></svg>`,
+  marvel: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="12" x2="12" y2="2"></line><line x1="12" y1="12" x2="20.7" y2="7"></line><line x1="12" y1="12" x2="20.7" y2="17"></line><line x1="12" y1="12" x2="12" y2="22"></line><line x1="12" y1="12" x2="3.3" y2="17"></line><line x1="12" y1="12" x2="3.3" y2="7"></line><polygon points="12 6.4 16.8 9.2 16.8 14.8 12 17.6 7.2 14.8 7.2 9.2"></polygon><polygon points="12 2 20.7 7 20.7 17 12 22 3.3 17 3.3 7"></polygon></svg>`,
+  dc: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="12" r="7"></circle><circle cx="15.5" cy="12" r="7"></circle></svg>`,
   upcoming: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`,
   history: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 8 3 21 21 21 21 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>`,
   theaters: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2"></rect></svg>`,
@@ -100,8 +98,6 @@ function renderMenu() {
 
   addGroup("Главное");
   addItem("home", "Афиша", () => switchView("home"), currentView === "home");
-  // One roulette and one list for every category — you pick the category on
-  // the screen itself (the chip rows), not by walking the menu.
   addItem("shuffle", "Рулетка", () => switchView("spin"), currentView === "spin");
   addItem("list", "Списки", () => switchView("list"), currentView === "list");
 
@@ -236,8 +232,6 @@ async function showSection() {
   const hasViewTransitions = !reduceMotion && typeof document.startViewTransition === "function";
   const useViewTransition = isSwap && hasViewTransitions;
 
-  // Anything leaving the screen is about to be display:none'd, which cancels
-  // its CSS animations — the marquee banks its progress before that happens.
   if (currentView !== "home" && typeof pauseHomeMarquee === "function") pauseHomeMarquee();
 
   const resumeHomeMarqueeInline = currentView === "home" && homeLoaded && useViewTransition;
@@ -247,13 +241,6 @@ async function showSection() {
     for (const [view, id] of Object.entries(SECTION_IDS)) {
       document.getElementById(id).classList.toggle("active", currentView === view);
     }
-    // Must happen inside this same DOM update, not after showSection()'s
-    // await below: when a View Transition drives the section swap, it
-    // snapshots the "after" state right after applyDom() runs. If the wheel
-    // wrap isn't already hidden behind its skeleton by then, the transition
-    // crossfades in the stale, wrong-sized wheel for the length of the
-    // animation — a small wheel, then a jump cut to skeleton once
-    // showIdleWheel() finally runs, then the real wheel.
     if (currentView === "spin" && spinMode === "wheel" && !isRandomSpin()) {
       prepIdleWheelSkeleton(spinCat);
     }
@@ -287,10 +274,6 @@ async function showSection() {
   if (currentView === "spin") {
     renderAllDockControls("spin");
     currentCardData = null;
-    // prepIdleWheelSkeleton() above (inside applyDom) already hid the stale
-    // wheel behind the skeleton before the section became visible;
-    // showIdleWheel() here just picks up from there — fetches the preview
-    // and decides whether to reuse the existing wheel or rebuild it.
     if (spinMode === "wheel" && !isRandomSpin()) showIdleWheel(spinCat);
     else { resetWheelWraps(); resetSpinResult(); }
     if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();

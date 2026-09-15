@@ -7,7 +7,7 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 
 from app.db.database import (
     SKIP_SCOPES,
@@ -31,12 +31,22 @@ from ..shared import NOW_PLAYING_MAX_AGE_DAYS, THEATERS_PAGE_SIZE, SkipBody
 
 router = APIRouter()
 
+# Same reasoning as showcase.py's _SHOWCASE_CACHE_CONTROL: the underlying
+# TMDb listings are already cached server-side for hours, so a short
+# client-side cache costs nothing in freshness beyond the in_list/skip
+# window and saves a full round trip (TMDb merge + digitally-released
+# lookups) on quick tab switches.
+_THEATERS_CACHE_CONTROL = "private, max-age=45, stale-while-revalidate=180"
+
 
 @router.get("/api/theaters")
-async def api_theaters(now_playing_page: int = 1, upcoming_page: int = 1, added: str = "all") -> dict:
+async def api_theaters(
+    response: Response, now_playing_page: int = 1, upcoming_page: int = 1, added: str = "all"
+) -> dict:
     """TMDb's own "now playing" / "upcoming" theatrical calendars — global,
     not tied to any studio, unlike /api/showcase/{studio}. Movies and
     cartoons only; series live on their own /api/series-releases tab."""
+    response.headers["Cache-Control"] = _THEATERS_CACHE_CONTROL
     (now_playing, upcoming), (own_movies, own_cartoons, own_upcoming, skipped_now, skipped_upcoming) = (
         await asyncio.gather(
             asyncio.gather(get_now_playing(), get_upcoming_theatrical()),
@@ -103,10 +113,11 @@ async def api_theaters(now_playing_page: int = 1, upcoming_page: int = 1, added:
 
 
 @router.get("/api/series-releases")
-async def api_series_releases(page: int = 1, added: str = "all") -> dict:
+async def api_series_releases(response: Response, page: int = 1, added: str = "all") -> dict:
     """Popular TV shows airing new seasons/episodes soon — global TMDb
     discovery (not tied to the user's own series list), separate from the
     movies/cartoons-only /api/theaters tab. Rating 7+ only."""
+    response.headers["Cache-Control"] = _THEATERS_CACHE_CONTROL
     releases, own_series, skipped = await asyncio.gather(
         get_series_releases(), get_items("series"), get_skipped("series_releases"),
     )

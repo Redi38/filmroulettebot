@@ -13,6 +13,23 @@
 
 const API_TIMEOUT_MS = 15000;
 
+// GET-only, in-memory SWR-lite cache: repeat navigation to a screen the
+// user already has data for (switching list categories back and forth,
+// re-opening a showcase tab) reuses that data instead of re-running the
+// fetch, so the skeleton that used to flash on every visit only shows up
+// the first time. Two windows: within FRESH_MS an entry is served straight
+// from memory with no request at all; between FRESH_MS and MAX_AGE_MS it's
+// still served immediately (never blocks the caller) but a background
+// request quietly refreshes it for whoever asks next. Past MAX_AGE_MS the
+// entry is dropped and the next call is a normal network round trip.
+const API_CACHE_FRESH_MS = 20000;
+const API_CACHE_MAX_AGE_MS = 5 * 60 * 1000;
+
+/** @type {Map<string, {data: any, ts: number}>} */
+const _apiCache = new Map();
+/** @type {Set<string>} */
+const _apiRevalidating = new Set();
+
 class ApiError extends Error {
   /**
    * @param {string} message
@@ -28,25 +45,17 @@ class ApiError extends Error {
 }
 
 /**
- * Thin fetch wrapper: aborts after API_TIMEOUT_MS, throws an ApiError
- * (`.status` 0 for a client-side timeout) on any non-2xx response or
- * network failure, otherwise resolves with the parsed JSON body.
+ * The actual network request, with no cache involvement — aborts after
+ * API_TIMEOUT_MS, throws an ApiError (`.status` 0 for a client-side
+ * timeout) on any non-2xx response or network failure, otherwise resolves
+ * with the parsed JSON body. api() below wraps this with the GET cache;
+ * call this directly only from within that wrapper.
  *
- * Typed against api.d.ts whenever `path` is a literal string matching one
- * of the backend's actual OpenAPI paths — e.g. `api("/api/history")` infers
- * its return type straight from the FastAPI route's response model, so a
- * field rename on the backend shows up as a type error here instead of a
- * silent `undefined` at runtime. Endpoints built from a template literal
- * (dynamic category segment, etc.) can't be matched against those literal
- * keys, so those calls need an explicit cast at the call site — see
- * performSequel/performDelete below for the pattern.
- *
- * @template {keyof ApiPaths} Path
- * @param {Path} path
+ * @param {string} path
  * @param {RequestInit} [opts]
- * @returns {Promise<ApiResponseOf<Path>>}
+ * @returns {Promise<any>}
  */
-async function api(path, opts) {
+async function _fetchApi(path, opts) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
 
@@ -86,6 +95,79 @@ async function api(path, opts) {
     throw new ApiError(err.detail || "Ошибка запроса", resp.status);
   }
   return resp.json();
+}
+
+// Only a plain GET (no explicit method, or "GET", and definitely no body)
+// is safe to cache/dedupe — anything else is a mutation and has to reach
+// the server every time.
+/**
+ * @param {RequestInit} [opts]
+ * @returns {boolean}
+ */
+function _isCacheableGet(opts) {
+  if (!opts) return true;
+  if (opts.body) return false;
+  if (opts.method && opts.method.toUpperCase() !== "GET") return false;
+  return true;
+}
+
+/**
+ * @param {string} path
+ */
+function _revalidateInBackground(path) {
+  if (_apiRevalidating.has(path)) return;
+  _apiRevalidating.add(path);
+  _fetchApi(path)
+    .then((data) => _apiCache.set(path, {data, ts: Date.now()}))
+    // A background refresh failing (offline blip, timeout) isn't something
+    // the user asked for right now — the caller already got an answer from
+    // cache. Just leave the stale entry in place for next time.
+    .catch(() => {})
+    .finally(() => _apiRevalidating.delete(path));
+}
+
+/**
+ * Typed against api.d.ts whenever `path` is a literal string matching one
+ * of the backend's actual OpenAPI paths — e.g. `api("/api/history")` infers
+ * its return type straight from the FastAPI route's response model, so a
+ * field rename on the backend shows up as a type error here instead of a
+ * silent `undefined` at runtime. Endpoints built from a template literal
+ * (dynamic category segment, etc.) can't be matched against those literal
+ * keys, so those calls need an explicit cast at the call site — see
+ * performSequel/performDelete below for the pattern.
+ *
+ * A successful non-GET call clears the whole cache: it's the simplest way
+ * to guarantee "add a title, then reload the list" never serves the list
+ * as it was before the add — trading a few discarded-but-still-valid GET
+ * entries for never showing genuinely stale data right after a mutation.
+ *
+ * @template {keyof ApiPaths} Path
+ * @param {Path} path
+ * @param {RequestInit} [opts]
+ * @returns {Promise<ApiResponseOf<Path>>}
+ */
+async function api(path, opts) {
+  const cacheable = _isCacheableGet(opts);
+  if (cacheable) {
+    const entry = _apiCache.get(path);
+    if (entry) {
+      const age = Date.now() - entry.ts;
+      if (age < API_CACHE_FRESH_MS) return entry.data;
+      if (age < API_CACHE_MAX_AGE_MS) {
+        _revalidateInBackground(path);
+        return entry.data;
+      }
+      _apiCache.delete(path);
+    }
+  }
+
+  const data = await _fetchApi(path, opts);
+  if (cacheable) {
+    _apiCache.set(path, {data, ts: Date.now()});
+  } else {
+    _apiCache.clear();
+  }
+  return data;
 }
 
 /**

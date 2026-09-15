@@ -12,9 +12,10 @@ async function loadUpcoming() {
     container.style.opacity = "1";
     container.innerHTML = skeletonListHtml();
   }
+  const dataPromise = api("/api/upcoming");
+  const fadeOutPromise = fadeOut(container);
   try {
-    const data = await api("/api/upcoming");
-    await fadeOut(container);
+    const [data] = await Promise.all([dataPromise, fadeOutPromise]);
     container.dataset.loaded = "1";
     if (!data.items.length) {
       container.innerHTML = placeholderHtml("Пока нет ожидаемых тайтлов — добавь то, чего ждёшь, выше 👀", "🕐");

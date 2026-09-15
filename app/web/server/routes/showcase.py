@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 
 from app.db.database import get_items
 from app.services.tmdb import (
@@ -15,6 +15,17 @@ from app.services.tmdb import (
 )
 
 router = APIRouter()
+
+# Short client-side cache for this personalized-but-slow-changing catalog:
+# the TMDb data behind it only refreshes server-side every DISCOVER_CACHE_TTL
+# (6h, see cache_ttl.py), so a request that lands within this window is
+# guaranteed to get back exactly what a fresh request would — the only
+# thing that can go stale sooner is `in_list`, right after the user adds or
+# removes a title from this studio's list on this same tab. Kept short
+# enough that even that staleness window is barely noticeable, in exchange
+# for skipping a full request (TMDb aggregation + junk filtering +
+# next-episode/finale lookups) on quick back-and-forth tab switches.
+_SHOWCASE_CACHE_CONTROL = "private, max-age=45, stale-while-revalidate=180"
 
 STUDIO_QUERIES = {
     "marvel": ("Marvel Studios",),
@@ -39,9 +50,10 @@ def _is_showcase_junk(item: dict) -> bool:
 
 
 @router.get("/api/showcase/{studio}")
-async def api_showcase(studio: str) -> dict:
+async def api_showcase(studio: str, response: Response) -> dict:
     if studio not in STUDIO_QUERIES:
         raise HTTPException(404, f"Unknown studio: {studio}")
+    response.headers["Cache-Control"] = _SHOWCASE_CACHE_CONTROL
 
     names = STUDIO_QUERIES[studio]
     movie_lists, tv_lists, tv_all_lists = await asyncio.gather(

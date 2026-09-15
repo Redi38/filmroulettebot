@@ -91,12 +91,24 @@ async function loadTheaters(trigger) {
       <div class="theaters-col theaters-col-now">${skeletonShowcaseHtml()}</div>
       <div class="theaters-col theaters-col-upcoming">${skeletonShowcaseHtml()}</div>`;
   }
+  const dataPromise = api(`/api/theaters?now_playing_page=${theatersNowPlayingPage}&upcoming_page=${theatersUpcomingPage}&added=${theatersAddedFilter}`);
+  // The container only ever fades as a whole when !singleColumn, and that
+  // branch depends on `trigger` (already known) and whether the columns
+  // exist yet — never on the response — so it's safe to start this fade
+  // alongside the fetch. The per-column fades below (singleColumn path) do
+  // depend on which data actually came back, so those stay sequential.
+  const singleColumnGuess = (trigger === "now" || trigger === "upcoming")
+    && container.querySelector(".theaters-col-now") && container.querySelector(".theaters-col-upcoming");
+  const containerFadeOutPromise = singleColumnGuess ? Promise.resolve() : fadeOut(container);
   try {
-    const data = await api(`/api/theaters?now_playing_page=${theatersNowPlayingPage}&upcoming_page=${theatersUpcomingPage}&added=${theatersAddedFilter}`);
+    const [data] = await Promise.all([dataPromise, containerFadeOutPromise]);
     theatersLoaded = true;
     if (!data.now_playing.length && !data.upcoming.length
         && data.now_playing_total_pages <= 1 && data.upcoming_total_pages <= 1) {
-      await fadeOut(container);
+      // Rare edge case (singleColumn reload that turns up empty): the
+      // container-level fade above was skipped since singleColumnGuess
+      // assumed we'd only touch one column, so do it here instead.
+      if (singleColumnGuess) await fadeOut(container);
       container.innerHTML = placeholderHtml(
         theatersAddedFilter === "all" ? "Пока нет данных о прокате — загляни попозже" : "Ничего не подходит под выбранный фильтр",
         theatersAddedFilter === "all" ? "🎬" : "🔍"
@@ -107,9 +119,8 @@ async function loadTheaters(trigger) {
 
     let colNow = container.querySelector(".theaters-col-now");
     let colUpcoming = container.querySelector(".theaters-col-upcoming");
-    const singleColumn = (trigger === "now" || trigger === "upcoming") && colNow && colUpcoming;
+    const singleColumn = singleColumnGuess && colNow && colUpcoming;
     if (!singleColumn) {
-      await fadeOut(container);
       container.innerHTML = "";
       colNow = document.createElement("div");
       colNow.className = "theaters-col theaters-col-now";
@@ -179,9 +190,10 @@ async function loadSeriesReleases() {
     container.style.opacity = "1";
     container.innerHTML = skeletonShowcaseHtml();
   }
+  const dataPromise = api(`/api/series-releases?page=${seriesReleasesPage}&added=${seriesReleasesAddedFilter}`);
+  const fadeOutPromise = fadeOut(container);
   try {
-    const data = await api(`/api/series-releases?page=${seriesReleasesPage}&added=${seriesReleasesAddedFilter}`);
-    await fadeOut(container);
+    const [data] = await Promise.all([dataPromise, fadeOutPromise]);
     seriesReleasesLoaded = true;
     container.innerHTML = "";
     const releases = data.releases || [];

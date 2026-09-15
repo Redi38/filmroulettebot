@@ -7,8 +7,8 @@ old single-file app/db/database.py exposed, so `from app.db.database import
 """
 from __future__ import annotations
 
-from .cache import get_tmdb_cache, get_tmdb_cache_many, set_tmdb_cache
-from .connection import close_db
+from .cache import clear_mem_cache, get_tmdb_cache, get_tmdb_cache_many, set_tmdb_cache
+from .connection import close_db as _close_db_connections
 from .history import (
     clear_all_history,
     clear_history_category,
@@ -46,6 +46,18 @@ from .upcoming import (
     rename_upcoming_movie_by_id,
     upcoming_title_taken_by_other,
 )
+
+
+async def close_db() -> None:
+    """Close both DB connections (see connection.py) and drop the
+    in-process poster/TMDb cache (see cache.py). The two need to go
+    together: once the underlying SQLite file could be a different file
+    afterwards (tests reset settings.DB_PATH between cases; a real process
+    would just be shutting down), any entry still sitting in the
+    in-process cache would otherwise outlive the connection it came from."""
+    await _close_db_connections()
+    clear_mem_cache()
+
 
 __all__ = [
     "init_db",

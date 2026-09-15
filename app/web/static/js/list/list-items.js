@@ -61,11 +61,21 @@ async function loadList(page) {
     featured.innerHTML = skeletonCardHtml();
   }
 
+  // Kick the fade-out off alongside the fetch instead of after it resolves:
+  // fadeOut() only depends on the container already on screen, not on the
+  // response, so there's no reason to pay its ~100-400ms after the network
+  // round trip when it can run *during* it. On a slow connection the fetch
+  // is still the bottleneck and this costs nothing; on a fast one (or a
+  // cache hit) the fade is what used to make the screen feel sluggish.
+  const containerFadeOutPromise = fadeOut(container);
+  const featuredFadeOutPromise = (isFeaturedCat && isFreshView) ? fadeOut(featured) : Promise.resolve();
+
   try {
-    const [featuredCard, data] = await Promise.all([featuredPromise, itemsPromise]);
+    const [featuredCard, data] = await Promise.all([
+      featuredPromise, itemsPromise, containerFadeOutPromise, featuredFadeOutPromise,
+    ]);
 
     if (isFeaturedCat && isFreshView) {
-      await fadeOut(featured);
       featured.innerHTML = featuredCard
         ? `<div class="featured-label">🎲 Первый в списке</div>` + renderCard(featuredCard, {actions: false})
         : "";
@@ -74,7 +84,6 @@ async function loadList(page) {
       featured.innerHTML = "";
     }
 
-    await fadeOut(container);
     // Keep the cached counts (and therefore the chips, and therefore which
     // categories the roulette offers) honest after an add or a delete.
     // The roulette picker drops categories that have nothing left in them,

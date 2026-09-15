@@ -49,17 +49,41 @@ def retry_on_lock(func: _F) -> _F:
 _db_conn: aiosqlite.Connection | None = None
 _db_conn_lock = asyncio.Lock()
 
+_read_db_conn: aiosqlite.Connection | None = None
+_read_db_conn_lock = asyncio.Lock()
+
+
+async def _open_connection() -> aiosqlite.Connection:
+    db = await aiosqlite.connect(settings.DB_PATH)
+    db.row_factory = aiosqlite.Row
+    await db._execute(db._conn.create_collation, "UNICODE_NOCASE", _unicode_nocase)
+    await db.execute("PRAGMA journal_mode=WAL")
+    await db.execute("PRAGMA busy_timeout=5000")
+    return db
+
 
 async def _get_connection() -> aiosqlite.Connection:
     global _db_conn
     if _db_conn is None:
-        db = await aiosqlite.connect(settings.DB_PATH)
-        db.row_factory = aiosqlite.Row
-        await db._execute(db._conn.create_collation, "UNICODE_NOCASE", _unicode_nocase)
-        await db.execute("PRAGMA journal_mode=WAL")
-        await db.execute("PRAGMA busy_timeout=5000")
-        _db_conn = db
+        _db_conn = await _open_connection()
     return _db_conn
+
+
+async def _get_read_connection() -> aiosqlite.Connection:
+    """A second connection to the same WAL-mode database, used for
+    read-only queries (see read_conn() below). WAL lets any number of
+    readers run concurrently with the single writer without blocking each
+    other — but that only helps if reads and writes actually use separate
+    connections; sharing one connection (and one asyncio.Lock, as conn()
+    does) serializes everything in this process regardless of what SQLite
+    itself would allow. Splitting reads onto their own connection means a
+    page of poster lookups no longer queues up behind an in-flight
+    add/delete/rename, and vice versa."""
+    global _read_db_conn
+    if _read_db_conn is None:
+        _read_db_conn = await _open_connection()
+        await _read_db_conn.execute("PRAGMA query_only = TRUE")
+    return _read_db_conn
 
 
 @asynccontextmanager
@@ -69,12 +93,27 @@ async def conn() -> AsyncIterator[aiosqlite.Connection]:
         yield db
 
 
+@asynccontextmanager
+async def read_conn() -> AsyncIterator[aiosqlite.Connection]:
+    """Like conn(), but for read-only queries: uses the second, query_only
+    connection so reads don't serialize behind writes on the main
+    connection's lock. Never write through this — PRAGMA query_only makes
+    SQLite reject it, but callers still shouldn't reach for this on a
+    write path."""
+    async with _read_db_conn_lock:
+        db = await _get_read_connection()
+        yield db
+
+
 async def close_db() -> None:
-    """Close the shared connection. Call once on process shutdown."""
-    global _db_conn
+    """Close the shared connections. Call once on process shutdown."""
+    global _db_conn, _read_db_conn
     if _db_conn is not None:
         await _db_conn.close()
         _db_conn = None
+    if _read_db_conn is not None:
+        await _read_db_conn.close()
+        _read_db_conn = None
 
 
 def check_table(name: str) -> None:

@@ -2,7 +2,7 @@
 categories, upcoming movies, tracked series)."""
 from __future__ import annotations
 
-from .connection import check_table, conn, retry_on_lock
+from .connection import check_table, conn, read_conn, retry_on_lock
 
 
 async def get_item_counts(tables: list[str]) -> dict[str, int]:
@@ -16,7 +16,7 @@ async def get_item_counts(tables: list[str]) -> dict[str, int]:
     if not tables:
         return {}
     union_sql = " UNION ALL ".join(f"SELECT '{t}' AS tbl, COUNT(*) AS n FROM {t}" for t in tables)
-    async with conn() as db:
+    async with read_conn() as db:
         async with db.execute(union_sql) as cur:
             rows = await cur.fetchall()
     return {row[0]: row[1] for row in rows}
@@ -24,7 +24,7 @@ async def get_item_counts(tables: list[str]) -> dict[str, int]:
 
 async def get_items(table: str) -> list[str]:
     check_table(table)
-    async with conn() as db:
+    async with read_conn() as db:
         async with db.execute(f"SELECT title FROM {table} ORDER BY position, id") as cur:
             return [row[0] async for row in cur]
 
@@ -59,7 +59,7 @@ async def get_items_with_ids(table: str) -> list[dict]:
     of when they were added; the weighted roulette mode reads a title's
     odds straight off this order (title_weights() in app/services/titles.py)."""
     check_table(table)
-    async with conn() as db:
+    async with read_conn() as db:
         async with db.execute(
             f"SELECT id, title, is_series FROM {table} ORDER BY position, id"
         ) as cur:
@@ -81,7 +81,7 @@ async def get_item_is_series(table: str, title: str) -> bool | None:
     column, or the category does not track it.
     """
     check_table(table)
-    async with conn() as db:
+    async with read_conn() as db:
         async with db.execute(
             f"SELECT is_series FROM {table} WHERE title = ? LIMIT 1", (title,)
         ) as cur:
@@ -95,7 +95,7 @@ async def item_exists(table: str, title: str) -> bool:
     """Case-insensitive existence check (relies on COLLATE UNICODE_NOCASE on
     the column — see connection.py for why the built-in NOCASE isn't enough)."""
     check_table(table)
-    async with conn() as db:
+    async with read_conn() as db:
         async with db.execute(f"SELECT 1 FROM {table} WHERE title = ? LIMIT 1", (title,)) as cur:
             return await cur.fetchone() is not None
 
@@ -105,7 +105,7 @@ async def item_exists_other_id(table: str, title: str, exclude_id: int) -> bool:
     conflict checks, where the row's own (about-to-be-overwritten) title
     obviously shouldn't count as a conflict with itself."""
     check_table(table)
-    async with conn() as db:
+    async with read_conn() as db:
         async with db.execute(
             f"SELECT 1 FROM {table} WHERE title = ? AND id != ? LIMIT 1", (title, exclude_id)
         ) as cur:

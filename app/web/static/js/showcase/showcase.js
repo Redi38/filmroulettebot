@@ -14,20 +14,24 @@ async function loadShowcase() {
     container.style.opacity = "1";
     container.innerHTML = skeletonShowcaseHtml();
   }
+  const dataPromise = api(`/api/showcase/${cat}`);
+  // Fade the (skeleton or stale) container out while the request is in
+  // flight rather than after it resolves — see list-items.js's loadList
+  // for the same pattern and why it's worth doing.
+  const fadeOutPromise = fadeOut(container);
   try {
-    const data = await api(`/api/showcase/${cat}`);
+    const [data] = await Promise.all([dataPromise, fadeOutPromise]);
     lastShowcaseData = data;
     renderShowcaseFilters();
-    renderShowcaseContent();
+    renderShowcaseContent(true);
   } catch (e) {
     lastShowcaseData = null;
-    await fadeOut(container);
     container.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
     fadeIn(container);
   }
 }
 
-async function renderShowcaseContent() {
+async function renderShowcaseContent(alreadyFadedOut) {
   const container = document.getElementById("showcase-container");
   const data = lastShowcaseData;
   if (!data) return;
@@ -36,7 +40,10 @@ async function renderShowcaseContent() {
   const released = data.released.filter(m => showcaseTypeMatches(m) && showcaseAddedMatches(m));
   const newSeasons = (data.new_seasons || []).filter(m => showcaseTypeMatches(m) && showcaseAddedMatches(m));
 
-  await fadeOut(container);
+  // A filter-change call (see filters.js) has to fade the container itself,
+  // since nothing else is in flight to run the fade alongside — only skip
+  // it when loadShowcase() already faded the container out for us above.
+  if (!alreadyFadedOut) await fadeOut(container);
   container.innerHTML = "";
 
   if (!data.upcoming.length && !data.released.length && !(data.new_seasons || []).length) {
@@ -89,9 +96,10 @@ async function loadTrackedSeries() {
     container.style.opacity = "1";
     container.innerHTML = skeletonShowcaseHtml();
   }
+  const dataPromise = api(`/api/tracked-series`);
+  const fadeOutPromise = fadeOut(container);
   try {
-    const data = await api(`/api/tracked-series`);
-    await fadeOut(container);
+    const [data] = await Promise.all([dataPromise, fadeOutPromise]);
     trackedSeriesLoaded = true;
     container.innerHTML = "";
     const items = data.items || [];

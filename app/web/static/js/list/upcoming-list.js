@@ -13,7 +13,10 @@ async function loadUpcoming() {
     container.innerHTML = skeletonListHtml();
   }
   const dataPromise = api("/api/upcoming");
-  const fadeOutPromise = fadeOut(container);
+  // On a fresh view the skeleton was just inserted at full opacity, so
+  // there's no stale content to fade out (see loadShowcase() for why
+  // fading it here would hide it before it's ever painted).
+  const fadeOutPromise = isFreshView ? Promise.resolve() : fadeOut(container);
   try {
     const [data] = await Promise.all([dataPromise, fadeOutPromise]);
     container.dataset.loaded = "1";

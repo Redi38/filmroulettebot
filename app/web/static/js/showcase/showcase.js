@@ -15,10 +15,14 @@ async function loadShowcase() {
     container.innerHTML = skeletonShowcaseHtml();
   }
   const dataPromise = api(`/api/showcase/${cat}`);
-  // Fade the (skeleton or stale) container out while the request is in
-  // flight rather than after it resolves — see list-items.js's loadList
-  // for the same pattern and why it's worth doing.
-  const fadeOutPromise = fadeOut(container);
+  // Fade the (stale) container out while the request is in flight rather
+  // than after it resolves — see list-items.js's loadList for the same
+  // pattern and why it's worth doing. On a fresh view there's no stale
+  // content to hide (the skeleton was just inserted at full opacity), so
+  // skip the fade there — fading it to 0 in the same tick as setting it to
+  // 1 above means the browser never paints the "1" frame and the skeleton
+  // never becomes visible.
+  const fadeOutPromise = isFreshView ? Promise.resolve() : fadeOut(container);
   try {
     const [data] = await Promise.all([dataPromise, fadeOutPromise]);
     lastShowcaseData = data;
@@ -92,12 +96,15 @@ function renderShowcaseFilters() {
 let trackedSeriesLoaded = false;
 async function loadTrackedSeries() {
   const container = document.getElementById("tracked-series-container");
-  if (!trackedSeriesLoaded) {
+  const isFreshView = !trackedSeriesLoaded;
+  if (isFreshView) {
     container.style.opacity = "1";
     container.innerHTML = skeletonShowcaseHtml();
   }
   const dataPromise = api(`/api/tracked-series`);
-  const fadeOutPromise = fadeOut(container);
+  // See loadShowcase() above: skip the fade on a fresh view, or the
+  // skeleton just inserted gets faded to 0 before it's ever painted.
+  const fadeOutPromise = isFreshView ? Promise.resolve() : fadeOut(container);
   try {
     const [data] = await Promise.all([dataPromise, fadeOutPromise]);
     trackedSeriesLoaded = true;

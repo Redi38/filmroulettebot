@@ -85,7 +85,8 @@ function renderTheatersFilters() {
 async function loadTheaters(trigger) {
   const container = document.getElementById("theaters-container");
   renderTheatersFilters();
-  if (!theatersLoaded) {
+  const isFreshView = !theatersLoaded;
+  if (isFreshView) {
     container.style.opacity = "1";
     container.innerHTML = `
       <div class="theaters-col theaters-col-now">${skeletonShowcaseHtml()}</div>
@@ -96,10 +97,13 @@ async function loadTheaters(trigger) {
   // branch depends on `trigger` (already known) and whether the columns
   // exist yet — never on the response — so it's safe to start this fade
   // alongside the fetch. The per-column fades below (singleColumn path) do
-  // depend on which data actually came back, so those stay sequential.
+  // depend on which data actually came back, so those stay sequential. On a
+  // fresh view there's no stale content to fade out (the skeleton was just
+  // inserted at full opacity) — fading it out in the same tick would hide
+  // it before the browser ever paints it, so skip the fade there too.
   const singleColumnGuess = (trigger === "now" || trigger === "upcoming")
     && container.querySelector(".theaters-col-now") && container.querySelector(".theaters-col-upcoming");
-  const containerFadeOutPromise = singleColumnGuess ? Promise.resolve() : fadeOut(container);
+  const containerFadeOutPromise = (singleColumnGuess || isFreshView) ? Promise.resolve() : fadeOut(container);
   try {
     const [data] = await Promise.all([dataPromise, containerFadeOutPromise]);
     theatersLoaded = true;
@@ -186,12 +190,13 @@ function renderSeriesReleasesFilters() {
 async function loadSeriesReleases() {
   const container = document.getElementById("series-releases-container");
   renderSeriesReleasesFilters();
-  if (!seriesReleasesLoaded) {
+  const isFreshView = !seriesReleasesLoaded;
+  if (isFreshView) {
     container.style.opacity = "1";
     container.innerHTML = skeletonShowcaseHtml();
   }
   const dataPromise = api(`/api/series-releases?page=${seriesReleasesPage}&added=${seriesReleasesAddedFilter}`);
-  const fadeOutPromise = fadeOut(container);
+  const fadeOutPromise = isFreshView ? Promise.resolve() : fadeOut(container);
   try {
     const [data] = await Promise.all([dataPromise, fadeOutPromise]);
     seriesReleasesLoaded = true;

@@ -67,8 +67,14 @@ async function loadList(page) {
   // round trip when it can run *during* it. On a slow connection the fetch
   // is still the bottleneck and this costs nothing; on a fast one (or a
   // cache hit) the fade is what used to make the screen feel sluggish.
-  const containerFadeOutPromise = fadeOut(container);
-  const featuredFadeOutPromise = (isFeaturedCat && isFreshView) ? fadeOut(featured) : Promise.resolve();
+  // On a fresh view the skeleton was just inserted at full opacity, so
+  // there's no stale content to fade out — fading it to 0 in the same tick
+  // would hide it before the browser ever paints it (see loadShowcase()).
+  const containerFadeOutPromise = isFreshView ? Promise.resolve() : fadeOut(container);
+  // featured is only ever touched in the fresh+featured-cat branch above
+  // (skeleton just inserted at full opacity) or left untouched — never
+  // holding stale content to fade out, so there's nothing to await here.
+  const featuredFadeOutPromise = Promise.resolve();
 
   try {
     const [featuredCard, data] = await Promise.all([

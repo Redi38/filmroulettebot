@@ -2,48 +2,6 @@ const sideMenu = document.getElementById("side-menu");
 const sideMenuScroll = document.getElementById("side-menu-scroll");
 const overlay = document.getElementById("overlay");
 
-// /api/categories is the single source of truth for both the wording on the
-// category chips and how many items each category holds. The counts are what
-// let the roulette picker drop a category that has been fully watched off
-// (see spinnableCats() in core/state.js).
-(async () => {
-  let data;
-  try {
-    data = await api("/api/categories");
-  } catch (e) {
-    return;
-  }
-  for (const labels of [CATS, REF_CATS, ALL_CATS, LIST_CATS]) {
-    for (const code of Object.keys(labels)) {
-      const label = data[code] && data[code].short_label;
-      if (label) labels[code] = label;
-    }
-  }
-  categoryCounts = {};
-  for (const [code, info] of Object.entries(data)) categoryCounts[code] = info.count;
-  if (isCatEmpty(spinCat)) { spinCat = RANDOM_CAT; saveState(); }
-  renderMenu();
-  renderSpinCatChips();
-  if (currentView === "list") renderListCatChips();
-  updateHeaderTitle();
-})();
-
-const ICONS = {
-  home: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"></path><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"></path></svg>`,
-  shuffle: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>`,
-  movies: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="2"></rect><line x1="7" y1="3" x2="7" y2="21"></line><line x1="17" y1="3" x2="17" y2="21"></line><line x1="2" y1="8" x2="7" y2="8"></line><line x1="2" y1="16" x2="7" y2="16"></line><line x1="17" y1="8" x2="22" y2="8"></line><line x1="17" y1="16" x2="22" y2="16"></line></svg>`,
-  cartoons: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>`,
-  series: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>`,
-  premiere: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.36 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.36 12 2"></polygon></svg>`,
-  list: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>`,
-  marvel: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="12" x2="12" y2="2"></line><line x1="12" y1="12" x2="20.7" y2="7"></line><line x1="12" y1="12" x2="20.7" y2="17"></line><line x1="12" y1="12" x2="12" y2="22"></line><line x1="12" y1="12" x2="3.3" y2="17"></line><line x1="12" y1="12" x2="3.3" y2="7"></line><polygon points="12 6.4 16.8 9.2 16.8 14.8 12 17.6 7.2 14.8 7.2 9.2"></polygon><polygon points="12 2 20.7 7 20.7 17 12 22 3.3 17 3.3 7"></polygon></svg>`,
-  dc: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="12" r="7"></circle><circle cx="15.5" cy="12" r="7"></circle></svg>`,
-  upcoming: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`,
-  history: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 8 3 21 21 21 21 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>`,
-  theaters: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2"></rect></svg>`,
-  bell: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>`,
-};
-
 // The active-row marker is a single element that slides between rows, so it
 // has to outlive renderMenu()'s rebuild — hence clearing the item nodes one
 // by one rather than wiping innerHTML, and positioning it afterwards.
@@ -84,7 +42,10 @@ function renderMenu() {
   const addItem = (icon, label, onClick, active, sub) => {
     const b = document.createElement("button");
     b.className = "menu-item" + (sub ? " sub" : "") + (active ? " active" : "");
-    b.innerHTML = `${icon ? ICONS[icon] : ""}<span>${label}</span>`;
+    const iconSvg = icon
+      ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="/static/icons.svg#icon-${icon}"></use></svg>`
+      : "";
+    b.innerHTML = `${iconSvg}<span>${label}</span>`;
     b.onclick = () => { onClick(); closeMenu(); };
     sideMenuScroll.appendChild(b);
     if (active) activeItem = b;
@@ -147,154 +108,3 @@ if (burgerBtn) {
   setBurgerOpen(false);
 }
 overlay.onclick = closeMenu;
-
-function switchCat(code, view) {
-  currentCat = code; currentView = view;
-  saveState(); renderMenu();
-  pushViewToHistory(view, code);
-  showSection();
-}
-
-// Category switch *within* the single roulette view — no section swap, just a
-// fresh idle wheel and a cleared result.
-function switchSpinCat(code) {
-  if (spinCat === code) return;
-  spinCat = code;
-  saveState();
-  renderSpinCatChips();
-  updateHeaderTitle();
-  pushViewToHistory("spin", code);
-  currentCardData = null;
-  // Same as showSection(): the outgoing wheel stays put until the incoming
-  // one is ready, so switching category is a swap rather than a blank gap.
-  if (spinMode === "wheel" && !isRandomSpin()) showIdleWheel(spinCat);
-  else { resetWheelWraps(); resetSpinResult(); }
-  if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
-}
-
-// Entry point for the main-menu "Списки" item. Plain switchView("list")
-// would leave currentCat at whatever a Marvel/DC showcase visit last set it
-// to, so re-entering the list screen from elsewhere silently jumped into the
-// Marvel/DC list. Restore the list's own last category instead — but only
-// when actually arriving from another view; re-clicking while already on
-// the list screen must not reset a category picked via the chips.
-function switchToList() {
-  if (currentView !== "list") currentCat = lastListCat;
-  switchView("list");
-}
-
-// Category switch within the single list view.
-function switchListCat(code) {
-  lastListCat = code;
-  if (currentCat === code) return;
-  currentCat = code;
-  saveState();
-  renderListCatChips();
-  renderMenu();
-  applyStudioTheme();
-  updateHeaderTitle();
-  pushViewToHistory("list", code);
-  loadList();
-}
-function switchView(view) {
-  currentView = view;
-  saveState(); renderMenu();
-  pushViewToHistory(view, hashCatFor(view));
-  showSection();
-}
-
-const SECTION_IDS = {
-  home: "home-section",
-  spin: "spin-section", list: "list-section",
-  upcoming: "upcoming-section", history: "history-section", showcase: "showcase-section",
-  theaters: "theaters-section", series_releases: "series-releases-section",
-  tracked_series: "tracked-series-section",
-};
-
-function applyStudioTheme() {
-  const studio = (currentCat === "marvel" || currentCat === "dc") && VIEWS_WITH_CAT.includes(currentView)
-    ? currentCat
-    : "";
-  document.body.dataset.studio = studio;
-}
-
-// VIEW_TITLES and the title rule itself live in core/constants.js so the
-// pre-bundle header script in index.html shares them.
-function currentViewTitle() {
-  return viewTitleFor(currentView, currentCat, spinCat);
-}
-
-function updateHeaderTitle() {
-  const titleEl = document.getElementById("page-title");
-  if (!titleEl) return;
-  const nextTitle = currentViewTitle();
-  if (titleEl.textContent !== nextTitle) titleEl.textContent = nextTitle;
-}
-
-async function showSection() {
-  applyStudioTheme();
-  if (typeof closePosterInfoModal === "function") closePosterInfoModal();
-  if (typeof closeModal === "function") closeModal();
-  if (typeof closeRenameModal === "function") closeRenameModal();
-
-  const targetId = SECTION_IDS[currentView];
-  const prevEl = document.querySelector(".section.active");
-  const reduceMotion = reducedMotion();
-  const isSwap = !!(prevEl && prevEl.id !== targetId);
-  const hasViewTransitions = !reduceMotion && typeof document.startViewTransition === "function";
-  const useViewTransition = isSwap && hasViewTransitions;
-
-  if (currentView !== "home" && typeof pauseHomeMarquee === "function") pauseHomeMarquee();
-
-  const resumeHomeMarqueeInline = currentView === "home" && homeLoaded && useViewTransition;
-
-  const applyDom = () => {
-    window.scrollTo(0, 0);
-    for (const [view, id] of Object.entries(SECTION_IDS)) {
-      document.getElementById(id).classList.toggle("active", currentView === view);
-    }
-    if (currentView === "spin" && spinMode === "wheel" && !isRandomSpin()) {
-      prepIdleWheelSkeleton(spinCat);
-    }
-    updateHeaderTitle();
-    if (resumeHomeMarqueeInline) {
-      syncMarqueeSize();
-      resumeHomeMarquee();
-    }
-  };
-
-  if (useViewTransition) {
-    await runViewTransition(applyDom, "vt-section");
-  } else {
-    applyDom();
-    const activeEl = document.getElementById(targetId);
-    if (activeEl && isSwap && !reduceMotion) {
-      activeEl.classList.remove("section-fade-in");
-      void activeEl.offsetWidth;
-      activeEl.classList.add("section-fade-in");
-      activeEl.addEventListener("animationend", function onDone(ev) {
-        if (ev.target !== activeEl) return;
-        activeEl.classList.remove("section-fade-in");
-        activeEl.removeEventListener("animationend", onDone);
-      });
-    }
-  }
-
-  if (typeof updateWheelScrollLock === "function") updateWheelScrollLock();
-
-  if (currentView === "home" && !resumeHomeMarqueeInline) loadHome();
-  if (currentView === "spin") {
-    renderAllDockControls("spin");
-    currentCardData = null;
-    if (spinMode === "wheel" && !isRandomSpin()) showIdleWheel(spinCat);
-    else { resetWheelWraps(); resetSpinResult(); }
-    if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
-  }
-  if (currentView === "list") loadList();
-  if (currentView === "upcoming") loadUpcoming();
-  if (currentView === "history") loadHistory();
-  if (currentView === "showcase") loadShowcase();
-  if (currentView === "theaters") loadTheaters();
-  if (currentView === "series_releases") loadSeriesReleases();
-  if (currentView === "tracked_series") loadTrackedSeries();
-}

@@ -12,6 +12,8 @@
     "core/modal.js",
     "core/add-search.js",
     "core/menu.js",
+    "core/views.js",
+    "core/bootstrap.js",
     "core/router.js",
     "spin/spin-dock.js",
     "spin/settings/dock-controls.js",

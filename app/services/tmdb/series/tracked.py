@@ -6,7 +6,7 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from ..helpers import best_match, poster
+from ..helpers import POSTER_ROW, best_match, poster
 from .episodes import get_season_finale_date, get_tv_next_episode
 from .search import _search_tv_cached
 
@@ -32,7 +32,7 @@ async def get_tracked_series_status(titles: list[str]) -> list[dict[str, Any]]:
             "id": series["id"],
             "title": series.get("name") or title,
             "original_title": series.get("original_name") or "",
-            "poster_url": poster(series),
+            "poster_url": poster(series, POSTER_ROW),
             "overview": series.get("overview") or "",
             "rating": round(series["vote_average"], 1) if series.get("vote_average") else "—",
             "is_series": True,

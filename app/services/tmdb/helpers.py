@@ -39,9 +39,21 @@ def best_trailer_url(videos: dict) -> str | None:
     return f"https://www.youtube.com/watch?v={pick['key']}" if pick else None
 
 
-def poster(obj: dict) -> str | None:
+# TMDb image sizes actually used in the app, picked to match how big the
+# <img> is ever rendered — not w500 everywhere, which used to ship a
+# full-size poster into a 46x68px showcase row.
+#   w185 — list/showcase rows (list-row-poster, showcase-poster,
+#          add-search-poster: all well under 150px wide)
+#   w342 — medium card-sized renders
+#   w500 — only the large result/info card (.poster, ~280px wide)
+POSTER_ROW = "w185"
+POSTER_CARD = "w342"
+POSTER_LARGE = "w500"
+
+
+def poster(obj: dict, size: str = POSTER_LARGE) -> str | None:
     path = obj.get("poster_path")
-    return f"https://image.tmdb.org/t/p/w500{path}" if path else None
+    return f"https://image.tmdb.org/t/p/{size}{path}" if path else None
 
 
 def genres(details: dict) -> str:
@@ -70,7 +82,7 @@ def format_movie_results(results: list[dict]) -> list[dict[str, Any]]:
             "title": m.get("title"),
             "original_title": m.get("original_title") or "",
             "release_date": m.get("release_date") or "",
-            "poster_url": poster(m),
+            "poster_url": poster(m, POSTER_ROW),
             "overview": m.get("overview") or "",
             "rating": round(m["vote_average"], 1) if m.get("vote_average") else "—",
             "is_series": False,
@@ -99,7 +111,7 @@ def format_search_suggestions(results: list[dict], is_series: bool) -> list[dict
             "tmdb_id": rid,
             "title": title,
             "year": (r.get(date_field) or "")[:4],
-            "poster_url": poster(r),
+            "poster_url": poster(r, POSTER_ROW),
             "is_series": is_series,
         })
         if len(out) >= 6:

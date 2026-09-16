@@ -15,8 +15,6 @@ function isCatEmpty(code) {
   return !!categoryCounts && categoryCounts[code] === 0;
 }
 
-// Categories offered by the roulette picker: "Наугад" plus every spinnable
-// category that still has something in it. Until counts arrive, show all.
 function spinnableCats() {
   return Object.keys(CATS).filter((c) => !isCatEmpty(c) || c === spinCat);
 }
@@ -46,6 +44,13 @@ let currentCat = initial.cat;
 let currentView = initial.view;
 let spinCat = initial.spinCat;
 let currentCardData = null;
+
+// Remembers the category the list screen itself was last showing (set only
+// by picking a chip inside "Списки"), independent of `currentCat`, which
+// also gets overwritten while browsing a Marvel/DC showcase. Without this,
+// opening the showcase and then the main-menu "Списки" item would silently
+// land you on the showcase's category instead of your actual list.
+let lastListCat = initial.view === "list" ? initial.cat : "movies";
 
 function isRandomSpin() {
   return spinCat === RANDOM_CAT;

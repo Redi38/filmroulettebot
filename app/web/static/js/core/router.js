@@ -33,6 +33,7 @@ function adoptCat(view, cat) {
     if (cat === RANDOM_CAT || CATS[cat]) spinCat = cat;
   } else if (LIST_CATS[cat]) {
     currentCat = cat;
+    if (view === "list") lastListCat = cat;
   }
 }
 

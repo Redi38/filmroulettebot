@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from ..client import _get
-from ..helpers import poster
+from ..helpers import POSTER_ROW, poster
 from .episodes import get_season_finale_date, get_tv_next_episode
 
 MAX_SERIES_EPISODES = 100
@@ -78,7 +78,7 @@ async def get_series_releases(region: str = "UA", pages: int = 3) -> list[dict[s
             "title": r.get("name") or "",
             "original_title": r.get("original_name") or "",
             "release_date": finale if airing_now else nxt["air_date"],
-            "poster_url": poster(r),
+            "poster_url": poster(r, POSTER_ROW),
             "overview": r.get("overview") or "",
             "rating": round(r["vote_average"], 1) if r.get("vote_average") else "—",
             "is_series": True,

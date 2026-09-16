@@ -8,7 +8,7 @@ from app.db.database import get_tmdb_cache, set_tmdb_cache
 
 from ..cache_ttl import INFO_CACHE_TTL
 from ..client import _get
-from ..helpers import actors, best_match, genres, poster
+from ..helpers import POSTER_LARGE, actors, best_match, genres, poster
 from .search import _search_movie_cached
 
 
@@ -32,7 +32,7 @@ async def get_movie_info(title: str) -> dict[str, Any] | None:
         "overview": movie.get("overview") or "Описание недоступно.",
         "release_date": movie.get("release_date") or "—",
         "rating": round(movie["vote_average"], 1) if movie.get("vote_average") else "—",
-        "poster_url": poster(movie),
+        "poster_url": poster(movie, POSTER_LARGE),
         "runtime": details.get("runtime") or "—",
         "genres": genres(details),
         "actors": actors(credits),

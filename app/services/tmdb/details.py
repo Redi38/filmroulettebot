@@ -10,7 +10,7 @@ from app.db.database import get_tmdb_cache, set_tmdb_cache
 
 from .cache_ttl import INFO_CACHE_TTL
 from .client import _get
-from .helpers import actors, best_trailer_url, genres, poster
+from .helpers import POSTER_LARGE, actors, best_trailer_url, genres, poster
 
 
 async def get_details_by_id(tmdb_id: int, is_series: bool) -> dict[str, Any] | None:
@@ -42,7 +42,7 @@ async def get_details_by_id(tmdb_id: int, is_series: bool) -> dict[str, Any] | N
         "overview": details.get("overview") or "Описание недоступно.",
         "release_date": (details.get("release_date") if not is_series else details.get("first_air_date")) or "—",
         "rating": round(details["vote_average"], 1) if details.get("vote_average") else "—",
-        "poster_url": poster(details),
+        "poster_url": poster(details, POSTER_LARGE),
         "genres": genres(details),
         "actors": actors(credits),
         "trailer_url": best_trailer_url(videos),

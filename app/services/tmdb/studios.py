@@ -11,7 +11,7 @@ from app.db.database import get_tmdb_cache, set_tmdb_cache
 
 from .cache_ttl import COMPANY_ID_CACHE_TTL, DISCOVER_CACHE_TTL
 from .client import _get
-from .helpers import poster
+from .helpers import POSTER_ROW, poster
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +102,7 @@ async def discover_by_company(
             "title": m.get(title_field),
             "original_title": m.get(original_field) or "",
             "release_date": m.get(response_date_field) or "",
-            "poster_url": poster(m),
+            "poster_url": poster(m, POSTER_ROW),
             "overview": m.get("overview") or "",
             "rating": round(m["vote_average"], 1) if m.get("vote_average") else "—",
             "is_series": is_series,

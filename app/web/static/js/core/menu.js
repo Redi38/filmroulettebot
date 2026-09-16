@@ -99,7 +99,7 @@ function renderMenu() {
   addGroup("Главное");
   addItem("home", "Афиша", () => switchView("home"), currentView === "home");
   addItem("shuffle", "Рулетка", () => switchView("spin"), currentView === "spin");
-  addItem("list", "Списки", () => switchView("list"), currentView === "list");
+  addItem("list", "Списки", () => switchToList(), currentView === "list");
 
   addGroup("Кино и сериалы");
   addItem("theaters", "В прокате", () => switchView("theaters"), currentView === "theaters");
@@ -172,8 +172,20 @@ function switchSpinCat(code) {
   if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
 }
 
+// Entry point for the main-menu "Списки" item. Plain switchView("list")
+// would leave currentCat at whatever a Marvel/DC showcase visit last set it
+// to, so re-entering the list screen from elsewhere silently jumped into the
+// Marvel/DC list. Restore the list's own last category instead — but only
+// when actually arriving from another view; re-clicking while already on
+// the list screen must not reset a category picked via the chips.
+function switchToList() {
+  if (currentView !== "list") currentCat = lastListCat;
+  switchView("list");
+}
+
 // Category switch within the single list view.
 function switchListCat(code) {
+  lastListCat = code;
   if (currentCat === code) return;
   currentCat = code;
   saveState();

@@ -1,15 +1,5 @@
-import { api } from "./api.js";
-
 // Category and view vocabularies — the single source of truth for every
 // label the UI shows in a menu, chip row or the header.
-//
-// This file is special in two ways:
-//   1. It is first in manifest.json, so every other script can rely on it.
-//   2. The server inlines it verbatim into index.html (see
-//      app/web/server/shared/assets.py), inside an IIFE, so the header
-//      title that is painted *before* the bundle loads comes from the same
-//      maps as the app itself. Keep it free of DOM access and of anything
-//      that is not a plain constant or pure function.
 
 // CATS have their own roulette; REF_CATS are reference-only showcases (no
 // spin). LIST_CATS is what the single "Списки" view lets you switch between.

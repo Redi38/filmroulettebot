@@ -10,10 +10,7 @@ import { SPIN_COOLDOWN_SECONDS, spinCooldown } from "./settings/dock-controls.js
 import { spinMode } from "./settings/spin-mode.js";
 import { spinSpeedSeconds } from "./settings/spin-speed.js";
 import { isWeightedMode } from "./settings/weighted-mode.js";
-import { fireWheelConfetti } from "./wheel/confetti.js";
-import { highlightWheelWinner, spinWheelTo } from "./wheel/spin.js";
-import { primeWheelAudio } from "./wheel/wheel-audio.js";
-import { buildWheel, updateWheelScrollLock } from "./wheel/wheel-build.js";
+import { loadWheel } from "./wheel/loader.js";
 
 // Spin flow orchestration: classic + wheel spins, cooldown, button wiring.
 
@@ -86,24 +83,25 @@ function randomCategoryOrder(category) {
   return cats.length ? cats : Object.keys(CATS);
 }
 
-async function spinCategoryWheel(wheelWrapId, category) {
+async function spinCategoryWheel(wheel, wheelWrapId, category) {
   const order = randomCategoryOrder(category);
   const labels = order.map((c) => CATS[c] || c);
   let winnerIndex = order.indexOf(category);
   if (winnerIndex === -1) winnerIndex = 0;
   if (labels.length < 2) return; // nothing to reveal — one category is all there is
 
-  const canvas = buildWheel(wheelWrapId, labels);
+  const canvas = wheel.buildWheel(wheelWrapId, labels);
   await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
   const categorySpinMs = Math.max(1200, Math.round(spinSpeedSeconds * 1000 * 0.6));
-  await spinWheelTo(canvas, labels.length, winnerIndex, categorySpinMs);
+  await wheel.spinWheelTo(canvas, labels.length, winnerIndex, categorySpinMs);
   await new Promise((r) => setTimeout(r, 550));
 }
 
 async function doWheelSpin(cat, isRandom) {
   if (spinCooldown.until > Date.now()) return;
   cancelAutoWatchOpen();
-  primeWheelAudio();
+  const wheel = await loadWheel();
+  wheel.primeWheelAudio();
   const result = resultEl();
   const wheelWrapId = "spin-wheel-wrap";
   const prevResultHtml = result.innerHTML;
@@ -127,7 +125,7 @@ async function doWheelSpin(cat, isRandom) {
     uiState.currentCardData = data;
 
     if (isRandom) {
-      await spinCategoryWheel(wheelWrapId, data.category);
+      await spinCategoryWheel(wheel, wheelWrapId, data.category);
     }
 
     const pool = (data.wheel_pool && data.wheel_pool.length >= 2) ? data.wheel_pool : [data.original_title, data.original_title];
@@ -135,23 +133,23 @@ async function doWheelSpin(cat, isRandom) {
     let winnerIndex = pool.indexOf(data.original_title);
     if (winnerIndex === -1) winnerIndex = 0;
 
-    const canvas = buildWheel(wheelWrapId, pool, weights);
+    const canvas = wheel.buildWheel(wheelWrapId, pool, weights);
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-    await spinWheelTo(canvas, pool.length, winnerIndex, Math.round(spinSpeedSeconds * 1000));
-    if (typeof fireWheelConfetti === "function" && (typeof isConfettiEnabled !== "function" || isConfettiEnabled())) {
-      fireWheelConfetti(wheelWrapId);
+    await wheel.spinWheelTo(canvas, pool.length, winnerIndex, Math.round(spinSpeedSeconds * 1000));
+    if (typeof isConfettiEnabled !== "function" || isConfettiEnabled()) {
+      wheel.fireWheelConfetti(wheelWrapId);
     }
 
     // Landing: pop the wheel, dim losers / glow the winner, hold, then
     // morph the wheel into the result card (View Transitions when available).
     wrap.classList.add("wheel-done");
-    await highlightWheelWinner(canvas, winnerIndex);
-    await swapWheelForCard(wrap, result, data);
+    await wheel.highlightWheelWinner(canvas, winnerIndex);
+    await swapWheelForCard(wheel, wrap, result, data);
     scheduleAutoWatchOpen(data, result);
   } catch (e) {
     wrap.innerHTML = prevWrapHtml;
     wrap.style.display = prevWrapDisplay;
-    updateWheelScrollLock();
+    wheel.updateWheelScrollLock();
     handleSpinError(e, result, prevResultHtml);
   } finally {
     setDockLocked(false);
@@ -162,12 +160,12 @@ async function doWheelSpin(cat, isRandom) {
 // the wheel holder and the card poster share `view-transition-name: spin-hero`
 // (see spin-wheel.css / buttons-cards.css), so the browser animates one into
 // the other. Falls back to the old fade when the API is missing.
-async function swapWheelForCard(wrap, result, data) {
+async function swapWheelForCard(wheel, wrap, result, data) {
   const applyDom = () => {
     wrap.style.display = "none";
     wrap.innerHTML = "";
     wrap.classList.remove("wheel-done");
-    updateWheelScrollLock();
+    wheel.updateWheelScrollLock();
     result.innerHTML = renderCard(data);
     result.style.opacity = "1";
   };
@@ -176,6 +174,7 @@ async function swapWheelForCard(wrap, result, data) {
     document.documentElement.classList.add("vt-spin-landing");
     try {
       const vt = document.startViewTransition(applyDom);
+      vt.ready.catch(() => {}); // see runViewTransition in core/utils.js
       await vt.finished;
     } catch (e) {
       // startViewTransition rejects if a transition was interrupted; the DOM
@@ -188,7 +187,7 @@ async function swapWheelForCard(wrap, result, data) {
   wrap.style.display = "none";
   wrap.innerHTML = "";
   wrap.classList.remove("wheel-done");
-  updateWheelScrollLock();
+  wheel.updateWheelScrollLock();
   await fadeOut(result);
   result.innerHTML = renderCard(data);
   fadeIn(result);

@@ -12,8 +12,7 @@ import { loadShowcase, loadTrackedSeries, prepShowcaseSkeletonIfStale } from "..
 import { renderAllDockControls } from "../spin/settings/dock-controls.js";
 import { renderSpinCatChips, resetSpinResult } from "../spin/settings/spin-category.js";
 import { spinMode } from "../spin/settings/spin-mode.js";
-import { syncSpinResultClearance } from "../spin/wheel/viewport.js";
-import { prepIdleWheelSkeleton, resetWheelWraps, showIdleWheel, updateWheelScrollLock } from "../spin/wheel/wheel-build.js";
+import { loadWheel } from "../spin/wheel/loader.js";
 import { loadSeriesReleases, loadTheaters } from "../theaters/theaters.js";
 
 export function switchCat(code, view) {
@@ -25,7 +24,7 @@ export function switchCat(code, view) {
 
 // Category switch *within* the single roulette view — no section swap, just a
 // fresh idle wheel and a cleared result.
-export function switchSpinCat(code) {
+export async function switchSpinCat(code) {
   if (uiState.spinCat === code) return;
   uiState.spinCat = code;
   saveState();
@@ -33,11 +32,12 @@ export function switchSpinCat(code) {
   updateHeaderTitle();
   pushViewToHistory("spin", code);
   uiState.currentCardData = null;
+  const wheel = await loadWheel();
   // Same as showSection(): the outgoing wheel stays put until the incoming
   // one is ready, so switching category is a swap rather than a blank gap.
-  if (spinMode === "wheel" && !isRandomSpin()) showIdleWheel(uiState.spinCat);
-  else { resetWheelWraps(); resetSpinResult(); }
-  if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
+  if (spinMode === "wheel" && !isRandomSpin()) wheel.showIdleWheel(uiState.spinCat);
+  else { wheel.resetWheelWraps(); resetSpinResult(); }
+  wheel.syncSpinResultClearance();
 }
 
 export function switchToList() {
@@ -116,6 +116,13 @@ export async function showSection() {
     prepShowcaseSkeletonIfStale();
   }
 
+  // The wheel is a separate lazy chunk (see spin/wheel/loader.js). Await it
+  // up front whenever the roulette is the view being switched to, so
+  // everything below — including the synchronous view-transition callback —
+  // can call straight into it.
+  const needsWheel = uiState.currentView === "spin";
+  const wheel = needsWheel ? await loadWheel() : null;
+
   const targetId = SECTION_IDS[uiState.currentView];
   const prevEl = document.querySelector(".section.active");
   const reduceMotion = reducedMotion();
@@ -132,8 +139,8 @@ export async function showSection() {
     for (const [view, id] of Object.entries(SECTION_IDS)) {
       document.getElementById(id).classList.toggle("active", uiState.currentView === view);
     }
-    if (uiState.currentView === "spin" && spinMode === "wheel" && !isRandomSpin()) {
-      prepIdleWheelSkeleton(uiState.spinCat);
+    if (wheel && spinMode === "wheel" && !isRandomSpin()) {
+      wheel.prepIdleWheelSkeleton(uiState.spinCat);
     }
     updateHeaderTitle();
     if (resumeHomeMarqueeInline) {
@@ -159,15 +166,15 @@ export async function showSection() {
     }
   }
 
-  if (typeof updateWheelScrollLock === "function") updateWheelScrollLock();
+  if (wheel) wheel.updateWheelScrollLock();
 
   if (uiState.currentView === "home" && !resumeHomeMarqueeInline) loadHome();
   if (uiState.currentView === "spin") {
     renderAllDockControls("spin");
     uiState.currentCardData = null;
-    if (spinMode === "wheel" && !isRandomSpin()) showIdleWheel(uiState.spinCat);
-    else { resetWheelWraps(); resetSpinResult(); }
-    if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
+    if (spinMode === "wheel" && !isRandomSpin()) wheel.showIdleWheel(uiState.spinCat);
+    else { wheel.resetWheelWraps(); resetSpinResult(); }
+    wheel.syncSpinResultClearance();
   }
   const loader = VIEW_LOADERS[uiState.currentView];
   if (loader) loader();

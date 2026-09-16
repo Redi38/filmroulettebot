@@ -71,9 +71,6 @@ export function showInlineUndo(parent, referenceNode, msg, actionLabel, onAction
   pill.appendChild(btn);
   wrap.appendChild(pill);
   parent.insertBefore(wrap, referenceNode && referenceNode.isConnected ? referenceNode : null);
-  // The pill takes the place of a row that is collapsing to zero height at
-  // this very moment, so it has to grow into the gap rather than appear at
-  // full height — otherwise the row visibly "comes back" as the pill pops in.
   expandRowIn(wrap);
 
   let dismissed = false;
@@ -83,8 +80,6 @@ export function showInlineUndo(parent, referenceNode, msg, actionLabel, onAction
     dismissed = true;
     clearTimeout(timer);
     pill.style.opacity = "0";
-    // Collapse the pill's own height too, so the rows below glide up instead
-    // of jumping the moment the node leaves the flow.
     collapseAndRemoveRow(wrap, () => {
       if (fireCallback && onDismiss) onDismiss();
     }, {fadeMs: 120});
@@ -147,11 +142,6 @@ export function debounce(fn, wait) {
 
 function nextFrame() { return new Promise((r) => requestAnimationFrame(r)); }
 
-// Fades `el` to opacity 0 and resolves once its CSS transition has actually
-// finished, so callers can swap innerHTML while it is fully invisible.
-// Previously this waited a fixed 90 ms while the containers transition over
-// 220 ms — the new content was inserted at ~40% opacity and then finished
-// fading, which read as a visible jump.
 function maxTransitionMs(el) {
   const cs = getComputedStyle(el);
   const parse = (v) => v.split(",").map((s) => {
@@ -171,18 +161,8 @@ export function reducedMotion() {
   return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 }
 
-// Theaters/showcase/series-releases/tracked-series data comes from TMDB
-// scraping or manual add/remove — it doesn't change minute to minute. So a
-// loader called on a plain tab revisit (not an explicit filter/pagination/
-// add/delete action) skips the fetch-and-fade entirely if it already has
-// data younger than this, and just leaves the existing content on screen.
-// Explicit actions always bypass this and fetch fresh regardless.
 export const TAB_REVISIT_STALE_MS = 5 * 60 * 1000;
 
-// Page navigation slides the old page out and the new one in along the
-// direction of travel instead of cross-fading in place. paginationRow()
-// tags the container it lives in; fadeOut() reads the tag and fadeIn()
-// clears it, so an untagged container keeps the plain cross-fade.
 const NAV_SLIDE_PX = 22;
 
 export function setNavDirection(el, dir) {
@@ -202,9 +182,6 @@ export function fadeIn(el) {
   const dir = reducedMotion() ? 0 : (el._navDir || 0);
   el._navDir = 0;
   if (dir) {
-    // Jump to the far edge with the transition suppressed, then animate home
-    // on the next frame — otherwise the element would slide back across from
-    // where fadeOut() left it.
     el.style.transition = "none";
     el.style.transform = `translateX(${dir * NAV_SLIDE_PX}px)`;
     void el.offsetWidth;
@@ -235,9 +212,6 @@ export function resetRowCollapse(el) {
   for (const prop of ROW_COLLAPSE_PROPS) el.style[prop] = "";
 }
 
-// Grows `el` from zero height to its natural height. Used for anything that
-// appears where a row just was (the undo pill), so the two animations cancel
-// out and the surrounding rows never move.
 export function expandRowIn(el) {
   if (!el || reducedMotion()) return;
   const cs = getComputedStyle(el);
@@ -382,8 +356,7 @@ export function runViewTransition(update, vtClass) {
     document.documentElement.classList.remove(vtClass);
     return Promise.resolve();
   }
-  // `finished` rejects when a transition is interrupted by the next one; the
-  // DOM update itself has already run either way.
+  vt.ready.catch(() => {});
   return vt.finished
     .catch(() => {})
     .then(() => { document.documentElement.classList.remove(vtClass); });

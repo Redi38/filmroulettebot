@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 from pathlib import Path
 
 from .constants import STATIC_DIR
@@ -57,8 +58,8 @@ def _inline_constants() -> str:
         src = CONSTANTS_JS_PATH.read_text(encoding="utf-8")
     except FileNotFoundError:
         return ""
-    # A `</script>` inside a JS string literal would end the inline block
-    # early; the file is ours and never contains one, but be safe anyway.
+    src = re.sub(r"^\s*import .*$", "", src, flags=re.MULTILINE)
+    src = re.sub(r"^export\s+", "", src, flags=re.MULTILINE)
     return src.replace("</script", "<\\/script")
 
 

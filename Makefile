@@ -69,16 +69,18 @@ js-syntax: ## CI stage: node --check every static JS file
 	find app/web/static/js -name "*.js" -not -path "*/dist/*" -print0 | xargs -0 -n1 node --check
 
 # --- Frontend JS bundle (esbuild, no framework) ------------------------
-# `python main.py` / `uvicorn` serve app/web/static/js/dist/bundle.min.js,
-# which is a build artifact (gitignored) — run js-build at least once
-# after cloning, and again after editing anything under static/js.
+# `python main.py` / `uvicorn` serve app/web/static/js/dist/bundle.min.js
+# plus its lazy-loaded chunks (dist/chunks/*.js — currently just the spin
+# wheel, see static/js/spin/wheel/loader.js), all build artifacts
+# (gitignored) — run js-build at least once after cloning, and again after
+# editing anything under static/js.
 # `make up`/`make web` (Docker) build it automatically; only needed here
 # for running the app directly with Python.
 
 js-install: ## Install JS build tooling (esbuild) via npm
 	npm install
 
-js-build: ## Bundle+minify app/web/static/js into dist/bundle.min.js
+js-build: ## Bundle+minify app/web/static/js into dist/bundle.min.js + lazy chunks
 	npm run build:js
 
 js-watch: ## Rebuild the JS bundle on every change (local dev)

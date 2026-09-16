@@ -3,10 +3,7 @@ import { isRandomSpin, uiState } from "../../core/state.js";
 import { getLS, setLS } from "../../core/storage.js";
 import { renderChoiceToggle, renderControlOnAllDocks } from "./dock-controls.js";
 import { spinMode } from "./spin-mode.js";
-import { syncSpinResultClearance } from "../wheel/viewport.js";
-import { resetWheelWraps, showIdleWheel } from "../wheel/wheel-build.js";
-import { getWheelDPR, wheelSpinState } from "../wheel/wheel-constants.js";
-import { animateWheelWeights } from "../wheel/wheel-draw.js";
+import { loadWheel } from "../wheel/loader.js";
 
 // ---- weighted mode ---------------------------------------------------------
 const WEIGHTED_MODE_KEY = "filmroulette_weighted_spin";
@@ -40,20 +37,21 @@ export function renderWeightToggle(containerId) {
 }
 
 async function resizeIdleWheelForWeightedMode(weighted) {
+  const wheel = await loadWheel();
   const wrap = document.getElementById("spin-wheel-wrap");
   const canvas = wrap && wrap.querySelector(".wheel-canvas");
   const pool = wrap && wrap._wheelPool;
   const canResize = wrap && canvas && pool && pool.length >= 2
-    && !wheelSpinState.active && !uiState.currentCardData
+    && !wheel.wheelSpinState.active && !uiState.currentCardData
     && spinMode === "wheel" && uiState.currentView === "spin";
 
   if (!canResize) {
     weightResizeToken++;
     requestAnimationFrame(() => {
-      resetWheelWraps();
-      if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
+      wheel.resetWheelWraps();
+      wheel.syncSpinResultClearance();
       if (uiState.currentCardData) return;
-      if (spinMode === "wheel" && uiState.currentView === "spin" && !isRandomSpin()) showIdleWheel(uiState.spinCat);
+      if (spinMode === "wheel" && uiState.currentView === "spin" && !isRandomSpin()) wheel.showIdleWheel(uiState.spinCat);
     });
     return;
   }
@@ -67,11 +65,11 @@ async function resizeIdleWheelForWeightedMode(weighted) {
     if (token !== weightResizeToken) return;
     if (wrap._wheelPool !== pool || document.getElementById("spin-wheel-wrap") !== wrap) return;
     wrap._wheelWeights = data.wheel_weights;
-    await animateWheelWeights(canvas, pool, getWheelDPR(), data.wheel_weights);
+    await wheel.animateWheelWeights(canvas, pool, wheel.getWheelDPR(), data.wheel_weights);
   } catch (e) {
     if (token !== weightResizeToken) return;
-    resetWheelWraps();
-    if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
-    if (!uiState.currentCardData && spinMode === "wheel" && uiState.currentView === "spin" && !isRandomSpin()) showIdleWheel(uiState.spinCat);
+    wheel.resetWheelWraps();
+    wheel.syncSpinResultClearance();
+    if (!uiState.currentCardData && spinMode === "wheel" && uiState.currentView === "spin" && !isRandomSpin()) wheel.showIdleWheel(uiState.spinCat);
   }
 }

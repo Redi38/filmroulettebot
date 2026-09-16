@@ -105,12 +105,15 @@ python main.py                                   # the Telegram bot
 
 ### Frontend JS build
 
-`app/web/static/js/` is plain, framework-free JS (no bundler-required
-import/export) — but the 40+ files under it are concatenated and minified
-into a single `dist/bundle.min.js` by [esbuild](https://esbuild.github.io/)
-so the page loads with one request instead of 40+. That's a build artifact
-(gitignored, built fresh in Docker), so if you're running the app directly
-with `python`/`uvicorn` rather than Docker, build it once after cloning and
+`app/web/static/js/` is plain ES modules (real `import`/`export`, no
+framework) bundled and minified by [esbuild](https://esbuild.github.io/)
+into `dist/bundle.min.js` so the page loads that one entry file instead of
+40+ separate scripts. The roulette wheel (canvas build/draw, spin
+animation, audio cues, confetti) is pulled in separately, as a lazy
+`import()` chunk under `dist/chunks/`, so visitors who never open the
+roulette never download it. Both are build artifacts (gitignored, built
+fresh in Docker), so if you're running the app directly with
+`python`/`uvicorn` rather than Docker, build them once after cloning and
 again after editing anything under `static/js`:
 
 ```bash

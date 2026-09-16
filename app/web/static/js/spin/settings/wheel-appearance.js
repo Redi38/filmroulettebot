@@ -1,8 +1,7 @@
 import { getLS, setLS } from "../../core/storage.js";
 import { renderControlOnAllDocks } from "./dock-controls.js";
 import { spinMode } from "./spin-mode.js";
-import { WHEEL_WRAP_IDS, getWheelDPR } from "../wheel/wheel-constants.js";
-import { drawWheel } from "../wheel/wheel-draw.js";
+import { loadWheel } from "../wheel/loader.js";
 
 // ---- wheel appearance (neon on/off) ---------------------------------------
 const WHEEL_APPEARANCE_KEY = "filmroulette_wheel_appearance";
@@ -32,14 +31,15 @@ export function renderWheelAppearanceToggle(containerId) {
   btn.textContent = "✨ Неон";
   btn.setAttribute("aria-pressed", isNeon ? "true" : "false");
   if (wheelAppearanceJustToggled) btn.classList.add("fx-toggle-pop");
-  btn.onclick = () => {
+  btn.onclick = async () => {
     const turningOff = wheelAppearance === "neon";
     wheelAppearance = wheelAppearance === "neon" ? "classic" : "neon";
     saveWheelAppearance(wheelAppearance === "neon");
     wheelAppearanceJustToggled = true;
     renderControlOnAllDocks(renderWheelAppearanceToggle, "appearance-toggle");
     wheelAppearanceJustToggled = false;
-    for (const id of WHEEL_WRAP_IDS) {
+    const wheel = await loadWheel();
+    for (const id of wheel.WHEEL_WRAP_IDS) {
       const wrap = document.getElementById(id);
       if (!wrap || !wrap._wheelPool) continue;
       const holder = wrap.querySelector(".wheel-holder");
@@ -51,7 +51,7 @@ export function renderWheelAppearanceToggle(containerId) {
         }
       }
       const canvas = wrap.querySelector("canvas");
-      if (canvas) drawWheel(canvas, wrap._wheelPool, getWheelDPR(), wrap._wheelWeights);
+      if (canvas) wheel.drawWheel(canvas, wrap._wheelPool, wheel.getWheelDPR(), wrap._wheelWeights);
     }
   };
 

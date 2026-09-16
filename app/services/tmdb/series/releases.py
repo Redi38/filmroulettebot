@@ -7,6 +7,9 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from app.db.database import get_tmdb_cache, set_tmdb_cache
+
+from ..cache_ttl import DISCOVER_CACHE_TTL
 from ..client import _get
 from ..helpers import POSTER_ROW, poster
 from .episodes import get_season_finale_date, get_tv_next_episode
@@ -21,7 +24,24 @@ async def get_series_releases(region: str = "UA", pages: int = 3) -> list[dict[s
     check this replaces). Long-running shows (100+ total episodes — soaps,
     daily procedurals, etc.) are excluded: they always have "a new episode
     soon" by nature and would otherwise crowd out shows actually worth
-    noticing here."""
+    noticing here.
+
+    Bug fix: unlike get_now_playing/get_upcoming_theatrical, this used to
+    have no caching at all — every call (including every single pagination
+    click) re-ran the whole live pipeline (3 discover pages, then a
+    get_tv_next_episode and possibly get_season_finale_date call *per*
+    show). Besides being slow, that made the result set genuinely
+    non-deterministic between two nearly-simultaneous requests (transient
+    network hiccups, TMDb's popularity-sorted discover results shifting
+    slightly between calls), which showed up as total_pages changing while
+    paging through the same listing (e.g. "1/2" then "2/3" a moment
+    later). Cache the final result the same way the sibling listings do.
+    """
+    cache_key = f"series_releases:{region}"
+    cached = await get_tmdb_cache(cache_key, DISCOVER_CACHE_TTL)
+    if cached is not None:
+        return cached
+
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     horizon = (datetime.now(timezone.utc) + timedelta(days=45)).strftime("%Y-%m-%d")
     raw: list[dict[str, Any]] = []
@@ -86,4 +106,5 @@ async def get_series_releases(region: str = "UA", pages: int = 3) -> list[dict[s
             "airing_now": airing_now,
         })
     out.sort(key=lambda m: m["release_date"])
+    await set_tmdb_cache(cache_key, out)
     return out

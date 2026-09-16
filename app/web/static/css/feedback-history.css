@@ -104,6 +104,7 @@
    out and the next page in from the direction the reader is travelling —
    see setNavDirection()/fadeOut()/fadeIn() in core/utils.js. */
 #list-container, #list-featured, #up-list-container, #up-check-result, #history-list, #showcase-container, #theaters-container, #series-releases-container,
+#tracked-series-container,
 .theaters-col, #poster-info-content {
   transition: opacity 0.22s ease, transform 0.22s var(--ease-out);
 }

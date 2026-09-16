@@ -3,6 +3,7 @@
 // own pagination and skip-list, rendered via showcaseGroup/showcaseRow.
 
 let theatersLoaded = false;
+let theatersLoadedAt = 0;
 let theatersNowPlayingPage = 1;
 let theatersUpcomingPage = 1;
 const THEATERS_FILTER_KEY = "filmroulette_theaters_filter";
@@ -82,9 +83,18 @@ function renderTheatersFilters() {
   if (theatersHideLocalOnly === null) ensureTheatersSettingsLoaded();
 }
 
-async function loadTheaters(trigger) {
+// `fromNav` is only true when showSection() calls this on a plain tab
+// switch (see VIEW_LOADERS in views.js) — pagination and filter changes
+// always pass their own args instead, so they always fetch.
+async function loadTheaters(trigger, fromNav) {
   const container = document.getElementById("theaters-container");
+  if (fromNav && theatersLoaded && Date.now() - theatersLoadedAt < TAB_REVISIT_STALE_MS) {
+    return;
+  }
   renderTheatersFilters();
+
+  if (theatersHideLocalOnly === null) await ensureTheatersSettingsLoaded();
+
   const isFreshView = !theatersLoaded;
   if (isFreshView) {
     container.style.opacity = "1";
@@ -92,26 +102,20 @@ async function loadTheaters(trigger) {
       <div class="theaters-col theaters-col-now">${skeletonShowcaseHtml()}</div>
       <div class="theaters-col theaters-col-upcoming">${skeletonShowcaseHtml()}</div>`;
   }
-  const dataPromise = api(`/api/theaters?now_playing_page=${theatersNowPlayingPage}&upcoming_page=${theatersUpcomingPage}&added=${theatersAddedFilter}`);
-  // The container only ever fades as a whole when !singleColumn, and that
-  // branch depends on `trigger` (already known) and whether the columns
-  // exist yet — never on the response — so it's safe to start this fade
-  // alongside the fetch. The per-column fades below (singleColumn path) do
-  // depend on which data actually came back, so those stay sequential. On a
-  // fresh view there's no stale content to fade out (the skeleton was just
-  // inserted at full opacity) — fading it out in the same tick would hide
-  // it before the browser ever paints it, so skip the fade there too.
+
+  const dataPromise = api(`/api/theaters?now_playing_page=${theatersNowPlayingPage}&upcoming_page=${theatersUpcomingPage}&added=${theatersAddedFilter}&hide_local_only=${theatersHideLocalOnly ? 1 : 0}`);
+
   const singleColumnGuess = (trigger === "now" || trigger === "upcoming")
     && container.querySelector(".theaters-col-now") && container.querySelector(".theaters-col-upcoming");
   const containerFadeOutPromise = (singleColumnGuess || isFreshView) ? Promise.resolve() : fadeOut(container);
+
   try {
     const [data] = await Promise.all([dataPromise, containerFadeOutPromise]);
     theatersLoaded = true;
+    theatersLoadedAt = Date.now();
+
     if (!data.now_playing.length && !data.upcoming.length
         && data.now_playing_total_pages <= 1 && data.upcoming_total_pages <= 1) {
-      // Rare edge case (singleColumn reload that turns up empty): the
-      // container-level fade above was skipped since singleColumnGuess
-      // assumed we'd only touch one column, so do it here instead.
       if (singleColumnGuess) await fadeOut(container);
       container.innerHTML = placeholderHtml(
         theatersAddedFilter === "all" ? "Пока нет данных о прокате — загляни попозже" : "Ничего не подходит под выбранный фильтр",
@@ -173,6 +177,7 @@ async function loadTheaters(trigger) {
 }
 
 let seriesReleasesLoaded = false;
+let seriesReleasesLoadedAt = 0;
 let seriesReleasesPage = 1;
 const SERIES_RELEASES_FILTER_KEY = "filmroulette_series_releases_filter";
 let seriesReleasesAddedFilter = loadSimpleAddedFilter(SERIES_RELEASES_FILTER_KEY);
@@ -187,21 +192,29 @@ function renderSeriesReleasesFilters() {
   });
 }
 
-async function loadSeriesReleases() {
+async function loadSeriesReleases(fromNav) {
   const container = document.getElementById("series-releases-container");
+  if (fromNav && seriesReleasesLoaded && Date.now() - seriesReleasesLoadedAt < TAB_REVISIT_STALE_MS) {
+    return;
+  }
   renderSeriesReleasesFilters();
+
   const isFreshView = !seriesReleasesLoaded;
   if (isFreshView) {
     container.style.opacity = "1";
     container.innerHTML = skeletonShowcaseHtml();
   }
+
   const dataPromise = api(`/api/series-releases?page=${seriesReleasesPage}&added=${seriesReleasesAddedFilter}`);
   const fadeOutPromise = isFreshView ? Promise.resolve() : fadeOut(container);
+
   try {
     const [data] = await Promise.all([dataPromise, fadeOutPromise]);
     seriesReleasesLoaded = true;
+    seriesReleasesLoadedAt = Date.now();
     container.innerHTML = "";
     const releases = data.releases || [];
+
     if (!releases.length && data.total_pages <= 1) {
       container.innerHTML = placeholderHtml(
         seriesReleasesAddedFilter === "all" ? "Пока нет анонсированных премьер с рейтингом 7+ — загляни попозже" : "Ничего не подходит под выбранный фильтр",
@@ -210,10 +223,12 @@ async function loadSeriesReleases() {
       fadeIn(container);
       return;
     }
+
     container.appendChild(showcaseGroup(
       "📺 Премьеры и новые сезоны", releases, "series", false, null,
       "series_releases", loadSeriesReleases,
     ));
+
     if (data.total_pages > 1) {
       container.appendChild(paginationRow(data.page, data.total_pages, (p) => {
         seriesReleasesPage = p;

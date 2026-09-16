@@ -33,7 +33,7 @@ async def _get_digital_release_date(movie_id: int) -> str | None:
     regions = [by_country["US"]] if "US" in by_country else list(by_country.values())
     for region in regions:
         for rd in region.get("release_dates", []):
-            if rd.get("type") == 4:  # 4 = Digital (см. TMDb release_dates docs)
+            if rd.get("type") == 4:  # 4 = Digital (TMDb release_dates docs)
                 date_str = (rd.get("release_date") or "")[:10]
                 if date_str:
                     return date_str
@@ -132,7 +132,15 @@ async def _release_country_count(movie_id: int) -> int:
     if cached is not None:
         return cached["count"]
     data = await _get(f"/movie/{movie_id}/release_dates")
-    count = len(data.get("results", [])) if data else 0
+    if data is None:
+        # A failed/timed-out request is not the same as TMDb genuinely
+        # having zero release-date entries — caching 0 here would
+        # permanently (for SEARCH_CACHE_TTL) mark a perfectly global
+        # release as "local-only" and hide it from Афиша just because one
+        # request hiccuped. Don't persist a failure as a real result; the
+        # next call will simply retry.
+        return 0
+    count = len(data.get("results", []))
     await set_tmdb_cache(cache_key, {"count": count})
     return count
 

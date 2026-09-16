@@ -88,10 +88,21 @@ function setBurgerOpen(isOpen) {
   burgerBtn.setAttribute("aria-label", isOpen ? "Закрыть меню" : "Меню");
 }
 
+// Guards against the delayed "ghost click" some mobile browsers still fire
+// ~300ms after the touch that opened the menu: by the time it lands, the
+// overlay is sitting under the finger and the ghost click closes the menu
+// almost immediately after it opened. touch-action: manipulation (see
+// base.css) should prevent that delayed click outright, but this timestamp
+// check is a cheap second line of defense — any overlay click within the
+// window a ghost click would land in is ignored.
+const MENU_GHOST_CLICK_GUARD_MS = 400;
+let menuOpenedAt = 0;
+
 function openMenu() {
   sideMenu.classList.add("open");
   overlay.classList.add("open");
   setBurgerOpen(true);
+  menuOpenedAt = Date.now();
   syncMenuIndicator(sideMenuScroll.querySelector(".menu-item.active"));
 }
 function closeMenu() {
@@ -107,4 +118,7 @@ if (burgerBtn) {
   burgerBtn.onclick = toggleMenu;
   setBurgerOpen(false);
 }
-overlay.onclick = closeMenu;
+overlay.onclick = () => {
+  if (Date.now() - menuOpenedAt < MENU_GHOST_CLICK_GUARD_MS) return;
+  closeMenu();
+};

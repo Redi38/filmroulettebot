@@ -168,6 +168,14 @@ function reducedMotion() {
   return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 }
 
+// Theaters/showcase/series-releases/tracked-series data comes from TMDB
+// scraping or manual add/remove — it doesn't change minute to minute. So a
+// loader called on a plain tab revisit (not an explicit filter/pagination/
+// add/delete action) skips the fetch-and-fade entirely if it already has
+// data younger than this, and just leaves the existing content on screen.
+// Explicit actions always bypass this and fetch fresh regardless.
+const TAB_REVISIT_STALE_MS = 5 * 60 * 1000;
+
 // Page navigation slides the old page out and the new one in along the
 // direction of travel instead of cross-fading in place. paginationRow()
 // tags the container it lives in; fadeOut() reads the tag and fadeIn()

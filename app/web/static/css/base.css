@@ -124,6 +124,12 @@ header h1 { margin: 0; font-size: 1.15rem; font-weight: 800; }
   font-family: inherit; display: inline-flex; align-items: center; justify-content: center;
   width: 34px; height: 34px; padding: 0; flex-shrink: 0;
   transition: transform var(--dur-fast) var(--ease-spring), background var(--dur-fast) ease;
+  /* Without this, iOS/Android can wait ~300ms after touchend to decide the
+     tap isn't the start of a double-tap-to-zoom, then dispatch a delayed
+     synthetic click. By the time it lands, the menu has already opened and
+     the overlay now covers this button, so that ghost click hits the
+     overlay instead and closes the menu a beat after it opened. */
+  touch-action: manipulation;
 }
 #burger-btn:active { transform: scale(0.9); }
 @media (hover: hover) and (pointer: fine) {
@@ -143,6 +149,7 @@ header .header-spacer { width: 34px; height: 34px; flex-shrink: 0; }
   position: fixed; inset: 0; background: rgba(5,3,2,0.65); z-index: 10;
   opacity: 0; visibility: hidden; pointer-events: none;
   transition: opacity 0.2s ease, visibility 0s linear 0.2s;
+  touch-action: manipulation;
 }
 #overlay.open {
   opacity: 1; visibility: visible; pointer-events: auto;

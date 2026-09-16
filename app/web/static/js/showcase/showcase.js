@@ -4,28 +4,37 @@
 
 let currentShowcaseStudio = null;
 let lastShowcaseData = null;
+let lastShowcaseLoadedAt = 0;
 
-async function loadShowcase() {
+function prepShowcaseSkeletonIfStale() {
+  if (currentCat === currentShowcaseStudio) return;
+  const container = document.getElementById("showcase-container");
+  if (!container) return;
+  container.style.opacity = "1";
+  container.innerHTML = skeletonShowcaseHtml();
+}
+
+// `fromNav` is only true when showSection() calls this on a plain tab
+// switch (see VIEW_LOADERS in views.js) — filter changes and other direct
+// callers always pass nothing, so they always fetch.
+async function loadShowcase(fromNav) {
   const cat = currentCat;
   const container = document.getElementById("showcase-container");
   const isFreshView = currentShowcaseStudio !== cat;
+  if (fromNav && !isFreshView && lastShowcaseData && Date.now() - lastShowcaseLoadedAt < TAB_REVISIT_STALE_MS) {
+    return;
+  }
   currentShowcaseStudio = cat;
   if (isFreshView) {
     container.style.opacity = "1";
     container.innerHTML = skeletonShowcaseHtml();
   }
   const dataPromise = api(`/api/showcase/${cat}`);
-  // Fade the (stale) container out while the request is in flight rather
-  // than after it resolves — see list-items.js's loadList for the same
-  // pattern and why it's worth doing. On a fresh view there's no stale
-  // content to hide (the skeleton was just inserted at full opacity), so
-  // skip the fade there — fading it to 0 in the same tick as setting it to
-  // 1 above means the browser never paints the "1" frame and the skeleton
-  // never becomes visible.
   const fadeOutPromise = isFreshView ? Promise.resolve() : fadeOut(container);
   try {
     const [data] = await Promise.all([dataPromise, fadeOutPromise]);
     lastShowcaseData = data;
+    lastShowcaseLoadedAt = Date.now();
     renderShowcaseFilters();
     renderShowcaseContent(true);
   } catch (e) {
@@ -94,8 +103,13 @@ function renderShowcaseFilters() {
 }
 
 let trackedSeriesLoaded = false;
-async function loadTrackedSeries() {
+let trackedSeriesLoadedAt = 0;
+
+async function loadTrackedSeries(fromNav) {
   const container = document.getElementById("tracked-series-container");
+  if (fromNav && trackedSeriesLoaded && Date.now() - trackedSeriesLoadedAt < TAB_REVISIT_STALE_MS) {
+    return;
+  }
   const isFreshView = !trackedSeriesLoaded;
   if (isFreshView) {
     container.style.opacity = "1";
@@ -108,6 +122,7 @@ async function loadTrackedSeries() {
   try {
     const [data] = await Promise.all([dataPromise, fadeOutPromise]);
     trackedSeriesLoaded = true;
+    trackedSeriesLoadedAt = Date.now();
     container.innerHTML = "";
     const items = data.items || [];
     if (!items.length) {

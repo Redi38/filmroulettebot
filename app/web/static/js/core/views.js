@@ -22,12 +22,6 @@ function switchSpinCat(code) {
   if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
 }
 
-// Entry point for the main-menu "Списки" item. Plain switchView("list")
-// would leave currentCat at whatever a Marvel/DC showcase visit last set it
-// to, so re-entering the list screen from elsewhere silently jumped into the
-// Marvel/DC list. Restore the list's own last category instead — but only
-// when actually arriving from another view; re-clicking while already on
-// the list screen must not reset a category picked via the chips.
 function switchToList() {
   if (currentView !== "list") currentCat = lastListCat;
   switchView("list");
@@ -61,20 +55,18 @@ const SECTION_IDS = {
   tracked_series: "tracked-series-section",
 };
 
-// Per-view "the section is now on screen, load its data" hooks, keyed the
-// same way as SECTION_IDS. showSection() looks the current view up here
-// instead of chaining `if (currentView === ...)` checks — a view with
-// nothing to load on entry (e.g. "spin", handled separately above the
-// table since it also needs to run before the async DOM swap settles)
-// simply has no entry.
 const VIEW_LOADERS = {
   list: () => loadList(),
   upcoming: () => loadUpcoming(),
   history: () => loadHistory(),
-  showcase: () => loadShowcase(),
-  theaters: () => loadTheaters(),
-  series_releases: () => loadSeriesReleases(),
-  tracked_series: () => loadTrackedSeries(),
+  // `true` marks this as a plain tab-revisit call: if the view already has
+  // fresh-enough data, the loader skips the fetch-and-fade entirely instead
+  // of re-flickering content that source updates only rarely (TMDB
+  // scraping / manual add-remove — see TAB_REVISIT_STALE_MS).
+  showcase: () => loadShowcase(true),
+  theaters: () => loadTheaters(undefined, true),
+  series_releases: () => loadSeriesReleases(true),
+  tracked_series: () => loadTrackedSeries(true),
 };
 
 function applyStudioTheme() {
@@ -102,6 +94,9 @@ async function showSection() {
   if (typeof closePosterInfoModal === "function") closePosterInfoModal();
   if (typeof closeModal === "function") closeModal();
   if (typeof closeRenameModal === "function") closeRenameModal();
+  if (currentView === "showcase" && typeof prepShowcaseSkeletonIfStale === "function") {
+    prepShowcaseSkeletonIfStale();
+  }
 
   const targetId = SECTION_IDS[currentView];
   const prevEl = document.querySelector(".section.active");

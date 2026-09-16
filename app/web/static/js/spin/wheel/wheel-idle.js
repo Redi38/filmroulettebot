@@ -1,3 +1,9 @@
+import { isWeightedMode } from "../settings/weighted-mode.js";
+import { setCanvasRotation, wheelPrefersReducedMotion } from "./spin.js";
+import { buildWheel } from "./wheel-build.js";
+import { getWheelDPR, wheelSpinState } from "./wheel-constants.js";
+import { drawWheelSegments, getCanvasRotationDeg, updatePointerTitle } from "./wheel-draw.js";
+
 // Roulette wheel: the resting state. A wheel that nobody has spun yet used
 // to sit perfectly still, which read as a static image rather than something
 // you could touch. It now drifts very slowly, and highlights whichever
@@ -33,7 +39,7 @@ function wheelIdleSegmentAt(canvas, clientX, clientY) {
   return idx;
 }
 
-function wheelIdleRedraw(canvas, highlightIndex) {
+export function wheelIdleRedraw(canvas, highlightIndex) {
   const items = canvas._wheelItems;
   if (!items || !canvas._wheelBoundaries) return;
   drawWheelSegments(canvas, items, getWheelDPR(), canvas._wheelBoundaries, {
@@ -103,13 +109,13 @@ function positionWheelHoverLabel(canvas, clientX, clientY, text, odds) {
   label.classList.add("visible");
 }
 
-function hideWheelHoverLabel(canvas) {
+export function hideWheelHoverLabel(canvas) {
   const holder = canvas.closest(".wheel-holder");
   const label = holder && holder.querySelector(".wheel-hover-label");
   if (label) label.classList.remove("visible");
 }
 
-function stopWheelIdle(canvas) {
+export function stopWheelIdle(canvas) {
   if (!canvas || !canvas._idleRAF) return;
   cancelAnimationFrame(canvas._idleRAF);
   canvas._idleRAF = null;
@@ -117,7 +123,7 @@ function stopWheelIdle(canvas) {
 
 // Called by buildWheel() once the canvas is drawn. Safe to call twice — the
 // previous loop is cancelled first.
-function startWheelIdle(canvas) {
+export function startWheelIdle(canvas) {
   if (!canvas) return;
   stopWheelIdle(canvas);
   if (wheelPrefersReducedMotion()) return;
@@ -126,7 +132,7 @@ function startWheelIdle(canvas) {
   const tick = (now) => {
     // A spin owns the transform while it runs; the landing state should stay
     // put afterwards, so the drift does not resume on its own.
-    if (wheelSpinActive) {
+    if (wheelSpinState.active) {
       canvas._idleRAF = null;
       return;
     }
@@ -144,10 +150,10 @@ function startWheelIdle(canvas) {
 
 // Hover highlighting lives on the mask rather than the canvas, because the
 // canvas is rotating and its own box rotates with it.
-function attachWheelHover(canvas, mask) {
+export function attachWheelHover(canvas, mask) {
   if (!canvas || !mask) return;
 
-  const isLocked = () => wheelSpinActive || canvas._hoverLocked;
+  const isLocked = () => wheelSpinState.active || canvas._hoverLocked;
 
   const clear = () => {
     canvas._idleHovering = false;

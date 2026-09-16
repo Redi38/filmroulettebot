@@ -1,3 +1,8 @@
+import { getLS, setLS } from "../../core/storage.js";
+import { renderControlOnAllDocks } from "./dock-controls.js";
+import { spinMode } from "./spin-mode.js";
+import { wheelMuted } from "./wheel-mute.js";
+
 // ---- wheel sound theme -------------------------------------------------------
 const WHEEL_SOUND_THEME_KEY = "filmroulette_wheel_sound_theme";
 const WHEEL_SOUND_THEME_OPTIONS = [
@@ -13,14 +18,14 @@ function saveWheelSoundTheme(v) {
   setLS(WHEEL_SOUND_THEME_KEY, v);
 }
 let wheelSoundTheme = loadWheelSoundTheme();
-function getWheelSoundTheme() { return wheelSoundTheme; }
+export function getWheelSoundTheme() { return wheelSoundTheme; }
 
 const SOUND_THEME_CHEVRON_SVG =
   '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">' +
   '<polyline points="6 9 12 15 18 9"></polyline>' +
   "</svg>";
 
-function closeSoundThemeMenus(exceptWrap) {
+export function closeSoundThemeMenus(exceptWrap) {
   document.querySelectorAll(".sound-theme-dropdown.open").forEach((wrap) => {
     if (wrap === exceptWrap) return;
     wrap.classList.remove("open");
@@ -33,7 +38,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") closeSoundThemeMenus();
 });
 
-function renderSoundThemeToggle(containerId) {
+export function renderSoundThemeToggle(containerId) {
   const el = document.getElementById(containerId);
   if (!el) return;
   el.innerHTML = "";

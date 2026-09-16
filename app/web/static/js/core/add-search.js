@@ -1,3 +1,8 @@
+import { api } from "./api.js";
+import { overlay } from "./menu.js";
+import { skeletonSearchHtml } from "./skeleton.js";
+import { escapeHtml } from "./utils.js";
+
 // Shared "pick from TMDb" modal for add-a-title flows: list-items.js,
 // upcoming-list.js, and the tracked-series add button in showcase.js all
 // call openAddSearchModal() instead of adding the typed text straight away.
@@ -9,7 +14,7 @@ function _addSearchTypeBadge(searchEndpoint, isSeries) {
   return isSeries ? "Сериал" : "Фильм";
 }
 
-async function openAddSearchModal(searchEndpoint, query, {onPick, onFallback}) {
+export async function openAddSearchModal(searchEndpoint, query, {onPick, onFallback}) {
   const overlay = document.getElementById("add-search-overlay");
   const resultsEl = document.getElementById("add-search-results");
   const fallbackBtn = document.getElementById("add-search-fallback");

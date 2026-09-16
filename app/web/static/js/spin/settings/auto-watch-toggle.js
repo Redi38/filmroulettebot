@@ -1,3 +1,6 @@
+import { getLS, setLS } from "../../core/storage.js";
+import { renderControlOnAllDocks } from "./dock-controls.js";
+
 // ---- auto watch-link redirect ------------------------------------------
 const AUTO_WATCH_ENABLED_KEY = "filmroulette_auto_watch_enabled";
 function loadAutoWatchEnabled() {
@@ -8,10 +11,10 @@ function saveAutoWatchEnabled(v) {
   setLS(AUTO_WATCH_ENABLED_KEY, v ? "1" : "0");
 }
 let autoWatchEnabled = loadAutoWatchEnabled();
-function isAutoWatchEnabled() { return autoWatchEnabled; }
+export function isAutoWatchEnabled() { return autoWatchEnabled; }
 let autoWatchJustToggled = false;
 
-function renderAutoWatchToggle(containerId) {
+export function renderAutoWatchToggle(containerId) {
   const el = document.getElementById(containerId);
   if (!el) return;
   el.innerHTML = "";

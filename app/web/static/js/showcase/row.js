@@ -1,3 +1,8 @@
+import { escapeHtml } from "../core/utils.js";
+import { buildShowcaseActionSlot } from "./actions.js";
+import { showcaseDateLine } from "./date.js";
+import { attachShowcaseDetailToggle } from "./detail.js";
+
 // Shared row/group renderer used by every "list of titles with a poster,
 // a date line, and an add/skip/delete action" screen: the studio showcase,
 // the theaters tab, series releases, and the user's tracked-series list.
@@ -9,7 +14,7 @@
 // detail.js) — this file just wires a row's DOM together from
 // them. Only showcaseGroup() is used outside this group of files.
 
-function showcaseGroup(title, items, cat, isNewSeasons, addMode, skipScope, onSkipSettled) {
+export function showcaseGroup(title, items, cat, isNewSeasons, addMode, skipScope, onSkipSettled) {
   const group = document.createElement("div");
   group.className = "check-group";
   const h3 = document.createElement("h3");
@@ -26,7 +31,7 @@ function showcaseGroup(title, items, cat, isNewSeasons, addMode, skipScope, onSk
   return group;
 }
 
-function showcaseRow(item, cat, isNewSeasons, addMode, skipScope, onSkipSettled) {
+export function showcaseRow(item, cat, isNewSeasons, addMode, skipScope, onSkipSettled) {
   const wrap = document.createElement("div");
   wrap.className = "showcase-item-wrap";
 

@@ -1,6 +1,10 @@
+import { REF_CATS } from "./constants.js";
+import { uiState } from "./state.js";
+import { switchCat, switchToList, switchView } from "./views.js";
+
 const sideMenu = document.getElementById("side-menu");
 const sideMenuScroll = document.getElementById("side-menu-scroll");
-const overlay = document.getElementById("overlay");
+export const overlay = document.getElementById("overlay");
 
 // The active-row marker is a single element that slides between rows, so it
 // has to outlive renderMenu()'s rebuild — hence clearing the item nodes one
@@ -33,7 +37,7 @@ function syncMenuIndicator(activeItem) {
   }
 }
 
-function renderMenu() {
+export function renderMenu() {
   const indicator = ensureMenuIndicator();
   for (const child of [...sideMenuScroll.children]) {
     if (child !== indicator) child.remove();
@@ -58,23 +62,23 @@ function renderMenu() {
   };
 
   addGroup("Главное");
-  addItem("home", "Афиша", () => switchView("home"), currentView === "home");
-  addItem("shuffle", "Рулетка", () => switchView("spin"), currentView === "spin");
-  addItem("list", "Списки", () => switchToList(), currentView === "list");
+  addItem("home", "Афиша", () => switchView("home"), uiState.currentView === "home");
+  addItem("shuffle", "Рулетка", () => switchView("spin"), uiState.currentView === "spin");
+  addItem("list", "Списки", () => switchToList(), uiState.currentView === "list");
 
   addGroup("Кино и сериалы");
-  addItem("theaters", "В прокате", () => switchView("theaters"), currentView === "theaters");
-  addItem("premiere", "Премьеры сериалов", () => switchView("series_releases"), currentView === "series_releases");
-  addItem("bell", "Отслеживание сериалов", () => switchView("tracked_series"), currentView === "tracked_series");
+  addItem("theaters", "В прокате", () => switchView("theaters"), uiState.currentView === "theaters");
+  addItem("premiere", "Премьеры сериалов", () => switchView("series_releases"), uiState.currentView === "series_releases");
+  addItem("bell", "Отслеживание сериалов", () => switchView("tracked_series"), uiState.currentView === "tracked_series");
 
   addGroup("Подборки");
   for (const code of Object.keys(REF_CATS)) {
-    addItem(code, REF_CATS[code], () => switchCat(code, "showcase"), currentView === "showcase" && currentCat === code);
+    addItem(code, REF_CATS[code], () => switchCat(code, "showcase"), uiState.currentView === "showcase" && uiState.currentCat === code);
   }
 
   addGroup("Прочее");
-  addItem("upcoming", "Ожидаемые", () => switchView("upcoming"), currentView === "upcoming");
-  addItem("history", "История", () => switchView("history"), currentView === "history");
+  addItem("upcoming", "Ожидаемые", () => switchView("upcoming"), uiState.currentView === "upcoming");
+  addItem("history", "История", () => switchView("history"), uiState.currentView === "history");
 
   syncMenuIndicator(activeItem);
 }

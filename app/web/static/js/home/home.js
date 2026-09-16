@@ -1,11 +1,16 @@
+import { api } from "../core/api.js";
+import { openPosterInfoModal } from "../core/modal.js";
+import { debounce } from "../core/utils.js";
+import { switchView } from "../core/views.js";
+
 // Home screen ("Афиша"): a CSS-only running poster marquee built from the
 // user's own lists, plus quick actions to jump into the roulette or a
 // category list. Tapping a poster opens its full card info in a modal.
 
-let homeLoaded = false;
+export let homeLoaded = false;
 let homeLoading = false;
 
-async function loadHome() {
+export async function loadHome() {
   if (homeLoading) return;
   const block = document.getElementById("home-collection-block");
 
@@ -44,7 +49,7 @@ function marqueeAnimationOf(track) {
   return running.length ? running[0] : null;
 }
 
-function pauseHomeMarquee() {
+export function pauseHomeMarquee() {
   if (!marqueeShownAt) return;
   const elapsed = performance.now() - marqueeShownAt;
   marqueeShownAt = 0;
@@ -76,7 +81,7 @@ function seekMarqueeTrack(track) {
   return true;
 }
 
-function resumeHomeMarquee() {
+export function resumeHomeMarquee() {
   if (marqueeShownAt) return;
   marqueeShownAt = performance.now();
   for (const track of document.querySelectorAll(".marquee-track")) {
@@ -125,7 +130,7 @@ function renderHomeMarquee(posters) {
   syncMarqueeSize();
 }
 
-function syncMarqueeSize() {
+export function syncMarqueeSize() {
   const block = document.getElementById("home-collection-block");
   const section = document.getElementById("home-section");
   if (!block || !section || !section.classList.contains("active") || block.style.display === "none") return;

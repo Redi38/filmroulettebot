@@ -1,3 +1,6 @@
+import { api } from "./api.js";
+import { closeSoundThemeMenus } from "../spin/settings/sound-theme.js";
+
 // Two ways to pick a category, both replacing what used to be one side-menu
 // entry per category (three spin tabs + "Наугад", five "Список" tabs).
 //
@@ -9,7 +12,7 @@
 //   where four or five pills side by side do not fit. Shares its markup and
 //   styling with the wheel's sound-theme dropdown next to it.
 
-function renderCatChips(containerId, { options, value, onChange, extraClass }) {
+export function renderCatChips(containerId, { options, value, onChange, extraClass }) {
   const el = document.getElementById(containerId);
   if (!el) return;
 
@@ -64,7 +67,7 @@ function renderCatChips(containerId, { options, value, onChange, extraClass }) {
 
 // Split out so a resize (which can rewrap the row and strand the thumb under
 // the wrong chip) can re-measure without rebuilding anything.
-function positionCatChipThumb(el, activeBtn, justBuilt) {
+export function positionCatChipThumb(el, activeBtn, justBuilt) {
   const thumb = el && el.querySelector(".showcase-filter-thumb");
   if (!thumb) return;
   if (!activeBtn) activeBtn = el.querySelector(".cat-chip.active");
@@ -93,7 +96,7 @@ function closeCatSelectMenus(except) {
 document.addEventListener("click", () => closeCatSelectMenus());
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeCatSelectMenus(); });
 
-function renderCatSelect(containerId, { options, value, onChange, label }) {
+export function renderCatSelect(containerId, { options, value, onChange, label }) {
   const el = document.getElementById(containerId);
   if (!el) return;
   el.innerHTML = "";

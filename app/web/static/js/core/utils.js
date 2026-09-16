@@ -1,8 +1,11 @@
+import { api, performDelete, performSequel } from "./api.js";
+import { paginationRow } from "../list/list-items.js";
+
 // api(), performSequel(), performDelete() moved to core/api.js (typed
 // against the backend's OpenAPI schema — see that file's header comment).
 // This file keeps the untyped DOM/UI helpers that don't touch the network.
 
-function ensureFilterPanel(panelId, sectionId, beforeId) {
+export function ensureFilterPanel(panelId, sectionId, beforeId) {
   const section = document.getElementById(sectionId);
   let panel = document.getElementById(panelId);
   if (!panel) {
@@ -29,7 +32,7 @@ function dismissToast(el) {
   setTimeout(() => el.remove(), TOAST_LEAVE_MS);
 }
 
-function showToast(msg, type) {
+export function showToast(msg, type) {
   const isError = type === "error";
   const stack = document.getElementById(isError ? "toast-stack-error" : "toast-stack");
   if (!stack) return null;
@@ -52,7 +55,7 @@ function showToast(msg, type) {
   return el;
 }
 
-function showInlineUndo(parent, referenceNode, msg, actionLabel, onAction, onDismiss, duration) {
+export function showInlineUndo(parent, referenceNode, msg, actionLabel, onAction, onDismiss, duration) {
   const ms = duration || 4500;
   const wrap = document.createElement("div");
   wrap.className = "inline-undo-row";
@@ -95,7 +98,7 @@ function showInlineUndo(parent, referenceNode, msg, actionLabel, onAction, onDis
   return dismiss;
 }
 
-function copyToClipboard(text, el) {
+export function copyToClipboard(text, el) {
   const ta = document.createElement("textarea");
   ta.value = text;
   ta.style.position = "fixed";
@@ -125,16 +128,16 @@ function copyToClipboard(text, el) {
 // escapeAttr() that produced a JS string literal for inline onclick="..."
 // handlers is gone along with those handlers.
 const HTML_ESCAPES = {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"};
-function escapeHtml(s) {
+export function escapeHtml(s) {
   return String(s ?? "").replace(/[&<>"']/g, (ch) => HTML_ESCAPES[ch]);
 }
 
-function placeholderHtml(text, icon) {
+export function placeholderHtml(text, icon) {
   const fixedText = String(text).replace(/ ([\p{Extended_Pictographic}\uFE0F\u200d]+)$/u, "\u00A0$1");
   return `<div class="placeholder"><span class="big">${icon || "🎲"}</span>${fixedText}</div>`;
 }
 
-function debounce(fn, wait) {
+export function debounce(fn, wait) {
   let t;
   return (...args) => {
     clearTimeout(t);
@@ -164,7 +167,7 @@ function maxTransitionMs(el) {
   }
   return max;
 }
-function reducedMotion() {
+export function reducedMotion() {
   return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 }
 
@@ -174,7 +177,7 @@ function reducedMotion() {
 // add/delete action) skips the fetch-and-fade entirely if it already has
 // data younger than this, and just leaves the existing content on screen.
 // Explicit actions always bypass this and fetch fresh regardless.
-const TAB_REVISIT_STALE_MS = 5 * 60 * 1000;
+export const TAB_REVISIT_STALE_MS = 5 * 60 * 1000;
 
 // Page navigation slides the old page out and the new one in along the
 // direction of travel instead of cross-fading in place. paginationRow()
@@ -182,11 +185,11 @@ const TAB_REVISIT_STALE_MS = 5 * 60 * 1000;
 // clears it, so an untagged container keeps the plain cross-fade.
 const NAV_SLIDE_PX = 22;
 
-function setNavDirection(el, dir) {
+export function setNavDirection(el, dir) {
   if (el) el._navDir = dir;
 }
 
-async function fadeOut(el) {
+export async function fadeOut(el) {
   const dir = reducedMotion() ? 0 : (el._navDir || 0);
   const ms = maxTransitionMs(el);
   el.style.opacity = "0";
@@ -195,7 +198,7 @@ async function fadeOut(el) {
   await new Promise((r) => setTimeout(r, Math.min(400, Math.max(60, ms + 20))));
 }
 
-function fadeIn(el) {
+export function fadeIn(el) {
   const dir = reducedMotion() ? 0 : (el._navDir || 0);
   el._navDir = 0;
   if (dir) {
@@ -227,7 +230,7 @@ const ROW_COLLAPSE_PROPS = [
   "transition", "opacity", "transform",
 ];
 
-function resetRowCollapse(el) {
+export function resetRowCollapse(el) {
   if (!el) return;
   for (const prop of ROW_COLLAPSE_PROPS) el.style[prop] = "";
 }
@@ -235,7 +238,7 @@ function resetRowCollapse(el) {
 // Grows `el` from zero height to its natural height. Used for anything that
 // appears where a row just was (the undo pill), so the two animations cancel
 // out and the surrounding rows never move.
-function expandRowIn(el) {
+export function expandRowIn(el) {
   if (!el || reducedMotion()) return;
   const cs = getComputedStyle(el);
   const target = el.getBoundingClientRect().height;
@@ -274,7 +277,7 @@ function expandRowIn(el) {
 
 // `opts.onCollapseStart` fires on the frame the collapse begins, so a caller
 // can insert a replacement (the undo pill) that expands in step with it.
-function collapseAndRemoveRow(row, onRemoved, opts) {
+export function collapseAndRemoveRow(row, onRemoved, opts) {
   const options = opts || {};
   const fadeMs = options.fadeMs === undefined ? ROW_FADE_MS : options.fadeMs;
   const done = () => {
@@ -318,7 +321,7 @@ function collapseAndRemoveRow(row, onRemoved, opts) {
   setTimeout(done, fadeMs * 0.5 + ROW_COLLAPSE_MS + 20);
 }
 
-function removeRowOptimistically(row, deleteRequest, onRemoved, opts) {
+export function removeRowOptimistically(row, deleteRequest, onRemoved, opts) {
   collapseAndRemoveRow(row, onRemoved, opts);
   deleteRequest().catch((e) => {
     showToast(e.message || "Не удалось удалить");
@@ -331,7 +334,7 @@ function removeRowOptimistically(row, deleteRequest, onRemoved, opts) {
 // while it fades, so the box is sized by the incoming content throughout.
 const CROSSFADE_MS = 220;
 
-function crossfadeContent(container, html) {
+export function crossfadeContent(container, html) {
   if (!container) return;
   if (reducedMotion() || !container.firstChild) {
     container.innerHTML = html;
@@ -366,7 +369,7 @@ function crossfadeContent(container, html) {
 // Runs `update` inside a View Transition when the browser has one, with
 // `vtClass` on <html> for the duration so the transition's CSS can be scoped
 // to this particular navigation. Falls back to running `update` directly.
-function runViewTransition(update, vtClass) {
+export function runViewTransition(update, vtClass) {
   if (reducedMotion() || typeof document.startViewTransition !== "function") {
     update();
     return Promise.resolve();
@@ -386,10 +389,10 @@ function runViewTransition(update, vtClass) {
     .then(() => { document.documentElement.classList.remove(vtClass); });
 }
 
-const TRASH_ICON_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>`;
+export const TRASH_ICON_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>`;
 
-const PENCIL_ICON_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path><path d="M15 5l4 4"></path></svg>`;
+export const PENCIL_ICON_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path><path d="M15 5l4 4"></path></svg>`;
 
-const ARROW_UP_ICON_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>`;
+export const ARROW_UP_ICON_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>`;
 
-const ARROW_DOWN_ICON_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>`;
+export const ARROW_DOWN_ICON_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>`;

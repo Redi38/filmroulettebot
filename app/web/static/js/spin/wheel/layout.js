@@ -1,8 +1,10 @@
+import { getDockFor } from "./wheel-build.js";
+
 // Roulette wheel: sizing constants and pure layout math (no DOM mutation).
 
-const WHEEL_MIN_SIZE = 260;
+export const WHEEL_MIN_SIZE = 260;
 const WHEEL_MAX_SIZE = 1100;
-const WHEEL_VERTICAL_RESERVE = 70;
+export const WHEEL_VERTICAL_RESERVE = 70;
 
 function fontsSettled() {
   const fontsReady = (document.fonts && document.fonts.ready)
@@ -11,13 +13,13 @@ function fontsSettled() {
   return Promise.race([fontsReady, new Promise((resolve) => setTimeout(resolve, 800))]);
 }
 
-function nextSettledFrame() {
+export function nextSettledFrame() {
   return fontsSettled().then(() => new Promise((resolve) => {
     requestAnimationFrame(() => requestAnimationFrame(resolve));
   }));
 }
 
-function computeWheelSize(availableWidth, availableHeight) {
+export function computeWheelSize(availableWidth, availableHeight) {
   return Math.min(
     Math.max(Math.min(availableWidth, availableHeight - WHEEL_VERTICAL_RESERVE) - 4, WHEEL_MIN_SIZE),
     WHEEL_MAX_SIZE
@@ -28,7 +30,7 @@ function computeWheelSize(availableWidth, availableHeight) {
 // sized proportionally to `weights`. Falls back to equal segments when
 // weights is missing or malformed, so a classic (non-weighted) wheel is
 // unchanged from equal division.
-function computeWheelBoundaries(n, weights) {
+export function computeWheelBoundaries(n, weights) {
   if (!weights || weights.length !== n || n === 0) {
     const seg = 360 / n;
     return Array.from({length: n}, (_, i) => ({start: i * seg, end: (i + 1) * seg}));
@@ -42,13 +44,13 @@ function computeWheelBoundaries(n, weights) {
   });
 }
 
-function getWheelBottomGap(wrap) {
+export function getWheelBottomGap(wrap) {
   const mainEl = wrap.closest("main");
   const paddingBottom = mainEl ? parseFloat(getComputedStyle(mainEl).paddingBottom) || 0 : 0;
   return Math.max(16, paddingBottom);
 }
 
-function computeDockClearance(wrap, dock) {
+export function computeDockClearance(wrap, dock) {
   if (!dock) return 0;
   const dockPos = getComputedStyle(dock).position;
   if (dockPos !== "absolute" && dockPos !== "fixed") return 0;
@@ -66,7 +68,7 @@ function computeDockClearance(wrap, dock) {
   return Math.max(0, Math.ceil(dockRect.bottom - wrapTop) + 14);
 }
 
-function predictWheelSize(wrap) {
+export function predictWheelSize(wrap) {
   const dock = getDockFor(wrap);
   const dockClearance = computeDockClearance(wrap, dock);
   const top = wrap.getBoundingClientRect().top - (parseFloat(wrap.style.paddingTop) || 0);

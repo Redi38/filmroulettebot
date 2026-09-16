@@ -1,3 +1,7 @@
+import { getLS, setLS } from "../../core/storage.js";
+import { renderControlOnAllDocks } from "./dock-controls.js";
+import { spinMode } from "./spin-mode.js";
+
 // ---- confetti effect ---------------------------------------------------
 const CONFETTI_ENABLED_KEY = "filmroulette_confetti_enabled";
 function loadConfettiEnabled() {
@@ -8,10 +12,10 @@ function saveConfettiEnabled(v) {
   setLS(CONFETTI_ENABLED_KEY, v ? "1" : "0");
 }
 let confettiEnabled = loadConfettiEnabled();
-function isConfettiEnabled() { return confettiEnabled; }
+export function isConfettiEnabled() { return confettiEnabled; }
 let confettiJustToggled = false;
 
-function renderConfettiToggle(containerId) {
+export function renderConfettiToggle(containerId) {
   const fxSection = document.getElementById(containerId.replace(/-confetti-toggle$/, "-fx-section"));
   if (fxSection) fxSection.classList.toggle("visible", spinMode === "wheel");
 

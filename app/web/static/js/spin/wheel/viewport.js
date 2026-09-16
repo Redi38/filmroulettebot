@@ -1,3 +1,7 @@
+import { debounce } from "../../core/utils.js";
+import { nextSettledFrame } from "./layout.js";
+import { forceRebuildVisibleWheels, rebuildVisibleWheels, redrawVisibleWheelCanvases } from "./spin.js";
+
 // Roulette wheel: resize/orientation/ResizeObserver orchestration.
 
 const SPIN_RESULT_MAX_WIDTH = 860;
@@ -5,7 +9,7 @@ const SPIN_RESULT_PAIRS = [
   { sectionId: "spin-section", resultId: "spin-result" },
 ];
 
-function syncSpinResultClearance() {
+export function syncSpinResultClearance() {
   const isDesktop = window.matchMedia("(min-width: 900px)").matches;
   for (const { sectionId, resultId } of SPIN_RESULT_PAIRS) {
     const section = document.getElementById(sectionId);
@@ -69,7 +73,7 @@ function onRealResize(handler) {
 // wait for a quiet window before it measures anything.
 let wheelLayoutTouchedAt = performance.now();
 function touchWheelLayout() { wheelLayoutTouchedAt = performance.now(); }
-function wheelLayoutQuietFor() { return performance.now() - wheelLayoutTouchedAt; }
+export function wheelLayoutQuietFor() { return performance.now() - wheelLayoutTouchedAt; }
 
 function refreshWheelLayout() {
   touchWheelLayout();

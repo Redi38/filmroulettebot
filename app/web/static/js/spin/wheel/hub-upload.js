@@ -1,7 +1,11 @@
+import { overlay } from "../../core/menu.js";
+import { getLS, setLS } from "../../core/storage.js";
+import { WHEEL_HUB_GIF_URL } from "./wheel-constants.js";
+
 // Wheel hub image: click the center circle to pick a custom picture/gif.
 // Stored client-side (localStorage) — no server upload endpoint needed.
 const WHEEL_HUB_STORAGE_KEY = "wheelHubImage";
-function getWheelHubImage() {
+export function getWheelHubImage() {
   return getLS(WHEEL_HUB_STORAGE_KEY, "") || WHEEL_HUB_GIF_URL || "";
 }
 function setWheelHubImage(url) {

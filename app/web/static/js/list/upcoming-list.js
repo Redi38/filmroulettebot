@@ -1,3 +1,12 @@
+import { openAddSearchModal } from "../core/add-search.js";
+import { api } from "../core/api.js";
+import { openCategoryModal } from "../core/modal.js";
+import { skeletonListHtml } from "../core/skeleton.js";
+import { escapeHtml, fadeIn, fadeOut, placeholderHtml, showToast } from "../core/utils.js";
+import { createEditableRow } from "./list-row.js";
+import { humanizeShowcaseDate } from "../showcase/date.js";
+import { loadShowcase } from "../showcase/showcase.js";
+
 // Upcoming releases list: load, add/delete, and TMDb release-date check flow.
 
 function checkUpcomingEmpty(container) {
@@ -5,7 +14,7 @@ function checkUpcomingEmpty(container) {
   container.innerHTML = placeholderHtml("Пока нет ожидаемых тайтлов — добавь то, чего ждёшь, выше 👀", "🕐");
 }
 
-async function loadUpcoming() {
+export async function loadUpcoming() {
   const container = document.getElementById("up-list-container");
   const isFreshView = container.dataset.loaded !== "1";
   if (isFreshView) {

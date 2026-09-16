@@ -1,18 +1,24 @@
+import { api, performDelete, performSequel } from "../core/api.js";
+import { CATS } from "../core/constants.js";
+import { escapeHtml, fadeIn, fadeOut, placeholderHtml, showToast } from "../core/utils.js";
+import { updateClearButtonState } from "./shell.js";
+import { histKey, historyState, loadResolvedMap, markResolved, resolveOnServer } from "./state.js";
+
 // History module: rendering the entry list and per-entry actions
 // (confirm / sequel / delete / remove-from-history).
 // Relies on state/storage from history-state.js and the shell helpers
 // from history-shell.js (both loaded before this file).
 
-function renderHistoryList() {
+export function renderHistoryList() {
   const list = document.getElementById("history-list");
   list.innerHTML = "";
 
-  const filtered = historyItems
+  const filtered = historyState.items
     .map((e, idx) => ({ e, idx }))
-    .filter(({ e }) => e.category === historyFilter);
+    .filter(({ e }) => e.category === historyState.filter);
 
   if (!filtered.length) {
-    list.innerHTML = placeholderHtml(`В категории «${CATS[historyFilter]}» пока нет истории — она появится после первого ролла 🎲`, "📜");
+    list.innerHTML = placeholderHtml(`В категории «${CATS[historyState.filter]}» пока нет истории — она появится после первого ролла 🎲`, "📜");
     updateClearButtonState(false);
     return;
   }
@@ -84,7 +90,7 @@ function resolvedOutcomeLabel(title, outcome) {
 
 async function histClearEntry(row) {
   const idx = Number(row.dataset.idx);
-  const entry = historyItems[idx];
+  const entry = historyState.items[idx];
   if (!entry) return;
   try {
     await api("/api/history/delete", {
@@ -93,7 +99,7 @@ async function histClearEntry(row) {
         category: entry.category, title: entry.title, timestamp: Number(entry.timestamp),
       }),
     });
-    historyItems = historyItems.filter((_, i) => i !== idx);
+    historyState.items = historyState.items.filter((_, i) => i !== idx);
     const list = document.getElementById("history-list");
     await fadeOut(list);
     renderHistoryList();

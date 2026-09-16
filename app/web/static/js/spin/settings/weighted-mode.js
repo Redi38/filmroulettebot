@@ -1,3 +1,13 @@
+import { api } from "../../core/api.js";
+import { isRandomSpin, uiState } from "../../core/state.js";
+import { getLS, setLS } from "../../core/storage.js";
+import { renderChoiceToggle, renderControlOnAllDocks } from "./dock-controls.js";
+import { spinMode } from "./spin-mode.js";
+import { syncSpinResultClearance } from "../wheel/viewport.js";
+import { resetWheelWraps, showIdleWheel } from "../wheel/wheel-build.js";
+import { getWheelDPR, wheelSpinState } from "../wheel/wheel-constants.js";
+import { animateWheelWeights } from "../wheel/wheel-draw.js";
+
 // ---- weighted mode ---------------------------------------------------------
 const WEIGHTED_MODE_KEY = "filmroulette_weighted_spin";
 function loadWeightedMode() {
@@ -7,11 +17,11 @@ function saveWeightedMode(v) {
   setLS(WEIGHTED_MODE_KEY, v ? "1" : "0");
 }
 let weightedMode = loadWeightedMode();
-function isWeightedMode() { return weightedMode; }
+export function isWeightedMode() { return weightedMode; }
 
 let weightResizeToken = 0;
 
-function renderWeightToggle(containerId) {
+export function renderWeightToggle(containerId) {
   const section = document.getElementById(containerId.replace(/-weight-toggle$/, "-weight-section"));
   if (section) section.classList.toggle("visible", spinMode === "wheel");
   renderChoiceToggle(containerId, {
@@ -34,23 +44,23 @@ async function resizeIdleWheelForWeightedMode(weighted) {
   const canvas = wrap && wrap.querySelector(".wheel-canvas");
   const pool = wrap && wrap._wheelPool;
   const canResize = wrap && canvas && pool && pool.length >= 2
-    && !wheelSpinActive && !currentCardData
-    && spinMode === "wheel" && currentView === "spin";
+    && !wheelSpinState.active && !uiState.currentCardData
+    && spinMode === "wheel" && uiState.currentView === "spin";
 
   if (!canResize) {
     weightResizeToken++;
     requestAnimationFrame(() => {
       resetWheelWraps();
       if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
-      if (currentCardData) return;
-      if (spinMode === "wheel" && currentView === "spin" && !isRandomSpin()) showIdleWheel(spinCat);
+      if (uiState.currentCardData) return;
+      if (spinMode === "wheel" && uiState.currentView === "spin" && !isRandomSpin()) showIdleWheel(uiState.spinCat);
     });
     return;
   }
 
   const token = ++weightResizeToken;
   try {
-    const data = await api(`/api/${spinCat}/wheel-weights`, {
+    const data = await api(`/api/${uiState.spinCat}/wheel-weights`, {
       method: "POST", headers: {"Content-Type": "application/json"},
       body: JSON.stringify({pool, weighted}),
     });
@@ -62,6 +72,6 @@ async function resizeIdleWheelForWeightedMode(weighted) {
     if (token !== weightResizeToken) return;
     resetWheelWraps();
     if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
-    if (!currentCardData && spinMode === "wheel" && currentView === "spin" && !isRandomSpin()) showIdleWheel(spinCat);
+    if (!uiState.currentCardData && spinMode === "wheel" && uiState.currentView === "spin" && !isRandomSpin()) showIdleWheel(uiState.spinCat);
   }
 }

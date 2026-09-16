@@ -1,9 +1,13 @@
+import { openAddSearchModal } from "../core/add-search.js";
+import { openRenameModal } from "../core/modal.js";
+import { ARROW_DOWN_ICON_SVG, ARROW_UP_ICON_SVG, PENCIL_ICON_SVG, TRASH_ICON_SVG, copyToClipboard, removeRowOptimistically, showInlineUndo, showToast } from "../core/utils.js";
+
 // Shared row renderer for "title + edit + delete-with-undo" lists.
 // Used by list-items.js (per-category lists) and upcoming-list.js.
 // All API calls stay in the caller (endpoints differ), this only owns
 // the DOM + optimistic-delete/undo wiring so it's written once.
 
-function createEditableRow(title, opts) {
+export function createEditableRow(title, opts) {
   const row = document.createElement("div");
   row.className = "list-row fade-in";
 

@@ -11,6 +11,39 @@ def check_category(cat: str) -> None:
         raise HTTPException(404, f"Unknown category: {cat}")
 
 
+async def valid_category(cat: str) -> str:
+    """FastAPI dependency form of check_category(), for handlers whose
+    category comes from the `{cat}` path segment: `cat: str =
+    Depends(valid_category)` replaces the `cat: str` param + a manual
+    `check_category(cat)` call in the body, since FastAPI resolves this
+    dependency's own `cat` argument from that same path segment.
+
+    Only fits path-param routes. A category read from a request body field
+    (e.g. MoveBody.category) can't be wired through Depends this way —
+    those handlers still call check_category(body.category) directly."""
+    check_category(cat)
+    return cat
+
+
+async def add_or_conflict(exists_fn, add_fn, title: str, conflict_msg: str) -> str:
+    """Shared validate-then-add for the three list "add a title" endpoints
+    (items.py, upcoming.py, tracked_series.py): strip the title, reject an
+    empty or already-present one, then call add_fn(title). Returns the
+    stripped title so callers can do post-add work (e.g. caching a tmdb id)
+    without re-stripping body.title themselves.
+
+    exists_fn/add_fn are pre-bound to whatever category/table the caller's
+    endpoint is for (a lambda or partial) — this only owns the check/raise
+    sequence all three shared, not the underlying storage call."""
+    title = title.strip()
+    if not title:
+        raise HTTPException(400, "Title can't be empty")
+    if await exists_fn(title):
+        raise HTTPException(409, conflict_msg)
+    await add_fn(title)
+    return title
+
+
 async def validate_rename(
     exists_fn, old_title: str, new_title: str, category_label: str,
     conflict_msg: str | None = None,

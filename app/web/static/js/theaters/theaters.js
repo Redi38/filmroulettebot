@@ -1,3 +1,11 @@
+import { api } from "../core/api.js";
+import { skeletonShowcaseHtml } from "../core/skeleton.js";
+import { TAB_REVISIT_STALE_MS, ensureFilterPanel, escapeHtml, fadeIn, fadeOut, placeholderHtml } from "../core/utils.js";
+import { VIEW_LOADERS, showSection } from "../core/views.js";
+import { paginationRow } from "../list/list-items.js";
+import { loadSimpleAddedFilter, simpleAddedFilterGroup } from "../showcase/filters.js";
+import { showcaseGroup, showcaseRow } from "../showcase/row.js";
+
 // "Афиша" (global now-playing/upcoming theatrical) and "Премьеры сериалов"
 // (global series releases) tabs — both are TMDb discovery data with their
 // own pagination and skip-list, rendered via showcaseGroup/showcaseRow.
@@ -86,7 +94,7 @@ function renderTheatersFilters() {
 // `fromNav` is only true when showSection() calls this on a plain tab
 // switch (see VIEW_LOADERS in views.js) — pagination and filter changes
 // always pass their own args instead, so they always fetch.
-async function loadTheaters(trigger, fromNav) {
+export async function loadTheaters(trigger, fromNav) {
   const container = document.getElementById("theaters-container");
   if (fromNav && theatersLoaded && Date.now() - theatersLoadedAt < TAB_REVISIT_STALE_MS) {
     return;
@@ -192,7 +200,7 @@ function renderSeriesReleasesFilters() {
   });
 }
 
-async function loadSeriesReleases(fromNav) {
+export async function loadSeriesReleases(fromNav) {
   const container = document.getElementById("series-releases-container");
   if (fromNav && seriesReleasesLoaded && Date.now() - seriesReleasesLoadedAt < TAB_REVISIT_STALE_MS) {
     return;

@@ -1,3 +1,6 @@
+import { getLS, setLS } from "../../core/storage.js";
+import { spinMode } from "./spin-mode.js";
+
 // ---- spin speed --------------------------------------------------------------
 const SPIN_SPEED_KEY = "filmroulette_spin_speed";
 const SPIN_SPEED_MIN = 1;
@@ -12,7 +15,7 @@ function loadSpinSpeed() {
 function saveSpinSpeed(v) {
   setLS(SPIN_SPEED_KEY, String(v));
 }
-let spinSpeedSeconds = loadSpinSpeed();
+export let spinSpeedSeconds = loadSpinSpeed();
 
 function clampSpinSpeed(v) {
   if (!Number.isFinite(v)) return spinSpeedSeconds;
@@ -22,7 +25,7 @@ function formatSpinSpeed(v) {
   return String(Math.round(v * 10) / 10);
 }
 
-function renderSpinSpeedControl(containerId) {
+export function renderSpinSpeedControl(containerId) {
   const el = document.getElementById(containerId);
   if (!el) return;
   el.innerHTML = "";

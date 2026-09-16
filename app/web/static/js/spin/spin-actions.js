@@ -1,3 +1,20 @@
+import { renderCard } from "../card/card-render.js";
+import { api } from "../core/api.js";
+import { CATS } from "../core/constants.js";
+import { skeletonCardHtml, skeletonWheelHtml } from "../core/skeleton.js";
+import { isRandomSpin, spinnableCats, uiState } from "../core/state.js";
+import { escapeHtml, fadeIn, fadeOut, showToast } from "../core/utils.js";
+import { isAutoWatchEnabled } from "./settings/auto-watch-toggle.js";
+import { isConfettiEnabled } from "./settings/confetti-toggle.js";
+import { SPIN_COOLDOWN_SECONDS, spinCooldown } from "./settings/dock-controls.js";
+import { spinMode } from "./settings/spin-mode.js";
+import { spinSpeedSeconds } from "./settings/spin-speed.js";
+import { isWeightedMode } from "./settings/weighted-mode.js";
+import { fireWheelConfetti } from "./wheel/confetti.js";
+import { highlightWheelWinner, spinWheelTo } from "./wheel/spin.js";
+import { primeWheelAudio } from "./wheel/wheel-audio.js";
+import { buildWheel, updateWheelScrollLock } from "./wheel/wheel-build.js";
+
 // Spin flow orchestration: classic + wheel spins, cooldown, button wiring.
 
 const AUTO_WATCH_OPEN_DELAY_SEC = 3;
@@ -30,7 +47,7 @@ function scheduleAutoWatchOpen(data, result) {
     if (secondsLeft > 0) { renderCountdown(); return; }
 
     clearInterval(autoWatchOpenInterval);
-    if (currentCardData !== data) return; // safety net
+    if (uiState.currentCardData !== data) return; // safety net
     const win = window.open(data.watch_link, "_blank", "noopener");
     if (textEl) textEl.textContent = "";
     if (!win) showToast("Не удалось открыть вкладку — разрешите всплывающие окна");
@@ -52,7 +69,7 @@ function setDockLocked(locked) {
 }
 
 function applySpinButtonLockState() {
-  const cooldownActive = spinCooldownUntil > Date.now();
+  const cooldownActive = spinCooldown.until > Date.now();
   const disabled = dockLocked || cooldownActive;
   const btn = document.getElementById("spin-btn");
   if (btn) btn.disabled = disabled;
@@ -84,7 +101,7 @@ async function spinCategoryWheel(wheelWrapId, category) {
 }
 
 async function doWheelSpin(cat, isRandom) {
-  if (spinCooldownUntil > Date.now()) return;
+  if (spinCooldown.until > Date.now()) return;
   cancelAutoWatchOpen();
   primeWheelAudio();
   const result = resultEl();
@@ -107,7 +124,7 @@ async function doWheelSpin(cat, isRandom) {
       method: "POST", headers: {"Content-Type": "application/json"},
       body: JSON.stringify({weighted: isWeightedMode()}),
     });
-    currentCardData = data;
+    uiState.currentCardData = data;
 
     if (isRandom) {
       await spinCategoryWheel(wheelWrapId, data.category);
@@ -177,7 +194,7 @@ async function swapWheelForCard(wrap, result, data) {
   fadeIn(result);
 }
 
-function handleSpinError(e, result, prevHtml) {
+export function handleSpinError(e, result, prevHtml) {
   if (e.status === 429) {
     result.innerHTML = prevHtml;
     const m = e.message.match(/[\d.]+/);
@@ -190,31 +207,31 @@ function handleSpinError(e, result, prevHtml) {
 
 function applySpinCooldown(seconds) {
   const until = Date.now() + seconds * 1000;
-  if (until <= spinCooldownUntil) return;
-  spinCooldownUntil = until;
+  if (until <= spinCooldown.until) return;
+  spinCooldown.until = until;
   startSpinCooldownAnim(seconds);
 }
 
 function startSpinCooldownAnim(seconds) {
   const spinBtn = document.getElementById("spin-btn");
-  clearTimeout(spinCooldownTimer);
+  clearTimeout(spinCooldown.timer);
   if (!spinBtn) return;
   spinBtn.disabled = true;
   spinBtn.classList.remove("wipe");
   spinBtn.style.setProperty("--cooldown-duration", seconds + "s");
   void spinBtn.offsetWidth;
   spinBtn.classList.add("cooldown-anim", "wipe");
-  spinCooldownTimer = setTimeout(() => {
+  spinCooldown.timer = setTimeout(() => {
     spinBtn.classList.remove("wipe");
     applySpinButtonLockState();
   }, seconds * 1000);
 }
-function resultEl() {
+export function resultEl() {
   return document.getElementById("spin-result");
 }
 
 async function doClassicSpin(cat, isRandom) {
-  if (spinCooldownUntil > Date.now()) return;
+  if (spinCooldown.until > Date.now()) return;
   cancelAutoWatchOpen();
   const result = resultEl();
   const prevHtml = result.innerHTML;
@@ -227,7 +244,7 @@ async function doClassicSpin(cat, isRandom) {
       method: "POST", headers: {"Content-Type": "application/json"},
       body: JSON.stringify({weighted: isWeightedMode()}),
     });
-    currentCardData = data;
+    uiState.currentCardData = data;
     await fadeOut(result);
     result.innerHTML = renderCard(data);
     fadeIn(result);
@@ -241,10 +258,12 @@ async function doClassicSpin(cat, isRandom) {
 
 // One entry point for the one roulette: the picked category decides whether
 // this is a random spin or a per-category one.
-function doSpin() {
+export function doSpin() {
   const isRandom = isRandomSpin();
-  const cat = isRandom ? null : spinCat;
+  const cat = isRandom ? null : uiState.spinCat;
   return spinMode === "wheel" ? doWheelSpin(cat, isRandom) : doClassicSpin(cat, isRandom);
 }
 
-document.getElementById("spin-btn").onclick = () => doSpin();
+document.addEventListener("click", (e) => {
+  if (e.target.closest("#spin-btn")) doSpin();
+});

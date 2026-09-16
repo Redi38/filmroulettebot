@@ -1,3 +1,9 @@
+import { getLS, setLS } from "../../core/storage.js";
+import { renderControlOnAllDocks } from "./dock-controls.js";
+import { spinMode } from "./spin-mode.js";
+import { WHEEL_WRAP_IDS, getWheelDPR } from "../wheel/wheel-constants.js";
+import { drawWheel } from "../wheel/wheel-draw.js";
+
 // ---- wheel appearance (neon on/off) ---------------------------------------
 const WHEEL_APPEARANCE_KEY = "filmroulette_wheel_appearance";
 function loadWheelAppearance() {
@@ -7,10 +13,10 @@ function saveWheelAppearance(isNeon) {
   setLS(WHEEL_APPEARANCE_KEY, isNeon ? "neon" : "classic");
 }
 let wheelAppearance = loadWheelAppearance() ? "neon" : "classic";
-function getWheelAppearance() { return wheelAppearance; }
+export function getWheelAppearance() { return wheelAppearance; }
 let wheelAppearanceJustToggled = false;
 
-function renderWheelAppearanceToggle(containerId) {
+export function renderWheelAppearanceToggle(containerId) {
   const fxSection = document.getElementById(containerId.replace(/-appearance-toggle$/, "-fx-section"));
   if (fxSection) fxSection.classList.toggle("visible", spinMode === "wheel");
 

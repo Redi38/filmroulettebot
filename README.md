@@ -119,8 +119,9 @@ make js-build     # one-off build
 make js-watch     # or: rebuild on every save
 ```
 
-File order matters (plain scripts share globals, no module resolution) —
-it's defined once in `app/web/static/js/manifest.json`.
+The JS is real ES modules now — `core/main.js` is the entry point, and
+esbuild resolves the rest of the load order from its `import` graph, the
+same as any other ESM codebase (no more hand-maintained manifest.json).
 
 </details>
 

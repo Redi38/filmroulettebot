@@ -1,3 +1,12 @@
+import { openAddSearchModal } from "../core/add-search.js";
+import { api } from "../core/api.js";
+import { skeletonShowcaseHtml } from "../core/skeleton.js";
+import { uiState } from "../core/state.js";
+import { TAB_REVISIT_STALE_MS, escapeHtml, fadeIn, fadeOut, placeholderHtml, showToast } from "../core/utils.js";
+import { VIEW_LOADERS, showSection } from "../core/views.js";
+import { showcaseAddedMatches, showcaseFilterGroup, showcaseTypeMatches } from "./filters.js";
+import { showcaseGroup } from "./row.js";
+
 // Studio showcase (Marvel/DC catalog browsing) and the user's own
 // tracked-series list. Filter helpers live in filters.js, and
 // row/group rendering (shared with theaters.js) lives in row.js.
@@ -6,8 +15,8 @@ let currentShowcaseStudio = null;
 let lastShowcaseData = null;
 let lastShowcaseLoadedAt = 0;
 
-function prepShowcaseSkeletonIfStale() {
-  if (currentCat === currentShowcaseStudio) return;
+export function prepShowcaseSkeletonIfStale() {
+  if (uiState.currentCat === currentShowcaseStudio) return;
   const container = document.getElementById("showcase-container");
   if (!container) return;
   container.style.opacity = "1";
@@ -17,8 +26,8 @@ function prepShowcaseSkeletonIfStale() {
 // `fromNav` is only true when showSection() calls this on a plain tab
 // switch (see VIEW_LOADERS in views.js) — filter changes and other direct
 // callers always pass nothing, so they always fetch.
-async function loadShowcase(fromNav) {
-  const cat = currentCat;
+export async function loadShowcase(fromNav) {
+  const cat = uiState.currentCat;
   const container = document.getElementById("showcase-container");
   const isFreshView = currentShowcaseStudio !== cat;
   if (fromNav && !isFreshView && lastShowcaseData && Date.now() - lastShowcaseLoadedAt < TAB_REVISIT_STALE_MS) {
@@ -44,7 +53,7 @@ async function loadShowcase(fromNav) {
   }
 }
 
-async function renderShowcaseContent(alreadyFadedOut) {
+export async function renderShowcaseContent(alreadyFadedOut) {
   const container = document.getElementById("showcase-container");
   const data = lastShowcaseData;
   if (!data) return;
@@ -71,14 +80,14 @@ async function renderShowcaseContent(alreadyFadedOut) {
   }
 
   if (newSeasons.length) {
-    container.appendChild(showcaseGroup("🔔 Новые сезоны", newSeasons, currentCat, true));
+    container.appendChild(showcaseGroup("🔔 Новые сезоны", newSeasons, uiState.currentCat, true));
   }
-  container.appendChild(showcaseGroup("⏳ Скоро выйдет", upcoming, currentCat));
-  container.appendChild(showcaseGroup("✅ Уже вышло", released, currentCat));
+  container.appendChild(showcaseGroup("⏳ Скоро выйдет", upcoming, uiState.currentCat));
+  container.appendChild(showcaseGroup("✅ Уже вышло", released, uiState.currentCat));
   fadeIn(container);
 }
 
-function renderShowcaseFilters() {
+export function renderShowcaseFilters() {
   let panel = document.getElementById("showcase-filters");
   const isNewPanel = !panel;
   if (!panel) {
@@ -105,7 +114,7 @@ function renderShowcaseFilters() {
 let trackedSeriesLoaded = false;
 let trackedSeriesLoadedAt = 0;
 
-async function loadTrackedSeries(fromNav) {
+export async function loadTrackedSeries(fromNav) {
   const container = document.getElementById("tracked-series-container");
   if (fromNav && trackedSeriesLoaded && Date.now() - trackedSeriesLoadedAt < TAB_REVISIT_STALE_MS) {
     return;

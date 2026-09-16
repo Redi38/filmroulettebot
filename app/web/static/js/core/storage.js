@@ -2,7 +2,7 @@
 // localStorage pattern that used to be copy-pasted in every file that
 // persisted a setting (spin-settings.js, history.js, hub-upload.js,
 // state.js, showcase-filters.js).
-function getLS(key, fallback = null) {
+export function getLS(key, fallback = null) {
   try {
     const v = localStorage.getItem(key);
     return v === null ? fallback : v;
@@ -11,7 +11,7 @@ function getLS(key, fallback = null) {
   }
 }
 
-function setLS(key, value) {
+export function setLS(key, value) {
   try {
     if (value === null || value === undefined) {
       localStorage.removeItem(key);
@@ -25,7 +25,7 @@ function removeLS(key) {
   try { localStorage.removeItem(key); } catch {}
 }
 
-function getLSJSON(key, fallback = null) {
+export function getLSJSON(key, fallback = null) {
   try {
     const raw = localStorage.getItem(key);
     if (raw === null) return fallback;
@@ -35,6 +35,6 @@ function getLSJSON(key, fallback = null) {
   }
 }
 
-function setLSJSON(key, value) {
+export function setLSJSON(key, value) {
   setLS(key, value);
 }

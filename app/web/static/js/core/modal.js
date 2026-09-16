@@ -1,4 +1,11 @@
-function openCategoryModal(titleText, onPick, allowedCats) {
+import { renderCard } from "../card/card-render.js";
+import { api } from "./api.js";
+import { CATS } from "./constants.js";
+import { overlay } from "./menu.js";
+import { skeletonCardHtml } from "./skeleton.js";
+import { crossfadeContent, escapeHtml } from "./utils.js";
+
+export function openCategoryModal(titleText, onPick, allowedCats) {
   const overlay = document.getElementById("modal-overlay");
   const optionsEl = document.getElementById("modal-options");
   document.getElementById("modal-title").textContent = titleText;
@@ -15,12 +22,12 @@ function openCategoryModal(titleText, onPick, allowedCats) {
   }
   overlay.classList.add("open");
 }
-function closeModal() { document.getElementById("modal-overlay").classList.remove("open"); }
+export function closeModal() { document.getElementById("modal-overlay").classList.remove("open"); }
 document.getElementById("modal-cancel").onclick = closeModal;
 document.getElementById("modal-overlay").onclick = (ev) => { if (ev.target.id === "modal-overlay") closeModal(); };
 let _closeActiveRenameModal = null;
 
-function openRenameModal(currentTitle, onSave) {
+export function openRenameModal(currentTitle, onSave) {
   const overlay = document.getElementById("rename-modal-overlay");
   const input = document.getElementById("rename-modal-input");
   input.value = currentTitle;
@@ -56,9 +63,9 @@ function openRenameModal(currentTitle, onSave) {
   overlay.addEventListener("click", onOverlayClick);
   _closeActiveRenameModal = close;
 }
-function closeRenameModal() { if (_closeActiveRenameModal) _closeActiveRenameModal(); }
+export function closeRenameModal() { if (_closeActiveRenameModal) _closeActiveRenameModal(); }
 
-function openPosterInfoModal(category, title) {
+export function openPosterInfoModal(category, title) {
   const overlay = document.getElementById("poster-info-overlay");
   const content = document.getElementById("poster-info-content");
   content.innerHTML = skeletonCardHtml();
@@ -68,7 +75,7 @@ function openPosterInfoModal(category, title) {
     .then((data) => { crossfadeContent(content, renderCard(data, {actions: false})); })
     .catch((e) => { crossfadeContent(content, `<div class="muted">❌ ${escapeHtml(e.message)}</div>`); });
 }
-function closePosterInfoModal() { document.getElementById("poster-info-overlay").classList.remove("open"); }
+export function closePosterInfoModal() { document.getElementById("poster-info-overlay").classList.remove("open"); }
 document.getElementById("poster-info-close").onclick = closePosterInfoModal;
 document.getElementById("poster-info-overlay").onclick = (ev) => {
   if (ev.target.id === "poster-info-overlay") closePosterInfoModal();

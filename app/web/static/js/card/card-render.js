@@ -1,3 +1,8 @@
+import { ALL_CATS } from "../core/constants.js";
+import { escapeHtml } from "../core/utils.js";
+import { humanizeShowcaseDate } from "../showcase/date.js";
+import { isAutoWatchEnabled } from "../spin/settings/auto-watch-toggle.js";
+
 // Result card HTML rendering (poster, meta, actions).
 
 const CARD_ICON = {
@@ -17,11 +22,11 @@ const CARD_ICON = {
 
 const CATEGORY_ICON = {movies: "clapper", cartoons: "camera", series: "tv", marvel: "bolt", dc: "moon"};
 
-function metaLine(icon, text) {
+export function metaLine(icon, text) {
   return `<div class="meta"><span class="meta-icon">${CARD_ICON[icon]}</span><span>${text}</span></div>`;
 }
 
-function renderCard(data, opts) {
+export function renderCard(data, opts) {
   opts = opts || {};
   const showActions = opts.actions !== false;
   // `img-pending` keeps the shimmer running inside the poster's reserved box

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import random
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.db.database import get_items, get_tmdb_cache, save_history, set_tmdb_cache
 
@@ -24,22 +24,21 @@ from ..shared import (
     WheelWeightsBody,
     _build_wheel_pool,
     _card_data,
-    _check_category,
     _check_spin_cooldown,
     _client_ip,
     _pick_title,
     _pool_weights,
+    valid_category,
 )
 
 router = APIRouter()
 
 
 @router.get("/api/{cat}/wheel-preview")
-async def api_wheel_preview(cat: str, weighted: bool = False) -> dict:
+async def api_wheel_preview(cat: str = Depends(valid_category), weighted: bool = False) -> dict:
     """Idle wheel pool for display before the user presses "Крутить" — no
     winner is chosen, no history/cooldown side effects, just titles to show
     on the wheel segments."""
-    _check_category(cat)
     if cat not in ROULETTE_CATEGORIES:
         raise HTTPException(400, f"{cat} has no roulette — it's a reference list only")
     items = await get_items(cat)
@@ -51,12 +50,11 @@ async def api_wheel_preview(cat: str, weighted: bool = False) -> dict:
 
 
 @router.post("/api/{cat}/wheel-weights")
-async def api_wheel_weights(cat: str, body: WheelWeightsBody) -> dict:
+async def api_wheel_weights(body: WheelWeightsBody, cat: str = Depends(valid_category)) -> dict:
     """Recompute segment weights for a wheel pool the client already has on
     screen (see `pool_weights`), so toggling weighted/normal mode can resize
     the existing segments in place instead of rebuilding the wheel with a
     freshly-shuffled pool."""
-    _check_category(cat)
     if cat not in ROULETTE_CATEGORIES:
         raise HTTPException(400, f"{cat} has no roulette — it's a reference list only")
     items = await get_items(cat)
@@ -82,8 +80,7 @@ async def api_random_spin(request: Request, body: SpinBody = SpinBody()) -> dict
 
 
 @router.post("/api/{cat}/spin")
-async def api_spin(cat: str, request: Request, body: SpinBody = SpinBody()) -> dict:
-    _check_category(cat)
+async def api_spin(request: Request, cat: str = Depends(valid_category), body: SpinBody = SpinBody()) -> dict:
     if cat not in ROULETTE_CATEGORIES:
         raise HTTPException(400, f"{cat} has no roulette — it's a reference list only")
     _check_spin_cooldown(_client_ip(request))
@@ -98,8 +95,7 @@ async def api_spin(cat: str, request: Request, body: SpinBody = SpinBody()) -> d
 
 
 @router.get("/api/{cat}/featured")
-async def api_featured(cat: str) -> dict:
-    _check_category(cat)
+async def api_featured(cat: str = Depends(valid_category)) -> dict:
     items = await get_items(cat)
     if not items:
         raise HTTPException(404, "Список пуст — добавь тайтлы, чтобы крутить")

@@ -649,6 +649,17 @@ export interface paths {
          * @description TMDb's own "now playing" / "upcoming" theatrical calendars — global,
          *     not tied to any studio, unlike /api/showcase/{studio}. Movies and
          *     cartoons only; series live on their own /api/series-releases tab.
+         *
+         *     hide_local_only mirrors the "hide_local_only_afisha" setting and is
+         *     normally passed explicitly by the front end (which already loads that
+         *     setting to draw the toggle button) — that's what makes this request's
+         *     URL actually change when the toggle changes, which matters because this
+         *     endpoint sets a client-cacheable Cache-Control header: an identical URL
+         *     before/after flipping the setting would otherwise let the *browser's*
+         *     HTTP cache silently keep serving the pre-toggle response for up to 45s,
+         *     no matter what the DB setting says. When the param is omitted (older
+         *     cached pages, non-browser callers), fall back to reading the setting
+         *     from the DB as before.
          */
         get: operations["api_theaters_api_theaters_get"];
         put?: never;
@@ -2042,6 +2053,7 @@ export interface operations {
                 now_playing_page?: number;
                 upcoming_page?: number;
                 added?: string;
+                hide_local_only?: boolean | null;
             };
             header?: never;
             path?: never;

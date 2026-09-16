@@ -1,3 +1,16 @@
+import { renderCard } from "../card/card-render.js";
+import { openAddSearchModal } from "../core/add-search.js";
+import { api } from "../core/api.js";
+import { positionCatChipThumb, renderCatChips } from "../core/cat-select.js";
+import { LIST_CATS } from "../core/constants.js";
+import { skeletonCardHtml, skeletonListHtml } from "../core/skeleton.js";
+import { listCats, uiState } from "../core/state.js";
+import { debounce, escapeHtml, fadeIn, fadeOut, placeholderHtml, setNavDirection, showToast } from "../core/utils.js";
+import { switchListCat } from "../core/views.js";
+import { createEditableRow } from "./list-row.js";
+import { loadShowcase } from "../showcase/showcase.js";
+import { renderSpinCatChips } from "../spin/settings/spin-category.js";
+
 // List rendering for every category: load, search, pagination, add/delete.
 //
 // There is one list screen rather than one per category — the chip row at the
@@ -7,7 +20,7 @@ let currentListPage = 1;
 let currentListCat = null;
 let currentListQuery = "";
 
-function renderListCatChips() {
+export function renderListCatChips() {
   // Labels only. The counts used to ride along here, but they come from
   // /api/categories, which resolves after the first render — so on a reload
   // the chips drew bare and stayed that way, and the number looked like it
@@ -15,7 +28,7 @@ function renderListCatChips() {
   // looking at is already on the line below the search box.
   renderCatChips("list-cat-select", {
     options: listCats().map((code) => [code, LIST_CATS[code] || code]),
-    value: currentCat,
+    value: uiState.currentCat,
     onChange: (code) => switchListCat(code),
   });
 }
@@ -23,11 +36,11 @@ function renderListCatChips() {
 // Rewrapping the chip row (five categories, narrow screen) moves the chips
 // out from under the sliding thumb, so re-measure it after a resize.
 window.addEventListener("resize", debounce(() => {
-  if (currentView !== "list") return;
+  if (uiState.currentView !== "list") return;
   positionCatChipThumb(document.getElementById("list-cat-select"), null, false);
 }, 150));
 
-async function loadList(page) {
+export async function loadList(page) {
   if (page) currentListPage = page;
   else currentListPage = 1;
 
@@ -37,8 +50,8 @@ async function loadList(page) {
   const container = document.getElementById("list-container");
   const searchInput = document.getElementById("search-input");
 
-  const isFreshView = currentListCat !== currentCat;
-  currentListCat = currentCat;
+  const isFreshView = currentListCat !== uiState.currentCat;
+  currentListCat = uiState.currentCat;
   if (isFreshView) {
     currentListQuery = "";
     searchInput.value = "";
@@ -50,12 +63,12 @@ async function loadList(page) {
     if (countElReset) countElReset.textContent = "";
   }
 
-  const isFeaturedCat = currentCat === "marvel" || currentCat === "dc";
+  const isFeaturedCat = uiState.currentCat === "marvel" || uiState.currentCat === "dc";
   const featuredPromise = (isFeaturedCat && isFreshView)
-    ? api(`/api/${currentCat}/featured`).catch(() => null)
+    ? api(`/api/${uiState.currentCat}/featured`).catch(() => null)
     : Promise.resolve(null);
   const q = currentListQuery.trim();
-  const itemsPromise = api(`/api/${currentCat}/items?page=${currentListPage}&q=${encodeURIComponent(q)}`);
+  const itemsPromise = api(`/api/${uiState.currentCat}/items?page=${currentListPage}&q=${encodeURIComponent(q)}`);
 
   if (isFeaturedCat && isFreshView) {
     featured.innerHTML = skeletonCardHtml();
@@ -94,8 +107,8 @@ async function loadList(page) {
     // categories the roulette offers) honest after an add or a delete.
     // The roulette picker drops categories that have nothing left in them,
     // so its idea of the counts has to keep up with adds and deletes.
-    if (!q && categoryCounts && categoryCounts[currentCat] !== data.total_count) {
-      categoryCounts[currentCat] = data.total_count;
+    if (!q && uiState.categoryCounts && uiState.categoryCounts[uiState.currentCat] !== data.total_count) {
+      uiState.categoryCounts[uiState.currentCat] = data.total_count;
       if (typeof renderSpinCatChips === "function") renderSpinCatChips();
     }
     const countEl = document.getElementById("list-count");
@@ -113,7 +126,7 @@ async function loadList(page) {
     const canReorder = !q; // filtered view skips a title's real neighbours, so
                            // "up"/"down" here wouldn't mean what it looks like
     for (const [idx, {id, title, poster_url}] of data.items.entries()) {
-      const cat = currentCat;
+      const cat = uiState.currentCat;
       const row = createEditableRow(title, {
         posterUrl: poster_url,
         showPosterSlot: true,
@@ -133,10 +146,10 @@ async function loadList(page) {
           method: "POST", headers: {"Content-Type": "application/json"},
           body: JSON.stringify({title}),
         }),
-        onReload: () => { if (currentCat === cat) loadList(currentListPage); },
+        onReload: () => { if (uiState.currentCat === cat) loadList(currentListPage); },
         onUndoSettled: () => checkListEmpty(container),
         onCountChange: (delta) => {
-          if (currentCat !== cat || !countEl) return;
+          if (uiState.currentCat !== cat || !countEl) return;
           liveCount += delta;
           countEl.textContent = `Всего: ${liveCount}`;
         },
@@ -182,7 +195,7 @@ async function moveListItem(cat, id, direction, page, idx, totalPages, itemsOnPa
       method: "POST", headers: {"Content-Type": "application/json"},
       body: JSON.stringify({id, direction}),
     });
-    if (currentCat === cat) loadList(targetPage);
+    if (uiState.currentCat === cat) loadList(targetPage);
   } catch (e) { showToast(e.message); }
 }
 
@@ -210,7 +223,7 @@ function chevronSvg(dir) {
   return svg;
 }
 
-function paginationRow(page, totalPages, onNav) {
+export function paginationRow(page, totalPages, onNav) {
   const row = document.createElement("div");
   row.className = "pagination-row";
 
@@ -247,7 +260,7 @@ async function handleAddTitle() {
   if (!title) return;
   const doAdd = async (finalTitle, suggestion) => {
     try {
-      await api(`/api/${currentCat}/add`, {
+      await api(`/api/${uiState.currentCat}/add`, {
         method: "POST", headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
           title: finalTitle,
@@ -258,7 +271,7 @@ async function handleAddTitle() {
       loadList(currentListPage);
     } catch (e) { showToast(e.message, "error"); }
   };
-  openAddSearchModal(`/api/${currentCat}/search-suggest`, title, {
+  openAddSearchModal(`/api/${uiState.currentCat}/search-suggest`, title, {
     onPick: doAdd,
     onFallback: () => doAdd(title),
   });

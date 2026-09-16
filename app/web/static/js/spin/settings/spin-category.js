@@ -1,3 +1,10 @@
+import { api } from "../../core/api.js";
+import { renderCatSelect } from "../../core/cat-select.js";
+import { CATS, RANDOM_CAT } from "../../core/constants.js";
+import { isRandomSpin, spinnableCats, uiState } from "../../core/state.js";
+import { placeholderHtml } from "../../core/utils.js";
+import { showSection, switchSpinCat } from "../../core/views.js";
+
 // ---- roulette category ("Наугад" / Фильмы / Сериалы / …) ------------------
 //
 // Replaces what used to be four separate menu entries and two separate spin
@@ -13,10 +20,10 @@ function spinCatOptions() {
 
 // A dropdown rather than a pill row: the dock is a narrow fixed column on
 // desktop, and four or five pills do not fit across it.
-function renderSpinCatChips() {
+export function renderSpinCatChips() {
   renderCatSelect("spin-cat-select", {
     options: spinCatOptions(),
-    value: spinCat,
+    value: uiState.spinCat,
     label: "Категория рулетки",
     onChange: (code) => switchSpinCat(code),
   });
@@ -24,7 +31,7 @@ function renderSpinCatChips() {
 
 // Shared by showSection(), switchSpinCat() and the spin-mode toggle so the
 // empty-state copy always matches the category that is actually selected.
-function resetSpinResult() {
+export function resetSpinResult() {
   const el = document.getElementById("spin-result");
   if (!el) return;
   el.innerHTML = placeholderHtml(

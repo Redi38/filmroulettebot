@@ -1,8 +1,11 @@
+import { getWheelSoundTheme } from "../settings/sound-theme.js";
+import { isWheelMuted } from "../settings/wheel-mute.js";
+
 // Wheel roulette: tiny synthesized audio "tick" per segment crossed
 
 let _wheelAudioCtx = null;
 
-function primeWheelAudio() {
+export function primeWheelAudio() {
   try {
     if (!_wheelAudioCtx) {
       const Ctx = window.AudioContext || window.webkitAudioContext;
@@ -68,7 +71,7 @@ function _currentSoundTheme() {
 let _lastWheelTickAt = 0;
 const WHEEL_TICK_MIN_INTERVAL_MS = 28;
 
-function playWheelTick() {
+export function playWheelTick() {
   const now = performance.now();
   if (now - _lastWheelTickAt < WHEEL_TICK_MIN_INTERVAL_MS) return;
   _lastWheelTickAt = now;
@@ -76,7 +79,7 @@ function playWheelTick() {
   _playWheelBlip(t.freq, t.duration, t.gain, 0, t.type);
 }
 
-function playWheelStop() {
+export function playWheelStop() {
   const theme = _currentSoundTheme();
   for (const blip of theme.stop) {
     _playWheelBlip(blip.freq, blip.duration, blip.gain, blip.delay, blip.type);

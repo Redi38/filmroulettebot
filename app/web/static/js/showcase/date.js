@@ -69,7 +69,7 @@ function ymdSpan(from, to) {
 // withSpan=false drops the trailing "· через X" / "· X назад" part, leaving
 // just the short date (or the Сегодня/Завтра/На этой неделе badges) — used
 // for plain release dates where "29 лет 6 месяцев назад" isn't useful.
-function humanizeShowcaseDate(dateStr, withSpan = true) {
+export function humanizeShowcaseDate(dateStr, withSpan = true) {
   if (!dateStr) return dateStr;
   const d = new Date(`${dateStr}T00:00:00`);
   if (Number.isNaN(d.getTime())) return dateStr;
@@ -103,7 +103,7 @@ function humanizeShowcaseDate(dateStr, withSpan = true) {
   return future ? `${short} · через ${span}` : `${short} · ${span} назад`;
 }
 
-function showcaseDateLine(item, cat, isNewSeasons, addMode) {
+export function showcaseDateLine(item, cat, isNewSeasons, addMode) {
   if (addMode === "tracked-series") {
     if (item.status === "not_found") return "⚠️ Не найдено на TMDb";
     if (item.status === "no_upcoming") return "Нет анонса нового сезона";

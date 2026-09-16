@@ -1,3 +1,6 @@
+import { getLS, getLSJSON, setLS, setLSJSON } from "../core/storage.js";
+import { renderShowcaseContent, renderShowcaseFilters } from "./showcase.js";
+
 // Filter-panel helpers shared by the studio showcase, theaters, and
 // series-releases tabs: a "type" filter (showcase only) plus the common
 // "added to my list" filter (all three tabs). Groups keep their DOM
@@ -16,12 +19,12 @@ function saveShowcaseFilters() {
 }
 let showcaseFilters = loadShowcaseFilters();
 
-function showcaseTypeMatches(item) {
+export function showcaseTypeMatches(item) {
   if (showcaseFilters.type === "movie") return !item.is_series;
   if (showcaseFilters.type === "series") return !!item.is_series;
   return true;
 }
-function showcaseAddedMatches(item) {
+export function showcaseAddedMatches(item) {
   if (showcaseFilters.added === "hide") return !item.in_list;
   if (showcaseFilters.added === "only") return !!item.in_list;
   return true;
@@ -82,7 +85,7 @@ function renderFilterOptionsRow(panel, filterKey, title, options, currentValue, 
   }
 }
 
-function showcaseFilterGroup(panel, title, options, key) {
+export function showcaseFilterGroup(panel, title, options, key) {
   renderFilterOptionsRow(panel, "showcase-" + key, title, options, showcaseFilters[key], (value) => {
     showcaseFilters[key] = value;
     saveShowcaseFilters();
@@ -91,13 +94,13 @@ function showcaseFilterGroup(panel, title, options, key) {
   });
 }
 
-function simpleAddedFilterGroup(panel, storageKey, currentValue, onChange) {
+export function simpleAddedFilterGroup(panel, storageKey, currentValue, onChange) {
   renderFilterOptionsRow(panel, "added-" + storageKey, "Показывать",
     [["all", "Все"], ["hide", "Не добавленные"], ["only", "Уже добавленные"]], currentValue, (value) => {
       setLS(storageKey, value);
       onChange(value);
     });
 }
-function loadSimpleAddedFilter(storageKey) {
+export function loadSimpleAddedFilter(storageKey) {
   return getLS(storageKey, "all");
 }

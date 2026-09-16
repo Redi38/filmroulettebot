@@ -1,3 +1,10 @@
+import { predictWheelSize } from "./layout.js";
+import { playWheelStop } from "./wheel-audio.js";
+import { buildSettledWheel, buildWheel } from "./wheel-build.js";
+import { WHEEL_WRAP_IDS, getWheelDPR, wheelSpinState } from "./wheel-constants.js";
+import { drawWheel, drawWheelSegments, getCanvasRotationDeg, updatePointerTitle } from "./wheel-draw.js";
+import { hideWheelHoverLabel, stopWheelIdle, wheelIdleRedraw } from "./wheel-idle.js";
+
 // Roulette wheel: spin animation and rebuild/redraw triggers for visible wheels.
 //
 // The spin is driven from JS (rAF) rather than a CSS transition so that:
@@ -11,7 +18,7 @@
 const WHEEL_REDUCED_MOTION_SPIN_MS = 500;
 const WHEEL_EXTRA_SPINS = 6;
 
-function wheelPrefersReducedMotion() {
+export function wheelPrefersReducedMotion() {
   return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 }
 
@@ -22,7 +29,7 @@ function wheelSpinEase(t) {
   return 1 - Math.pow(1 - t, 4);
 }
 
-function setCanvasRotation(canvas, deg) {
+export function setCanvasRotation(canvas, deg) {
   // Kept alongside the style so a rebuild can carry the angle over without
   // parsing it back out of a computed matrix.
   canvas._rotationDeg = deg;
@@ -62,13 +69,13 @@ function settleWheelRebound(canvas, fromDeg, toDeg, onFrame) {
   });
 }
 
-function spinWheelTo(canvas, n, winnerIndex, durationMs) {
-  wheelSpinActive = true;
+export function spinWheelTo(canvas, n, winnerIndex, durationMs) {
+  wheelSpinState.active = true;
   if (typeof stopWheelIdle === "function") stopWheelIdle(canvas);
   if (typeof hideWheelHoverLabel === "function") hideWheelHoverLabel(canvas);
   canvas._idleHovering = false;
   // Hover highlighting is for browsing a resting wheel. Once a spin starts,
-  // the highlight belongs to the result: `wheelSpinActive` covers the spin
+  // the highlight belongs to the result: `wheelSpinState.active` covers the spin
   // itself, but it is already false while highlightWheelWinner() holds the
   // winner lit, so moving the mouse then would repaint the highlight onto
   // whatever segment the cursor happened to be over. This flag outlives the
@@ -124,7 +131,7 @@ function spinWheelTo(canvas, n, winnerIndex, durationMs) {
       settle.then(() => {
         setCanvasRotation(canvas, endDeg);
         updatePointerTitle(canvas, ((endDeg % 360) + 360) % 360, false, null);
-        wheelSpinActive = false;
+        wheelSpinState.active = false;
         resolve();
       });
     };
@@ -145,7 +152,7 @@ function spinWheelTo(canvas, n, winnerIndex, durationMs) {
 // pointer title pop. Resolves once the highlight has had time to register.
 const WHEEL_WINNER_HOLD_MS = 700;
 
-function highlightWheelWinner(canvas, winnerIndex) {
+export function highlightWheelWinner(canvas, winnerIndex) {
   const items = canvas._wheelItems;
   if (!items || !canvas._wheelBoundaries) return Promise.resolve();
   const dpr = getWheelDPR();
@@ -165,8 +172,8 @@ function highlightWheelWinner(canvas, winnerIndex) {
 // the wheel ended up visibly growing on screen. The wheel is hidden for the
 // frame or two the check takes, and its rotation carries over, so a rebuild
 // at the same size is invisible.
-function rebuildVisibleWheels() {
-  if (wheelSpinActive) return;
+export function rebuildVisibleWheels() {
+  if (wheelSpinState.active) return;
   for (const id of WHEEL_WRAP_IDS) {
     const wrap = document.getElementById(id);
     if (!wrap || wrap.style.display === "none" || !wrap._wheelPool) continue;
@@ -177,8 +184,8 @@ function rebuildVisibleWheels() {
   }
 }
 
-function forceRebuildVisibleWheels() {
-  if (wheelSpinActive) return;
+export function forceRebuildVisibleWheels() {
+  if (wheelSpinState.active) return;
   for (const id of WHEEL_WRAP_IDS) {
     const wrap = document.getElementById(id);
     if (!wrap || wrap.style.display === "none" || !wrap._wheelPool) continue;
@@ -186,8 +193,8 @@ function forceRebuildVisibleWheels() {
   }
 }
 
-function redrawVisibleWheelCanvases() {
-  if (wheelSpinActive) return;
+export function redrawVisibleWheelCanvases() {
+  if (wheelSpinState.active) return;
   const dpr = getWheelDPR();
   for (const id of WHEEL_WRAP_IDS) {
     const wrap = document.getElementById(id);

@@ -52,7 +52,9 @@ from .spin_state import check_spin_cooldown as _check_spin_cooldown
 from .spin_state import client_ip as _client_ip
 from .spin_state import pick_title_for_client as _pick_title
 from .spin_state import pool_weights as _pool_weights
+from .validation import add_or_conflict as _add_or_conflict
 from .validation import check_category as _check_category
+from .validation import valid_category
 from .validation import validate_rename as _validate_rename
 from .validation import validate_rename_by_id as _validate_rename_by_id
 
@@ -126,6 +128,8 @@ __all__ = [
     "ResolveBody",
     "DeleteHistoryEntryBody",
     "_check_category",
+    "valid_category",
+    "_add_or_conflict",
     "_validate_rename",
     "_validate_rename_by_id",
     "_check_spin_cooldown",

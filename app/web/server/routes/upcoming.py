@@ -17,7 +17,15 @@ from app.db.database import (
 )
 from app.services.tmdb import check_upcoming_released, search_movie_suggestions
 
-from ..shared import DeleteByIdBody, MoveBody, RenameByIdBody, TitleBody, _check_category, _validate_rename_by_id
+from ..shared import (
+    DeleteByIdBody,
+    MoveBody,
+    RenameByIdBody,
+    TitleBody,
+    _add_or_conflict,
+    _check_category,
+    _validate_rename_by_id,
+)
 
 router = APIRouter()
 
@@ -36,12 +44,12 @@ async def api_upcoming_search_suggest(q: str = "") -> dict:
 
 @router.post("/api/upcoming/add")
 async def api_upcoming_add(body: TitleBody) -> dict:
-    title = body.title.strip()
-    if not title:
-        raise HTTPException(400, "Title can't be empty")
-    if await item_exists("upcoming_movies", title):
-        raise HTTPException(409, f"«{title}» уже в списке ожидаемых")
-    await add_upcoming_movie(title)
+    await _add_or_conflict(
+        lambda t: item_exists("upcoming_movies", t),
+        add_upcoming_movie,
+        body.title,
+        conflict_msg=f"«{body.title.strip()}» уже в списке ожидаемых",
+    )
     return {"ok": True}
 
 

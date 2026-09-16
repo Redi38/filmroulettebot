@@ -1,7 +1,7 @@
 """Pick history: recent list, per-entry delete, and per-category clear."""
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.db.database import (
     clear_history_category,
@@ -10,7 +10,7 @@ from app.db.database import (
     resolve_history_entry,
 )
 
-from ..shared import DeleteHistoryEntryBody, ResolveBody, _check_category
+from ..shared import DeleteHistoryEntryBody, ResolveBody, _check_category, valid_category
 
 router = APIRouter()
 
@@ -48,7 +48,6 @@ async def api_history_delete_entry(body: DeleteHistoryEntryBody) -> dict:
 
 
 @router.post("/api/history/{cat}/clear")
-async def api_history_clear(cat: str) -> dict:
-    _check_category(cat)
+async def api_history_clear(cat: str = Depends(valid_category)) -> dict:
     await clear_history_category(cat)
     return {"ok": True}

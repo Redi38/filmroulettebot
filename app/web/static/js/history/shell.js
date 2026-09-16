@@ -1,8 +1,15 @@
+import { api } from "../core/api.js";
+import { CATS } from "../core/constants.js";
+import { skeletonHistoryHtml } from "../core/skeleton.js";
+import { escapeHtml, fadeIn, fadeOut, showToast } from "../core/utils.js";
+import { renderHistoryList } from "./list.js";
+import { historyState } from "./state.js";
+
 // History module: page shell (tabs + clear button) and data loading.
 // Relies on state/storage from history-state.js and renderHistoryList()
 // from history-list.js (loaded after this file).
 
-async function loadHistory() {
+export async function loadHistory() {
   const container = document.getElementById("history-container");
   ensureHistoryShell();
   const list = document.getElementById("history-list");
@@ -12,7 +19,7 @@ async function loadHistory() {
   }
   try {
     const data = await api("/api/history?limit=50");
-    historyItems = data.items.filter((e) => e.category !== "marvel" && e.category !== "dc");
+    historyState.items = data.items.filter((e) => e.category !== "marvel" && e.category !== "dc");
     list.dataset.loaded = "1";
     await fadeOut(list);
     renderHistoryList();
@@ -25,18 +32,18 @@ async function loadHistory() {
 
 function ensureHistoryShell() {
   const container = document.getElementById("history-container");
-  if (historyTabsRendered) return;
+  if (historyState.tabsRendered) return;
   container.innerHTML = "";
 
   const tabs = document.createElement("div");
   tabs.className = "hist-tabs";
   for (const [code, label] of Object.entries(CATS)) {
     const btn = document.createElement("button");
-    btn.className = "btn btn-primary" + (historyFilter === code ? " active" : "");
+    btn.className = "btn btn-primary" + (historyState.filter === code ? " active" : "");
     btn.textContent = label;
     btn.onclick = async () => {
-      if (historyFilter === code) return;
-      historyFilter = code;
+      if (historyState.filter === code) return;
+      historyState.filter = code;
       [...tabs.children].forEach((c) => c.classList.toggle("active", c === btn));
       resetClearButton();
       const list = document.getElementById("history-list");
@@ -63,7 +70,7 @@ function ensureHistoryShell() {
   list.id = "history-list";
   container.appendChild(list);
 
-  historyTabsRendered = true;
+  historyState.tabsRendered = true;
 }
 
 let clearConfirmTimer = null;
@@ -75,7 +82,7 @@ function resetClearButton() {
   btn.classList.remove("confirming");
 }
 
-function updateClearButtonState(hasItems) {
+export function updateClearButtonState(hasItems) {
   const btn = document.getElementById("hist-clear-btn");
   if (!btn) return;
   btn.disabled = !hasItems;
@@ -90,14 +97,14 @@ function handleClearClick(btn) {
     return;
   }
   clearTimeout(clearConfirmTimer);
-  clearHistoryCategory(historyFilter);
+  clearHistoryCategory(historyState.filter);
 }
 
 async function clearHistoryCategory(cat) {
   const list = document.getElementById("history-list");
   try {
     await api(`/api/history/${cat}/clear`, {method: "POST"});
-    historyItems = historyItems.filter((e) => e.category !== cat);
+    historyState.items = historyState.items.filter((e) => e.category !== cat);
     resetClearButton();
     await fadeOut(list);
     renderHistoryList();

@@ -5,7 +5,7 @@ const WHEEL_CONFETTI_COLORS = [
   "#f6c945", "#ef7fd1", "#5be3d0", "#f6975a",
 ];
 
-function fireWheelConfetti(wrapId) {
+export function fireWheelConfetti(wrapId) {
   const wrap = document.getElementById(wrapId);
   if (!wrap) return;
   if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;

@@ -1,3 +1,10 @@
+import { isRandomSpin, uiState } from "../../core/state.js";
+import { getLS, setLS } from "../../core/storage.js";
+import { DOCK_PREFIXES, renderAllDockControls, renderChoiceToggle } from "./dock-controls.js";
+import { resetSpinResult } from "./spin-category.js";
+import { syncSpinResultClearance } from "../wheel/viewport.js";
+import { resetWheelWraps, showIdleWheel } from "../wheel/wheel-build.js";
+
 // ---- spin mode (classic / wheel) -----------------------------------------
 const SPIN_MODE_KEY = "filmroulette_spin_mode";
 function loadSpinMode() {
@@ -7,9 +14,9 @@ function loadSpinMode() {
 function saveSpinMode(mode) {
   setLS(SPIN_MODE_KEY, mode);
 }
-let spinMode = loadSpinMode();
+export let spinMode = loadSpinMode();
 
-function renderSpinModeToggle(containerId) {
+export function renderSpinModeToggle(containerId) {
   renderChoiceToggle(containerId, {
     options: [["classic", "🎲 Классика"], ["wheel", "🎡 Колесо"]],
     value: spinMode,
@@ -24,10 +31,10 @@ function renderSpinModeToggle(containerId) {
         resetWheelWraps();
         if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
 
-        if (currentCardData) return;
+        if (uiState.currentCardData) return;
 
-        if (currentView !== "spin") return;
-        if (spinMode === "wheel" && !isRandomSpin()) showIdleWheel(spinCat);
+        if (uiState.currentView !== "spin") return;
+        if (spinMode === "wheel" && !isRandomSpin()) showIdleWheel(uiState.spinCat);
         else resetSpinResult();
       });
     },

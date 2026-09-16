@@ -4,7 +4,7 @@ tracked-series list is a related but distinct concern — see
 tracked_series.py."""
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.db.database import (
     add_item,
@@ -30,8 +30,9 @@ from ..shared import (
     RenameByIdBody,
     ReorderBody,
     TitleBody,
-    _check_category,
+    _add_or_conflict,
     _validate_rename_by_id,
+    valid_category,
 )
 from ..shared.posters import cache_info_by_id, lookup_poster_info_many, schedule_poster_backfill
 
@@ -39,8 +40,7 @@ router = APIRouter()
 
 
 @router.get("/api/{cat}/items")
-async def api_items(cat: str, page: int = 1, q: str = "") -> dict:
-    _check_category(cat)
+async def api_items(cat: str = Depends(valid_category), page: int = 1, q: str = "") -> dict:
     items = await get_items_with_ids(cat)
     q = q.strip().lower()
     if q:
@@ -61,11 +61,10 @@ async def api_items(cat: str, page: int = 1, q: str = "") -> dict:
 
 
 @router.get("/api/{cat}/search-suggest")
-async def api_search_suggest(cat: str, q: str = "") -> dict:
+async def api_search_suggest(cat: str = Depends(valid_category), q: str = "") -> dict:
     """TMDb title suggestions for the add-a-title picker: 'series' searches
     /search/tv, movies/cartoons search /search/movie, and dc/marvel search
     both (they cover theatrical films AND streaming series like Loki)."""
-    _check_category(cat)
     q = q.strip()
     if not q:
         return {"results": []}
@@ -79,34 +78,31 @@ async def api_search_suggest(cat: str, q: str = "") -> dict:
 
 
 @router.post("/api/{cat}/add")
-async def api_add(cat: str, body: TitleBody) -> dict:
-    _check_category(cat)
-    title = body.title.strip()
-    if not title:
-        raise HTTPException(400, "Title can't be empty")
-    if await item_exists(cat, title):
-        raise HTTPException(409, f"Не добавлено — «{title}» уже есть в «{CATEGORIES.get(cat, cat)}»")
-    await add_item(cat, title, body.is_series)
+async def api_add(body: TitleBody, cat: str = Depends(valid_category)) -> dict:
+    title = await _add_or_conflict(
+        lambda t: item_exists(cat, t),
+        lambda t: add_item(cat, t, body.is_series),
+        body.title,
+        conflict_msg=f"Не добавлено — «{body.title.strip()}» уже есть в «{CATEGORIES.get(cat, cat)}»",
+    )
     if body.tmdb_id is not None:
         await cache_info_by_id(title, body.tmdb_id, bool(body.is_series))
     return {"ok": True}
 
 
 @router.post("/api/{cat}/delete")
-async def api_delete(cat: str, body: DeleteByIdBody) -> dict:
-    _check_category(cat)
+async def api_delete(body: DeleteByIdBody, cat: str = Depends(valid_category)) -> dict:
     await delete_item_by_id(cat, body.id)
     return {"ok": True}
 
 
 @router.post("/api/{cat}/reorder")
-async def api_reorder(cat: str, body: ReorderBody) -> dict:
+async def api_reorder(body: ReorderBody, cat: str = Depends(valid_category)) -> dict:
     """Swap a title's rank with its neighbour above/below — in the full
     list, across page boundaries, not just the current page of /items.
     Position doubles as the weighted-roulette weight (see title_weights()
     in app/services/titles.py), so this is how a user makes a title more
     or less likely to come up."""
-    _check_category(cat)
     if body.direction not in ("up", "down"):
         raise HTTPException(400, "direction must be 'up' or 'down'")
     if not await move_item(cat, body.id, body.direction):
@@ -115,20 +111,18 @@ async def api_reorder(cat: str, body: ReorderBody) -> dict:
 
 
 @router.post("/api/{cat}/delete-by-title")
-async def api_delete_by_title(cat: str, body: TitleBody) -> dict:
+async def api_delete_by_title(body: TitleBody, cat: str = Depends(valid_category)) -> dict:
     """Title-based counterpart of /delete, for callers that only know a
     title and not a row id — the post-spin 'удалить' flow (pick-actions.js
     -> performDelete) and the history 'удалить' action (history.js) pick a
     title off the wheel pool / a history entry and never see a row id, so
     they can't use the id-based /delete the list UI (list-items.js) uses."""
-    _check_category(cat)
     await delete_item(cat, body.title)
     return {"ok": True}
 
 
 @router.post("/api/{cat}/rename")
-async def api_rename(cat: str, body: RenameByIdBody) -> dict:
-    _check_category(cat)
+async def api_rename(body: RenameByIdBody, cat: str = Depends(valid_category)) -> dict:
     new_title = body.new_title.strip()
     if not await _validate_rename_by_id(
         lambda title, item_id: item_exists_other_id(cat, title, item_id),

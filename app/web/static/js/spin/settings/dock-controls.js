@@ -1,18 +1,30 @@
+import { renderAutoWatchToggle } from "./auto-watch-toggle.js";
+import { renderConfettiToggle } from "./confetti-toggle.js";
+import { renderSoundThemeToggle } from "./sound-theme.js";
+import { renderSpinCatChips } from "./spin-category.js";
+import { renderSpinModeToggle } from "./spin-mode.js";
+import { renderSpinSpeedControl } from "./spin-speed.js";
+import { renderWeightToggle } from "./weighted-mode.js";
+import { renderWheelAppearanceToggle } from "./wheel-appearance.js";
+import { renderWheelMuteToggle } from "./wheel-mute.js";
+
 // Shared render plumbing for every dock setting toggle: the two spin
 // dock that every setting renders itself onto, and the
 // two generic toggle-button renderers (choice row / single icon button)
 // that each individual setting file in spin/settings/ builds on.
 
-const SPIN_COOLDOWN_SECONDS = 1.5;
-let spinCooldownUntil = 0;
-let spinCooldownTimer = null;
+export const SPIN_COOLDOWN_SECONDS = 1.5;
+// Mutated from spin/spin-actions.js, so it has to be a shared object rather
+// than plain `let` exports (ESM import bindings are read-only from the
+// importing side).
+export const spinCooldown = { until: 0, timer: null };
 
 // ---- shared dock render helpers ------------------------------------------
 // One roulette, one dock. Kept as a list so the per-setting files can keep
 // calling renderControlOnAllDocks() unchanged.
-const DOCK_PREFIXES = ["spin"];
+export const DOCK_PREFIXES = ["spin"];
 
-function renderAllDockControls(prefix) {
+export function renderAllDockControls(prefix) {
   renderSpinCatChips();
   renderSpinModeToggle(`${prefix}-mode-toggle`);
   renderWeightToggle(`${prefix}-weight-toggle`);
@@ -24,12 +36,12 @@ function renderAllDockControls(prefix) {
   renderSoundThemeToggle(`${prefix}-sound-theme-toggle`);
 }
 
-function renderControlOnAllDocks(renderFn, suffix) {
+export function renderControlOnAllDocks(renderFn, suffix) {
   for (const prefix of DOCK_PREFIXES) renderFn(`${prefix}-${suffix}`);
 }
 
 // ---- generic toggle renderers -------------------------------------------
-function renderChoiceToggle(containerId, { options, value, onChange, containerClass, visible, groupClass }) {
+export function renderChoiceToggle(containerId, { options, value, onChange, containerClass, visible, groupClass }) {
   const el = document.getElementById(containerId);
   if (!el) return;
   if (containerClass) el.className = containerClass + (visible ? " visible" : "");
@@ -80,7 +92,7 @@ function renderChoiceToggle(containerId, { options, value, onChange, containerCl
   }
 }
 
-function renderIconToggle(containerId, { containerClass, visible, active, btnClass, activeClass, iconOn, iconOff, labelOn, labelOff, onClick }) {
+export function renderIconToggle(containerId, { containerClass, visible, active, btnClass, activeClass, iconOn, iconOff, labelOn, labelOff, onClick }) {
   const el = document.getElementById(containerId);
   if (!el) return;
   el.innerHTML = "";

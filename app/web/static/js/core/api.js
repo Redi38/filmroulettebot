@@ -1,4 +1,7 @@
 // @ts-check
+import { showToast } from "./utils.js";
+import { handleSpinError } from "../spin/spin-actions.js";
+
 /** @typedef {import("../types/api.js").paths} ApiPaths */
 /**
  * Response body type for a literal API path present in the generated
@@ -146,7 +149,7 @@ function _revalidateInBackground(path) {
  * @param {RequestInit} [opts]
  * @returns {Promise<ApiResponseOf<Path>>}
  */
-async function api(path, opts) {
+export async function api(path, opts) {
   const cacheable = _isCacheableGet(opts);
   if (cacheable) {
     const entry = _apiCache.get(path);
@@ -175,7 +178,7 @@ async function api(path, opts) {
  * @param {string} title
  * @returns {Promise<string>}
  */
-async function performSequel(category, title) {
+export async function performSequel(category, title) {
   // `category` is only known at runtime, so the built path can't be checked
   // against ApiPaths's literal keys — cast the *call* to `any` (bypassing
   // the generic's literal-key constraint) and the *result* to the response
@@ -197,7 +200,7 @@ async function performSequel(category, title) {
  * @param {string} title
  * @returns {Promise<void>}
  */
-async function performDelete(category, title) {
+export async function performDelete(category, title) {
   await api(/** @type {any} */ (`/api/${category}/delete-by-title`), {
     method: "POST", headers: {"Content-Type": "application/json"},
     body: JSON.stringify({title}),

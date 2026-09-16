@@ -1,13 +1,13 @@
 """Index page, category summary, and the confirm-with-sequel action."""
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import HTMLResponse
 
 from app.db.database import add_item, delete_item, get_item_counts
 from app.services.titles import next_sequel_title
 
-from ..shared import CATEGORIES, CATEGORY_SHORT, SequelBody, SequelResponse, _check_category
+from ..shared import CATEGORIES, CATEGORY_SHORT, SequelBody, SequelResponse, valid_category
 from ..shared.assets import render_index_html
 
 router = APIRouter()
@@ -36,10 +36,9 @@ async def api_categories() -> dict:
 
 
 @router.post("/api/{cat}/sequel", response_model=SequelResponse)
-async def api_sequel(cat: str, body: SequelBody) -> SequelResponse:
+async def api_sequel(body: SequelBody, cat: str = Depends(valid_category)) -> SequelResponse:
     """Confirm-with-sequel: rename "Title" -> "Title 2" (or bump the number),
     same rule the bot's "✅ Да, сиквел" button uses."""
-    _check_category(cat)
     item = body.title
     new_item = next_sequel_title(item)
     await delete_item(cat, item)

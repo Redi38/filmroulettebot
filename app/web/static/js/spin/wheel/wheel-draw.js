@@ -1,8 +1,12 @@
+import { computeWheelBoundaries } from "./layout.js";
+import { playWheelTick } from "./wheel-audio.js";
+import { getWheelColors } from "./wheel-constants.js";
+
 // Roulette wheel: canvas rendering — drawing the segments/labels and
 // tracking which segment the pointer currently sits over. DOM construction
 // lives in wheel-build.js (loaded before this file, which calls into it).
 
-function getCanvasRotationDeg(canvas) {
+export function getCanvasRotationDeg(canvas) {
   const transform = getComputedStyle(canvas).transform;
   if (!transform || transform === "none") return 0;
   const match = transform.match(/matrix\(([^)]+)\)/);
@@ -16,7 +20,7 @@ function getCanvasRotationDeg(canvas) {
 
 // `onCross` (optional) fires whenever the pointer moves onto a new segment —
 // used by spin.js to flick the pointer in sync with the audio tick.
-function updatePointerTitle(canvas, rotationDeg, playTick, onCross) {
+export function updatePointerTitle(canvas, rotationDeg, playTick, onCross) {
   const items = canvas._wheelItems;
   const boundaries = canvas._wheelBoundaries;
   const titleEl = canvas._wheelTitleEl;
@@ -33,7 +37,7 @@ function updatePointerTitle(canvas, rotationDeg, playTick, onCross) {
   if (titleEl.textContent !== label) titleEl.textContent = label;
 }
 
-function animateWheelWeights(canvas, items, dpr, toWeights, duration = 420) {
+export function animateWheelWeights(canvas, items, dpr, toWeights, duration = 420) {
   if (canvas._wheelResizeRAF) cancelAnimationFrame(canvas._wheelResizeRAF);
   const fromBoundaries = canvas._wheelBoundaries || computeWheelBoundaries(items.length, null);
   const toBoundaries = computeWheelBoundaries(items.length, toWeights);
@@ -79,7 +83,7 @@ function animateWheelWeights(canvas, items, dpr, toWeights, duration = 420) {
   });
 }
 
-function drawWheel(canvas, items, dpr, weights) {
+export function drawWheel(canvas, items, dpr, weights) {
   const boundaries = computeWheelBoundaries(items.length, weights);
   drawWheelSegments(canvas, items, dpr, boundaries);
   canvas._wheelBoundaries = boundaries;
@@ -99,7 +103,7 @@ function shadeHex(hex, amount) {
   return `rgb(${r},${g},${b})`;
 }
 
-function drawWheelSegments(canvas, items, dpr, boundaries, {animating = false, highlightIndex = -1} = {}) {
+export function drawWheelSegments(canvas, items, dpr, boundaries, {animating = false, highlightIndex = -1} = {}) {
   const ctx = canvas.getContext("2d");
   const size = canvas.width;
   ctx.setTransform(1, 0, 0, 1, 0, 0);

@@ -1,3 +1,9 @@
+import { performDelete, performSequel } from "../core/api.js";
+import { uiState } from "../core/state.js";
+import { copyToClipboard, escapeHtml, fadeIn, fadeOut, showToast } from "../core/utils.js";
+import { markResolved, resolveOnServer } from "../history/state.js";
+import { doSpin, resultEl } from "../spin/spin-actions.js";
+
 // Post-pick actions: confirm/sequel/delete/watched flow after a spin result.
 
 function confirmPick() {
@@ -16,55 +22,55 @@ function confirmPick() {
 }
 
 function markCurrentPickResolved(outcome) {
-  if (!currentCardData || currentCardData.history_timestamp == null) return;
-  const key = `${currentCardData.category}|${currentCardData.original_title}|${currentCardData.history_timestamp}`;
+  if (!uiState.currentCardData || uiState.currentCardData.history_timestamp == null) return;
+  const key = `${uiState.currentCardData.category}|${uiState.currentCardData.original_title}|${uiState.currentCardData.history_timestamp}`;
   markResolved(key, outcome);
   resolveOnServer(
-    currentCardData.category,
-    currentCardData.original_title,
-    currentCardData.history_timestamp,
+    uiState.currentCardData.category,
+    uiState.currentCardData.original_title,
+    uiState.currentCardData.history_timestamp,
     outcome.type,
     outcome.newTitle || null
   );
 }
 
 async function sequelYes() {
-  if (!currentCardData) return;
+  if (!uiState.currentCardData) return;
   try {
-    const newTitle = await performSequel(currentCardData.category, currentCardData.original_title);
+    const newTitle = await performSequel(uiState.currentCardData.category, uiState.currentCardData.original_title);
     markCurrentPickResolved({ type: "sequel", newTitle });
     const container = resultEl();
     await fadeOut(container);
     container.innerHTML =
-      `<div class="card card-simple"><div class="title">🔄 ${escapeHtml(currentCardData.original_title)} → ${escapeHtml(newTitle)}</div></div>`;
+      `<div class="card card-simple"><div class="title">🔄 ${escapeHtml(uiState.currentCardData.original_title)} → ${escapeHtml(newTitle)}</div></div>`;
     fadeIn(container);
-    currentCardData = null;
+    uiState.currentCardData = null;
   } catch (e) { showToast(e.message); }
 }
 
 async function sequelNo() {
-  if (!currentCardData) return;
+  if (!uiState.currentCardData) return;
   try {
-    await performDelete(currentCardData.category, currentCardData.original_title);
+    await performDelete(uiState.currentCardData.category, uiState.currentCardData.original_title);
     markCurrentPickResolved({ type: "delete" });
     const container = resultEl();
     await fadeOut(container);
     container.innerHTML =
-      `<div class="card card-simple"><div class="title">❌ ${escapeHtml(currentCardData.original_title)} удалён</div></div>`;
+      `<div class="card card-simple"><div class="title">❌ ${escapeHtml(uiState.currentCardData.original_title)} удалён</div></div>`;
     fadeIn(container);
-    currentCardData = null;
+    uiState.currentCardData = null;
   } catch (e) { showToast(e.message); }
 }
 
 async function pickWatched() {
-  if (!currentCardData) return;
+  if (!uiState.currentCardData) return;
   markCurrentPickResolved({ type: "watched" });
   const container = resultEl();
   await fadeOut(container);
   container.innerHTML =
-    `<div class="card card-simple"><div class="title">✅ ${escapeHtml(currentCardData.original_title)} просмотрено</div></div>`;
+    `<div class="card card-simple"><div class="title">✅ ${escapeHtml(uiState.currentCardData.original_title)} просмотрено</div></div>`;
   fadeIn(container);
-  currentCardData = null;
+  uiState.currentCardData = null;
 }
 
 function rerollPick() { doSpin(); }

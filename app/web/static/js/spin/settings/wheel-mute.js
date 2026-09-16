@@ -1,3 +1,8 @@
+import { getLS, setLS } from "../../core/storage.js";
+import { renderControlOnAllDocks, renderIconToggle } from "./dock-controls.js";
+import { closeSoundThemeMenus, renderSoundThemeToggle } from "./sound-theme.js";
+import { spinMode } from "./spin-mode.js";
+
 // ---- wheel sound mute -------------------------------------------------------
 const WHEEL_MUTED_KEY = "filmroulette_wheel_muted";
 function loadWheelMuted() {
@@ -6,8 +11,8 @@ function loadWheelMuted() {
 function saveWheelMuted(v) {
   setLS(WHEEL_MUTED_KEY, v ? "1" : "0");
 }
-let wheelMuted = loadWheelMuted();
-function isWheelMuted() { return wheelMuted; }
+export let wheelMuted = loadWheelMuted();
+export function isWheelMuted() { return wheelMuted; }
 function setWheelMuted(v) {
   wheelMuted = v;
   saveWheelMuted(v);
@@ -30,7 +35,7 @@ const WHEEL_ICON_MUTED =
   '<line x1="17" y1="9" x2="23" y2="15"></line>' +
   "</svg>";
 
-function renderWheelMuteToggle(containerId) {
+export function renderWheelMuteToggle(containerId) {
   renderIconToggle(containerId, {
     containerClass: "wheel-mute-wrap",
     visible: spinMode === "wheel",

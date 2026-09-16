@@ -11,7 +11,7 @@ function skelLine(modifier, index) {
 }
 
 // Showcase / theaters / series-releases rows: poster, title, date, action.
-function skeletonShowcaseHtml(count, withAction) {
+export function skeletonShowcaseHtml(count, withAction) {
   const rows = [];
   for (let i = 0; i < (count || 6); i++) {
     rows.push(`
@@ -28,7 +28,7 @@ function skeletonShowcaseHtml(count, withAction) {
 }
 
 // Watchlist / upcoming rows: title pill plus the edit and delete buttons.
-function skeletonListHtml(count) {
+export function skeletonListHtml(count) {
   const rows = [];
   for (let i = 0; i < (count || 8); i++) {
     rows.push(`
@@ -42,7 +42,7 @@ function skeletonListHtml(count) {
 }
 
 // A result card: poster block beside title, badge and meta lines.
-function skeletonCardHtml() {
+export function skeletonCardHtml() {
   return `
     <div class="skel-card skel-group">
       <div class="skeleton skel-card-poster"></div>
@@ -59,7 +59,7 @@ function skeletonCardHtml() {
 }
 
 // Rows inside the "pick a title from TMDb" modal.
-function skeletonSearchHtml(count) {
+export function skeletonSearchHtml(count) {
   const rows = [];
   for (let i = 0; i < (count || 4); i++) {
     rows.push(`
@@ -72,7 +72,7 @@ function skeletonSearchHtml(count) {
 }
 
 // The expandable detail panel under a showcase row.
-function skeletonDetailHtml() {
+export function skeletonDetailHtml() {
   return `
     <div class="skel-detail skel-group">
       ${skelLine("sub", 0)}
@@ -84,7 +84,7 @@ function skeletonDetailHtml() {
 }
 
 // History entries: title, timestamp, and the action buttons.
-function skeletonHistoryHtml(count) {
+export function skeletonHistoryHtml(count) {
   const rows = [];
   for (let i = 0; i < (count || 5); i++) {
     rows.push(`
@@ -101,7 +101,7 @@ function skeletonHistoryHtml(count) {
 }
 
 // The roulette wheel while its canvas is being prepared.
-function skeletonWheelHtml() {
+export function skeletonWheelHtml() {
   return `
     <div class="skel-wheel-wrap">
       <div class="skeleton skel-wheel-title"></div>

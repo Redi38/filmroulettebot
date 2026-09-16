@@ -1,11 +1,20 @@
+import { api } from "../core/api.js";
+import { CATS } from "../core/constants.js";
+import { RESOLVED_HIST_KEY, initial } from "../core/state.js";
+import { getLSJSON, setLSJSON } from "../core/storage.js";
+
 // History module state + local/server resolution storage.
 // Shared by history-shell.js and history-list.js (loaded after this file).
 
-let historyItems = [];
-let historyFilter = initial.cat && CATS[initial.cat] ? initial.cat : "movies";
-let historyTabsRendered = false;
+// Mutated from history/shell.js and history/list.js, so it has to be a
+// shared object rather than plain `let` exports.
+export const historyState = {
+  items: [],
+  filter: initial.cat && CATS[initial.cat] ? initial.cat : "movies",
+  tabsRendered: false,
+};
 
-function loadResolvedMap() {
+export function loadResolvedMap() {
   const raw = getLSJSON(RESOLVED_HIST_KEY, {});
   if (Array.isArray(raw)) return {};
   return raw && typeof raw === "object" ? raw : {};
@@ -15,17 +24,17 @@ function saveResolvedMap(map) {
   setLSJSON(RESOLVED_HIST_KEY, map);
 }
 
-function histKey(e) {
+export function histKey(e) {
   return `${e.category}|${e.title}|${e.timestamp}`;
 }
 
-function markResolved(key, outcome) {
+export function markResolved(key, outcome) {
   const map = loadResolvedMap();
   map[key] = outcome || { type: "unknown" };
   saveResolvedMap(map);
 }
 
-async function resolveOnServer(category, title, timestamp, resolvedType, newTitle) {
+export async function resolveOnServer(category, title, timestamp, resolvedType, newTitle) {
   try {
     await api("/api/history/resolve", {
       method: "POST", headers: {"Content-Type": "application/json"},

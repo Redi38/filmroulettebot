@@ -1,3 +1,9 @@
+import { openAddSearchModal } from "../core/add-search.js";
+import { api } from "../core/api.js";
+import { openCategoryModal, openRenameModal } from "../core/modal.js";
+import { PENCIL_ICON_SVG, TRASH_ICON_SVG, collapseAndRemoveRow, expandRowIn, removeRowOptimistically, resetRowCollapse, showInlineUndo, showToast } from "../core/utils.js";
+import { loadTrackedSeries } from "./showcase.js";
+
 // Builds the action area on the right of a showcase row: either the
 // tracked-series edit/delete button pair, an "already in list" label, or
 // an add button (optionally paired with a skip button). Split out of
@@ -181,7 +187,7 @@ function buildAddActionSlot(item, cat, addMode, skipScope, wrap, onSkipSettled) 
   return actionSlot;
 }
 
-function buildShowcaseActionSlot(item, cat, addMode, skipScope, wrap, onSkipSettled) {
+export function buildShowcaseActionSlot(item, cat, addMode, skipScope, wrap, onSkipSettled) {
   return addMode === "tracked-series"
     ? buildTrackedSeriesActions(item, wrap, onSkipSettled)
     : buildAddActionSlot(item, cat, addMode, skipScope, wrap, onSkipSettled);

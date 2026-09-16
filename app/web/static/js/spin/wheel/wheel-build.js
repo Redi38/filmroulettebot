@@ -1,8 +1,21 @@
+import { api } from "../../core/api.js";
+import { overlay } from "../../core/menu.js";
+import { skeletonWheelHtml } from "../../core/skeleton.js";
+import { resetSpinResult } from "../settings/spin-category.js";
+import { isWeightedMode } from "../settings/weighted-mode.js";
+import { getWheelHubImage } from "./hub-upload.js";
+import { WHEEL_MIN_SIZE, WHEEL_VERTICAL_RESERVE, computeDockClearance, computeWheelSize, getWheelBottomGap, nextSettledFrame, predictWheelSize } from "./layout.js";
+import { setCanvasRotation } from "./spin.js";
+import { syncSpinResultClearance, wheelLayoutQuietFor } from "./viewport.js";
+import { WHEEL_HUB_GIF_URL, WHEEL_WRAP_IDS, getWheelDPR, getWheelStyle } from "./wheel-constants.js";
+import { drawWheel, getCanvasRotationDeg, updatePointerTitle } from "./wheel-draw.js";
+import { attachWheelHover, startWheelIdle } from "./wheel-idle.js";
+
 // Roulette wheel: DOM construction — the wrap/holder/canvas/hub markup
 // and the wrap-reset / idle-preview flows around it. Canvas drawing itself
 // lives in wheel-draw.js (loaded after this file).
 
-function getDockFor(wrap) {
+export function getDockFor(wrap) {
   return wrap.parentElement && wrap.parentElement.querySelector(".spin-controls-dock");
 }
 
@@ -15,7 +28,7 @@ function pluralizeTitles(n) {
   return `${n} ${word}`;
 }
 
-function resetWheelWraps() {
+export function resetWheelWraps() {
   for (const id of WHEEL_WRAP_IDS) {
     const wrap = document.getElementById(id);
     if (!wrap) continue;
@@ -33,7 +46,7 @@ function resetWheelWraps() {
   updateWheelScrollLock();
 }
 
-function updateWheelScrollLock() {
+export function updateWheelScrollLock() {
 }
 
 function isWheelWrapRendered(wrap) {
@@ -88,7 +101,7 @@ function awaitWheelLayoutReady() {
   });
 }
 
-function prepIdleWheelSkeleton(cat) {
+export function prepIdleWheelSkeleton(cat) {
   const wrap = document.getElementById("spin-wheel-wrap");
   if (!wrap || wrap.querySelector(".wheel-settle-skeleton")) return;
   const hadWheel = !!wrap.querySelector(".wheel-canvas");
@@ -106,7 +119,7 @@ function prepIdleWheelSkeleton(cat) {
   wrap._wheelSkeletonShownAt = performance.now();
 }
 
-async function showIdleWheel(cat) {
+export async function showIdleWheel(cat) {
   const wrap = document.getElementById("spin-wheel-wrap");
   if (!wrap) return;
   prepIdleWheelSkeleton(cat);
@@ -180,7 +193,7 @@ function applyWheelWrapMetrics(wrap, known) {
   return wrap._wheelMetrics;
 }
 
-function buildWheel(wrapId, items, weights, opts) {
+export function buildWheel(wrapId, items, weights, opts) {
   const skipEnter = !!(opts && opts.skipEnter);
   const wrap = document.getElementById(wrapId);
 
@@ -275,7 +288,7 @@ function buildWheel(wrapId, items, weights, opts) {
 const WHEEL_SETTLE_MAX_ATTEMPTS = 3;
 const WHEEL_SETTLE_TOLERANCE_PX = 3;
 
-function buildSettledWheel(wrapId, items, weights, attempt = 0, token = null, skipEnter = null) {
+export function buildSettledWheel(wrapId, items, weights, attempt = 0, token = null, skipEnter = null) {
   const wrap = document.getElementById(wrapId);
   if (!wrap) return null;
   if (attempt === 0) {

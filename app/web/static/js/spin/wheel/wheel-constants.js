@@ -1,7 +1,11 @@
+import { getWheelAppearance } from "../settings/wheel-appearance.js";
+
 // Roulette wheel: shared constants and small getters used by both
 // wheel-build.js (DOM construction) and wheel-draw.js (canvas rendering).
 
-let wheelSpinActive = false;
+// Mutated from spin/wheel/spin.js, so it must be a shared object rather
+// than a plain `let` export.
+export const wheelSpinState = { active: false };
 
 function hexToHsl(hex) {
   const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec((hex || "").trim());
@@ -47,7 +51,7 @@ const WHEEL_PALETTE_REFERENCE_HUE = 36.07;
 let _wheelColorsCache = null;
 let _wheelColorsCacheKey = "";
 
-function getWheelColors() {
+export function getWheelColors() {
   const primaryHex = getComputedStyle(document.documentElement).getPropertyValue("--primary").trim();
   if (_wheelColorsCache && _wheelColorsCacheKey === primaryHex) return _wheelColorsCache;
 
@@ -59,14 +63,14 @@ function getWheelColors() {
   return colors;
 }
 
-const WHEEL_HUB_GIF_URL = "";
-const WHEEL_WRAP_IDS = ["spin-wheel-wrap"];
+export const WHEEL_HUB_GIF_URL = "";
+export const WHEEL_WRAP_IDS = ["spin-wheel-wrap"];
 
-function getWheelStyle() {
+export function getWheelStyle() {
   return typeof getWheelAppearance === "function" ? getWheelAppearance() : "classic";
 }
 
-function getWheelDPR() {
+export function getWheelDPR() {
   const raw = window.devicePixelRatio || 1;
   return Math.min(3, Math.max(2, raw));
 }

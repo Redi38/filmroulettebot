@@ -1,10 +1,15 @@
+import { metaLine } from "../card/card-render.js";
+import { api } from "../core/api.js";
+import { skeletonDetailHtml } from "../core/skeleton.js";
+import { escapeHtml } from "../core/utils.js";
+
 // The expandable detail panel under a showcase row: fetches (and caches)
 // the full media info on first expand, then renders rating/genres/actors
 // and a trailer-or-watch-link button. Split out of row.js.
 
 const _mediaDetailsCache = new Map();
 
-function attachShowcaseDetailToggle(wrap, infoBtn, detail, item) {
+export function attachShowcaseDetailToggle(wrap, infoBtn, detail, item) {
   let expanded = false;
   infoBtn.onclick = async () => {
     expanded = !expanded;

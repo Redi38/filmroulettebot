@@ -3,12 +3,12 @@ from the Сериалы roulette category, which is about picking something to
 watch now, not tracking a specific show's future releases."""
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from app.db.database import add_item, delete_item, get_items, item_exists, rename_item
 from app.services.tmdb import get_tracked_series_status, search_series_suggestions
 
-from ..shared import RenameBody, TitleBody, _validate_rename
+from ..shared import RenameBody, TitleBody, _add_or_conflict, _validate_rename
 
 router = APIRouter()
 
@@ -28,12 +28,12 @@ async def api_tracked_series_search_suggest(q: str = "") -> dict:
 
 @router.post("/api/tracked-series/add")
 async def api_tracked_series_add(body: TitleBody) -> dict:
-    title = body.title.strip()
-    if not title:
-        raise HTTPException(400, "Title can't be empty")
-    if await item_exists("tracked_series", title):
-        raise HTTPException(409, f"«{title}» уже отслеживается")
-    await add_item("tracked_series", title)
+    await _add_or_conflict(
+        lambda t: item_exists("tracked_series", t),
+        lambda t: add_item("tracked_series", t),
+        body.title,
+        conflict_msg=f"«{body.title.strip()}» уже отслеживается",
+    )
     return {"ok": True}
 
 

@@ -140,7 +140,12 @@ export function debounce(fn, wait) {
   };
 }
 
-function nextFrame() { return new Promise((r) => requestAnimationFrame(r)); }
+function nextFrame() {
+  return new Promise((r) => {
+    if (document.hidden) { setTimeout(r, 16); return; }
+    requestAnimationFrame(r);
+  });
+}
 
 function maxTransitionMs(el) {
   const cs = getComputedStyle(el);
@@ -369,3 +374,26 @@ export const PENCIL_ICON_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" 
 export const ARROW_UP_ICON_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>`;
 
 export const ARROW_DOWN_ICON_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>`;
+
+// A CSS animation/transition that starts (or is mid-flight) while the tab is
+// hidden doesn't advance — browsers pause the whole timeline for a
+// backgrounded document — so it just resumes and plays out for real once the
+// tab is shown again. That's invisible for something that was already
+// mid-transition when the tab was switched away moments ago, but after a
+// long absence (e.g. a spin result card built while the tab sat hidden — see
+// swapWheelForCard in spin-actions.js) it reads as the entrance animation
+// only starting on return, instead of the card just being there already.
+// Snap anything still running to its end state the moment the tab becomes
+// visible. Infinite-iteration animations (the home marquee) are excluded —
+// finish() throws on those, and it seeks itself via currentTime instead
+// (see pauseHomeMarquee/resumeHomeMarquee in home/home.js).
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden || typeof document.getAnimations !== "function") return;
+  for (const anim of document.getAnimations()) {
+    try {
+      const timing = anim.effect && anim.effect.getComputedTiming ? anim.effect.getComputedTiming() : null;
+      if (!timing || timing.iterations === Infinity) continue;
+      if (anim.playState === "running" || anim.playState === "pending") anim.finish();
+    } catch {}
+  }
+});

@@ -18,10 +18,21 @@ export function primeWheelAudio() {
   } catch {}
 }
 
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && _wheelAudioCtx && _wheelAudioCtx.state === "suspended") {
+    _wheelAudioCtx.resume().catch(() => {});
+  }
+});
+
 function _playWheelBlip(freq, durationMs, gainPeak, delayMs, type) {
   if (typeof isWheelMuted === "function" && isWheelMuted()) return;
   const ctx = _wheelAudioCtx;
-  if (!ctx || ctx.state !== "running") return;
+  if (!ctx) return;
+  if (ctx.state === "suspended") {
+    ctx.resume().catch(() => {});
+    return;
+  }
+  if (ctx.state !== "running") return;
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
   osc.type = type;

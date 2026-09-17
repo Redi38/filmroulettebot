@@ -1,7 +1,7 @@
 import { renderCard } from "../card/card-render.js";
 import { api } from "../core/api.js";
 import { CATS } from "../core/constants.js";
-import { skeletonCardHtml, skeletonWheelHtml } from "../core/skeleton.js";
+import { skeletonCardHtml } from "../core/skeleton.js";
 import { isRandomSpin, spinnableCats, uiState } from "../core/state.js";
 import { escapeHtml, fadeIn, fadeOut, showToast } from "../core/utils.js";
 import { isAutoWatchEnabled } from "./settings/auto-watch-toggle.js";
@@ -114,7 +114,13 @@ async function doWheelSpin(cat, isRandom) {
   result.innerHTML = "";
   wrap.classList.remove("wheel-done");
   wrap.style.display = "flex";
-  wrap.innerHTML = skeletonWheelHtml();
+  // Mount the same metrics-aware skeleton prepIdleWheelSkeleton() uses when
+  // the tab first opens, instead of the bare skeletonWheelHtml() markup:
+  // that one sizes its disc from wrap._wheelMetrics (the JS-computed final
+  // wheel size for the current viewport), while the bare markup fell back
+  // to a CSS-only min(62vh, 82vw, 520px) guess — so the "Крутить" skeleton
+  // came out a visibly different size than the one shown on tab open.
+  wheel.prepIdleWheelSkeleton(cat);
 
   try {
     const endpoint = isRandom ? "/api/random-spin" : `/api/${cat}/spin`;
@@ -123,6 +129,15 @@ async function doWheelSpin(cat, isRandom) {
       body: JSON.stringify({weighted: isWeightedMode()}),
     });
     uiState.currentCardData = data;
+    // prepIdleWheelSkeleton() above added wheel-wrap--settling, which hides
+    // every child but the skeleton overlay (see
+    // .wheel-wrap--settling > *:not(.wheel-settle-skeleton) in
+    // spin-wheel.css). buildWheel() below builds the real canvas but never
+    // clears that class — nothing else in this flow does either, since
+    // doWheelSpin builds the wheel directly instead of going through
+    // buildSettledWheel()/revealSettledWheel() — so the new wheel was
+    // rendered invisible and the spin played out on a blank wrap.
+    wrap.classList.remove("wheel-wrap--settling");
 
     if (isRandom) {
       await spinCategoryWheel(wheel, wheelWrapId, data.category);
@@ -147,6 +162,7 @@ async function doWheelSpin(cat, isRandom) {
     await swapWheelForCard(wheel, wrap, result, data);
     scheduleAutoWatchOpen(data, result);
   } catch (e) {
+    wrap.classList.remove("wheel-wrap--settling");
     wrap.innerHTML = prevWrapHtml;
     wrap.style.display = prevWrapDisplay;
     wheel.updateWheelScrollLock();
@@ -170,7 +186,12 @@ async function swapWheelForCard(wheel, wrap, result, data) {
     result.style.opacity = "1";
   };
   const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (!reduced && typeof document.startViewTransition === "function") {
+  // View Transitions are compositor-driven the same way rAF is, and some
+  // browsers hold them until the tab is visible again — exactly the kind of
+  // block this function exists to avoid when the spin finished in the
+  // background. The plain fadeOut/fadeIn fallback below already tolerates a
+  // hidden tab (see nextFrame() in utils.js), so just skip straight to it.
+  if (!reduced && !document.hidden && typeof document.startViewTransition === "function") {
     document.documentElement.classList.add("vt-spin-landing");
     try {
       const vt = document.startViewTransition(applyDom);

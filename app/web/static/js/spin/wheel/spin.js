@@ -5,18 +5,19 @@ import { WHEEL_WRAP_IDS, getWheelDPR, wheelSpinState } from "./wheel-constants.j
 import { drawWheel, drawWheelSegments, getCanvasRotationDeg, updatePointerTitle } from "./wheel-draw.js";
 import { hideWheelHoverLabel, stopWheelIdle, wheelIdleRedraw } from "./wheel-idle.js";
 
-// Roulette wheel: spin animation and rebuild/redraw triggers for visible wheels.
-//
-// The spin is driven from JS (rAF) rather than a CSS transition so that:
-//   * the deceleration follows a friction curve (ticks are evenly spaced in
-//     "distance", not bunched at the start);
-//   * we know the exact angle every frame without forcing style recalc via
-//     getComputedStyle();
-//   * the pointer can "flick" on every segment boundary it passes;
-//   * prefers-reduced-motion can shorten the spin without touching CSS.
-
 const WHEEL_REDUCED_MOTION_SPIN_MS = 500;
 const WHEEL_EXTRA_SPINS = 6;
+
+function scheduleWheelFrame(cb) {
+  return document.hidden
+    ? {timeoutId: setTimeout(() => cb(performance.now()), 16)}
+    : {rafId: requestAnimationFrame(cb)};
+}
+function cancelWheelFrame(handle) {
+  if (!handle) return;
+  if (handle.rafId != null) cancelAnimationFrame(handle.rafId);
+  if (handle.timeoutId != null) clearTimeout(handle.timeoutId);
+}
 
 export function wheelPrefersReducedMotion() {
   return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -62,10 +63,10 @@ function settleWheelRebound(canvas, fromDeg, toDeg, onFrame) {
       const deg = fromDeg + delta * ease(t);
       setCanvasRotation(canvas, deg);
       if (onFrame) onFrame(deg);
-      if (t < 1) requestAnimationFrame(step);
+      if (t < 1) scheduleWheelFrame(step);
       else resolve();
     };
-    requestAnimationFrame(step);
+    scheduleWheelFrame(step);
   });
 }
 
@@ -74,19 +75,7 @@ export function spinWheelTo(canvas, n, winnerIndex, durationMs) {
   if (typeof stopWheelIdle === "function") stopWheelIdle(canvas);
   if (typeof hideWheelHoverLabel === "function") hideWheelHoverLabel(canvas);
   canvas._idleHovering = false;
-  // Hover highlighting is for browsing a resting wheel. Once a spin starts,
-  // the highlight belongs to the result: `wheelSpinState.active` covers the spin
-  // itself, but it is already false while highlightWheelWinner() holds the
-  // winner lit, so moving the mouse then would repaint the highlight onto
-  // whatever segment the cursor happened to be over. This flag outlives the
-  // spin — the lock lifts when a fresh wheel is built, which creates a new
-  // canvas without it.
   canvas._hoverLocked = true;
-  // Locking is not enough on its own: if the cursor was resting on a segment
-  // when "Крутить" was pressed, that segment is already drawn highlighted,
-  // and with hover now locked nothing would ever repaint it — so it stayed
-  // lit, rotating, for the whole spin. Clear it here; the only highlight
-  // from now until the next wheel is the winner's.
   canvas._idleHoverIdx = -1;
   if (typeof wheelIdleRedraw === "function") wheelIdleRedraw(canvas, -1);
   return new Promise((resolve) => {
@@ -116,10 +105,10 @@ export function spinWheelTo(canvas, n, winnerIndex, durationMs) {
 
     const onCross = reduced ? null : () => flickWheelPointer(canvas);
     const startTime = performance.now();
-    let rafId;
+    let frameHandle;
 
     const finish = () => {
-      cancelAnimationFrame(rafId);
+      cancelWheelFrame(frameHandle);
       setCanvasRotation(canvas, overshootDeg);
       updatePointerTitle(canvas, ((overshootDeg % 360) + 360) % 360, true, onCross);
       playWheelStop();
@@ -141,10 +130,10 @@ export function spinWheelTo(canvas, n, winnerIndex, durationMs) {
       const deg = startDeg + totalDelta * wheelSpinEase(t);
       setCanvasRotation(canvas, deg);
       updatePointerTitle(canvas, ((deg % 360) + 360) % 360, true, onCross);
-      if (t < 1) rafId = requestAnimationFrame(tick);
+      if (t < 1) frameHandle = scheduleWheelFrame(tick);
       else finish();
     };
-    rafId = requestAnimationFrame(tick);
+    frameHandle = scheduleWheelFrame(tick);
   });
 }
 

@@ -14,13 +14,19 @@ import { showcaseGroup } from "./row.js";
 let currentShowcaseStudio = null;
 let lastShowcaseData = null;
 let lastShowcaseLoadedAt = 0;
+let showcaseContainerPainted = false;
+let skeletonJustInserted = false;
 
 export function prepShowcaseSkeletonIfStale() {
   if (uiState.currentCat === currentShowcaseStudio) return;
   const container = document.getElementById("showcase-container");
   if (!container) return;
+  const prevEl = document.querySelector(".section.active");
+  const enteringFromElsewhere = !prevEl || prevEl.id !== "showcase-section";
+  if (!enteringFromElsewhere && showcaseContainerPainted) return;
   container.style.opacity = "1";
   container.innerHTML = skeletonShowcaseHtml();
+  skeletonJustInserted = true;
 }
 
 // `fromNav` is only true when showSection() calls this on a plain tab
@@ -34,20 +40,24 @@ export async function loadShowcase(fromNav) {
     return;
   }
   currentShowcaseStudio = cat;
-  if (isFreshView) {
+  const skipFadeOut = skeletonJustInserted || (isFreshView && !showcaseContainerPainted);
+  skeletonJustInserted = false;
+  if (skipFadeOut) {
     container.style.opacity = "1";
     container.innerHTML = skeletonShowcaseHtml();
   }
   const dataPromise = api(`/api/showcase/${cat}`);
-  const fadeOutPromise = isFreshView ? Promise.resolve() : fadeOut(container);
+  const fadeOutPromise = skipFadeOut ? Promise.resolve() : fadeOut(container);
   try {
     const [data] = await Promise.all([dataPromise, fadeOutPromise]);
     lastShowcaseData = data;
     lastShowcaseLoadedAt = Date.now();
+    showcaseContainerPainted = true;
     renderShowcaseFilters();
     renderShowcaseContent(true);
   } catch (e) {
     lastShowcaseData = null;
+    showcaseContainerPainted = true;
     container.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
     fadeIn(container);
   }
@@ -125,8 +135,6 @@ export async function loadTrackedSeries(fromNav) {
     container.innerHTML = skeletonShowcaseHtml();
   }
   const dataPromise = api(`/api/tracked-series`);
-  // See loadShowcase() above: skip the fade on a fresh view, or the
-  // skeleton just inserted gets faded to 0 before it's ever painted.
   const fadeOutPromise = isFreshView ? Promise.resolve() : fadeOut(container);
   try {
     const [data] = await Promise.all([dataPromise, fadeOutPromise]);

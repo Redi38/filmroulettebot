@@ -32,15 +32,6 @@ export async function loadHome() {
   resumeHomeMarquee();
 }
 
-// A CSS animation is cancelled outright when its element goes `display: none`
-// — which is what .section does on every view switch — so the marquee started
-// over from the left edge each time the user came back to Афиша.
-//
-// The fix is to record where each row had got to on the way out and seek the
-// fresh animation back there on the way in. Web Animations is what makes that
-// exact: `currentTime` is the animation's own clock, so it survives a hover
-// pause and needs no duration arithmetic. Wall-clock accounting is kept as a
-// fallback for browsers without getAnimations().
 let marqueeShownAt = 0;
 
 function marqueeAnimationOf(track) {
@@ -181,6 +172,23 @@ window.addEventListener("resize", handleMarqueeViewportResize);
 window.addEventListener("orientationchange", () => {
   lastMarqueeViewportWidth = window.innerWidth;
   debouncedSyncMarqueeSize();
+});
+
+// Backgrounding the browser tab (not just switching in-app views) leaves
+// #home-section visible/active — nothing calls pauseHomeMarquee/
+// resumeHomeMarquee for that case, so the animation timeline keeps
+// ticking on real wall-clock time while the tab is hidden. Most browsers
+// stop actually rendering frames while hidden but don't freeze that
+// timeline, so the moment the tab is shown again the marquee snaps
+// forward to wherever the elapsed real time says it should be — the
+// jerk. Route tab visibility through the same currentTime-based
+// pause/resume the in-app view switch already uses, so it looks
+// stopped the whole time instead of catching up in one jump.
+document.addEventListener("visibilitychange", () => {
+  const section = document.getElementById("home-section");
+  if (!homeLoaded || !section || !section.classList.contains("active")) return;
+  if (document.hidden) pauseHomeMarquee();
+  else resumeHomeMarquee();
 });
 
 function fillMarqueeTrack(track, posters) {

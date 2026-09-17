@@ -12,6 +12,10 @@ export const historyState = {
   items: [],
   filter: initial.cat && CATS[initial.cat] ? initial.cat : "movies",
   tabsRendered: false,
+  // Raw items from the last successful /api/history fetch (pre-filter,
+  // marvel/dc already stripped), used by loadHistory() to detect a
+  // no-op reload and skip the fade/re-render — see history/shell.js.
+  lastLoadedRaw: null,
 };
 
 export function loadResolvedMap() {

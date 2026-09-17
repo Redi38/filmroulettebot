@@ -9,6 +9,11 @@ import { loadShowcase } from "../showcase/showcase.js";
 
 // Upcoming releases list: load, add/delete, and TMDb release-date check flow.
 
+// Raw items from the last successful /api/upcoming fetch, used by
+// loadUpcoming() to detect a no-op reload (tab revisit with nothing
+// changed in the DB) and skip the fade/rebuild so it doesn't flicker.
+let lastUpcomingRaw = null;
+
 function checkUpcomingEmpty(container) {
   if (container.querySelector(".list-row") || container.querySelector(".inline-undo-row")) return;
   container.innerHTML = placeholderHtml("Пока нет ожидаемых тайтлов — добавь то, чего ждёшь, выше 👀", "🕐");
@@ -21,14 +26,23 @@ export async function loadUpcoming() {
     container.style.opacity = "1";
     container.innerHTML = skeletonListHtml();
   }
-  const dataPromise = api("/api/upcoming");
-  // On a fresh view the skeleton was just inserted at full opacity, so
-  // there's no stale content to fade out (see loadShowcase() for why
-  // fading it here would hide it before it's ever painted).
-  const fadeOutPromise = isFreshView ? Promise.resolve() : fadeOut(container);
   try {
-    const [data] = await Promise.all([dataPromise, fadeOutPromise]);
+    const data = await api("/api/upcoming");
+    // Same items shape every time ({id, title} pairs in server order), so a
+    // plain JSON compare tells a real DB change apart from a no-op revisit
+    // — skip the fade/rebuild for the latter so it doesn't flicker for no
+    // reason. Only fetched (not decided) up front, since we don't know
+    // whether it changed until the response is back.
+    const unchanged = !isFreshView
+      && lastUpcomingRaw !== null
+      && JSON.stringify(data.items) === JSON.stringify(lastUpcomingRaw);
     container.dataset.loaded = "1";
+    lastUpcomingRaw = data.items;
+    if (unchanged) return;
+    // On a fresh view the skeleton was just inserted at full opacity, so
+    // there's no stale content to fade out (see loadShowcase() for why
+    // fading it here would hide it before it's ever painted).
+    if (!isFreshView) await fadeOut(container);
     if (!data.items.length) {
       container.innerHTML = placeholderHtml("Пока нет ожидаемых тайтлов — добавь то, чего ждёшь, выше 👀", "🕐");
       fadeIn(container);

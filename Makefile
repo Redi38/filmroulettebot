@@ -10,8 +10,8 @@ DC ?= docker compose
 .DEFAULT_GOAL := help
 
 .PHONY: help venv install install-dev up web down logs ps \
-        ci compile lint typecheck test js-syntax js-install js-build js-watch \
-        css-build css-watch clean
+        ci compile lint typecheck test js-syntax api-types-freshness \
+        js-install js-build js-watch css-build css-watch clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -47,11 +47,11 @@ ps: ## Show status of the compose services
 	$(DC) ps
 
 # --- CI, runnable locally before you push -------------------------------
-# Same steps, same order, as .github/workflows/ci.yml's `test` and
-# `js-syntax` jobs -- run `make ci` for the full thing, or a target
-# below to run just one stage.
+# Same steps, same order, as .github/workflows/ci.yml's `test`,
+# `js-syntax`, and `api-types-freshness` jobs -- run `make ci` for the
+# full thing, or a target below to run just one stage.
 
-ci: compile lint typecheck test js-syntax ## Run every CI stage locally (compile + lint + typecheck + pytest + JS syntax)
+ci: compile lint typecheck test js-syntax api-types-freshness ## Run every CI stage locally (compile + lint + typecheck + pytest + JS syntax + API types freshness)
 
 compile: ## CI stage: byte-compile the whole project (fast syntax smoke test)
 	$(PYTHON) -m compileall -q app main.py
@@ -67,6 +67,13 @@ test: ## CI stage: run the pytest suite
 
 js-syntax: ## CI stage: node --check every static JS file
 	find app/web/static/js -name "*.js" -not -path "*/dist/*" -print0 | xargs -0 -n1 node --check
+
+api-types-freshness: ## CI stage: regenerate app/web/static/js/types/api.d.ts from the live OpenAPI schema and fail if it drifted (needs Python + JS deps installed)
+	npm run generate:types
+	git diff --exit-code -- app/web/static/js/types/api.d.ts || { \
+		echo "app/web/static/js/types/api.d.ts is out of date. Run 'npm run generate:types' and commit the result."; \
+		exit 1; \
+	}
 
 # --- Frontend JS bundle (esbuild, no framework) ------------------------
 # `python main.py` / `uvicorn` serve app/web/static/js/dist/bundle.min.js

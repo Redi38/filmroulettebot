@@ -19,8 +19,18 @@ export async function loadHistory() {
   }
   try {
     const data = await api("/api/history?limit=50");
-    historyState.items = data.items.filter((e) => e.category !== "marvel" && e.category !== "dc");
+    const items = data.items.filter((e) => e.category !== "marvel" && e.category !== "dc");
+    // Same shape as before (id-less objects with stable key order from the
+    // API), so a plain JSON compare is enough to tell "nothing changed in
+    // the DB" apart from a real update — skip the fade/re-render dance for
+    // the former so revisiting the tab doesn't flicker for no reason.
+    const unchanged = !isFreshView
+      && historyState.lastLoadedRaw !== null
+      && JSON.stringify(items) === JSON.stringify(historyState.lastLoadedRaw);
+    historyState.items = items;
+    historyState.lastLoadedRaw = items;
     list.dataset.loaded = "1";
+    if (unchanged) return;
     await fadeOut(list);
     renderHistoryList();
     fadeIn(list);

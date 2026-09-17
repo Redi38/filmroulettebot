@@ -7,6 +7,10 @@ import { getWheelColors } from "./wheel-constants.js";
 // lives in wheel-build.js (loaded before this file, which calls into it).
 
 export function getCanvasRotationDeg(canvas) {
+  if (typeof canvas._rotationDeg === "number") return canvas._rotationDeg;
+  // Fallback for canvases that never went through setCanvasRotation (e.g.
+  // a freshly built wheel before its first spin) — parse it out of the
+  // computed matrix, forcing a style recalc only in that rare case.
   const transform = getComputedStyle(canvas).transform;
   if (!transform || transform === "none") return 0;
   const match = transform.match(/matrix\(([^)]+)\)/);

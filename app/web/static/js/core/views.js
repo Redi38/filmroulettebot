@@ -108,7 +108,6 @@ export function updateHeaderTitle() {
 }
 
 export async function showSection() {
-  applyStudioTheme();
   if (typeof closePosterInfoModal === "function") closePosterInfoModal();
   if (typeof closeModal === "function") closeModal();
   if (typeof closeRenameModal === "function") closeRenameModal();
@@ -136,6 +135,7 @@ export async function showSection() {
 
   const applyDom = () => {
     window.scrollTo(0, 0);
+    applyStudioTheme();
     for (const [view, id] of Object.entries(SECTION_IDS)) {
       document.getElementById(id).classList.toggle("active", uiState.currentView === view);
     }

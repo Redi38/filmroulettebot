@@ -96,14 +96,15 @@ function renderTheatersFilters() {
 // always pass their own args instead, so they always fetch.
 export async function loadTheaters(trigger, fromNav) {
   const container = document.getElementById("theaters-container");
-  if (fromNav && theatersLoaded && Date.now() - theatersLoadedAt < TAB_REVISIT_STALE_MS) {
+  const isStaleRevisit = fromNav && theatersLoaded && Date.now() - theatersLoadedAt >= TAB_REVISIT_STALE_MS;
+  if (fromNav && theatersLoaded && !isStaleRevisit) {
     return;
   }
   renderTheatersFilters();
 
   if (theatersHideLocalOnly === null) await ensureTheatersSettingsLoaded();
 
-  const isFreshView = !theatersLoaded;
+  const isFreshView = !theatersLoaded || isStaleRevisit;
   if (isFreshView) {
     container.style.opacity = "1";
     container.innerHTML = `
@@ -202,12 +203,13 @@ function renderSeriesReleasesFilters() {
 
 export async function loadSeriesReleases(fromNav) {
   const container = document.getElementById("series-releases-container");
-  if (fromNav && seriesReleasesLoaded && Date.now() - seriesReleasesLoadedAt < TAB_REVISIT_STALE_MS) {
+  const isStaleRevisit = fromNav && seriesReleasesLoaded && Date.now() - seriesReleasesLoadedAt >= TAB_REVISIT_STALE_MS;
+  if (fromNav && seriesReleasesLoaded && !isStaleRevisit) {
     return;
   }
   renderSeriesReleasesFilters();
 
-  const isFreshView = !seriesReleasesLoaded;
+  const isFreshView = !seriesReleasesLoaded || isStaleRevisit;
   if (isFreshView) {
     container.style.opacity = "1";
     container.innerHTML = skeletonShowcaseHtml();

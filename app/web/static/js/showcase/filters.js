@@ -1,50 +1,121 @@
-import { getLS, getLSJSON, setLS, setLSJSON } from "../core/storage.js";
-import { renderShowcaseContent, renderShowcaseFilters } from "./showcase.js";
+// Filter-panel widgets shared by the studio showcase, the theaters tab and
+// the series-premieres tab.
+const COLLAPSE_MQ = "(max-width: 899px)";
+const COLLAPSE_MS = 280;
 
-// Filter-panel helpers shared by the studio showcase, theaters, and
-// series-releases tabs: a "type" filter (showcase only) plus the common
-// "added to my list" filter (all three tabs). Groups keep their DOM
-// across re-renders (keyed by data-filter-key) so the active-option
-// pill can slide between buttons instead of popping on every rebuild —
-// same technique as the spin-mode segmented toggle.
-
-const SHOWCASE_FILTER_KEY = "filmroulette_showcase_filters";
-function loadShowcaseFilters() {
-  const f = getLSJSON(SHOWCASE_FILTER_KEY, null);
-  if (!f) return {type: "all", added: "all"};
-  return {type: f.type || "all", added: f.added || "all"};
-}
-function saveShowcaseFilters() {
-  setLSJSON(SHOWCASE_FILTER_KEY, showcaseFilters);
-}
-let showcaseFilters = loadShowcaseFilters();
-
-export function showcaseTypeMatches(item) {
-  if (showcaseFilters.type === "movie") return !item.is_series;
-  if (showcaseFilters.type === "series") return !!item.is_series;
-  return true;
-}
-export function showcaseAddedMatches(item) {
-  if (showcaseFilters.added === "hide") return !item.in_list;
-  if (showcaseFilters.added === "only") return !!item.in_list;
-  return true;
+function matches(query) {
+  return typeof window.matchMedia === "function" && window.matchMedia(query).matches;
 }
 
-function renderFilterOptionsRow(panel, filterKey, title, options, currentValue, onClick) {
-  let wrap = panel.querySelector(`[data-filter-key="${filterKey}"]`);
+function setPanelOpen(panel, head, open) {
+  const body = panel.querySelector(":scope > .filter-panel-body");
+  const inner = body && body.querySelector(":scope > .filter-panel-inner");
+  panel.classList.toggle("open", open);
+  head.setAttribute("aria-expanded", open ? "true" : "false");
+  if (!body || !inner) return;
+
+  if (!matches(COLLAPSE_MQ) || matches("(prefers-reduced-motion: reduce)")) {
+    body.style.height = "";
+    return;
+  }
+
+  const from = body.getBoundingClientRect().height;
+  const to = open ? inner.getBoundingClientRect().height : 0;
+  body.style.height = `${from}px`;
+  void body.offsetHeight;
+  body.style.height = `${to}px`;
+
+  clearTimeout(body._collapseTimer);
+  body._collapseTimer = setTimeout(() => {
+    body.style.height = "";
+  }, COLLAPSE_MS);
+}
+
+export function filterPanelBody(panel) {
+  const existing = panel.querySelector(":scope > .filter-panel-body > .filter-panel-inner");
+  if (existing) return existing;
+
+  panel.classList.add("filter-panel-collapsible");
+  const head = document.createElement("button");
+  head.type = "button";
+  head.className = "filter-panel-toggle";
+  head.innerHTML = `
+    <span class="filter-panel-toggle-label">Фильтры</span>
+    <span class="filter-panel-count" hidden></span>
+    <svg class="filter-panel-chevron" viewBox="0 0 24 24" width="16" height="16" fill="none"
+         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="6 9 12 15 18 9"></polyline>
+    </svg>`;
+  head.setAttribute("aria-expanded", "false");
+  const body = document.createElement("div");
+  body.className = "filter-panel-body";
+  const inner = document.createElement("div");
+  inner.className = "filter-panel-inner";
+  body.appendChild(inner);
+  head.onclick = () => {
+    const open = !panel.classList.contains("open");
+    setPanelOpen(panel, head, open);
+    if (open) refreshThumbs(panel);
+  };
+  panel.appendChild(head);
+  panel.appendChild(body);
+  return inner;
+}
+
+// The count badge is the only thing telling someone on a phone that the
+// list they're looking at is filtered at all, since the collapsed panel
+// hides the active pills.
+export function setFilterPanelCount(panel, count) {
+  const badge = panel.querySelector(".filter-panel-count");
+  if (!badge) return;
+  badge.hidden = !count;
+  badge.textContent = count ? String(count) : "";
+  panel.classList.toggle("has-active-filters", !!count);
+}
+
+// Re-seat every segmented pill from its active button's current geometry.
+// Also used after a viewport change would invalidate the cached position.
+function refreshThumbs(panel) {
+  for (const row of panel.querySelectorAll(".showcase-filter-options.segmented")) {
+    const thumb = row.querySelector(".showcase-filter-thumb");
+    const active = row.querySelector(".showcase-filter-btn.active");
+    if (!thumb) continue;
+    if (!active) continue;
+    const prev = thumb.style.transition;
+    thumb.style.transition = "none";
+    thumb.style.width = active.offsetWidth + "px";
+    thumb.style.height = active.offsetHeight + "px";
+    thumb.style.transform = `translate(${active.offsetLeft}px, ${active.offsetTop}px)`;
+    void thumb.offsetWidth;
+    thumb.style.transition = prev;
+  }
+}
+
+function ensureGroup(panel, filterKey, title, className) {
+  const body = filterPanelBody(panel);
+  let wrap = body.querySelector(`[data-filter-key="${filterKey}"]`);
   if (!wrap) {
     wrap = document.createElement("div");
-    wrap.className = "showcase-filter-group";
+    wrap.className = `showcase-filter-group${className ? " " + className : ""}`;
     wrap.dataset.filterKey = filterKey;
-    const h4 = document.createElement("h4");
-    h4.textContent = title;
-    wrap.appendChild(h4);
+    if (title) {
+      const h4 = document.createElement("h4");
+      h4.textContent = title;
+      wrap.appendChild(h4);
+    }
     const row = document.createElement("div");
-    row.className = "showcase-filter-options segmented";
+    row.className = "showcase-filter-options";
     wrap.appendChild(row);
-    panel.appendChild(wrap);
+    body.appendChild(wrap);
   }
+  return wrap;
+}
+
+// A segmented single-choice row (Тип / Показывать / Когда / Сортировка...).
+export function segmentedGroup(panel, filterKey, title, options, currentValue, onClick) {
+  const wrap = ensureGroup(panel, filterKey, title);
   const row = wrap.querySelector(".showcase-filter-options");
+  row.classList.add("segmented");
 
   const keys = options.map(([v]) => String(v));
   const sameShape = row.dataset.keys === keys.join("|");
@@ -85,22 +156,43 @@ function renderFilterOptionsRow(panel, filterKey, title, options, currentValue, 
   }
 }
 
-export function showcaseFilterGroup(panel, title, options, key) {
-  renderFilterOptionsRow(panel, "showcase-" + key, title, options, showcaseFilters[key], (value) => {
-    showcaseFilters[key] = value;
-    saveShowcaseFilters();
-    renderShowcaseFilters();
-    renderShowcaseContent();
-  });
+export function togglesGroup(panel, filterKey, title, toggles) {
+  const wrap = ensureGroup(panel, filterKey, title, "showcase-filter-group-toggle");
+  const row = wrap.querySelector(".showcase-filter-options");
+
+  const keys = toggles.map((t) => t.key).join("|");
+  if (row.dataset.keys !== keys) {
+    row.dataset.keys = keys;
+    row.innerHTML = "";
+    for (const toggle of toggles) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "showcase-filter-btn";
+      btn.dataset.toggleKey = toggle.key;
+      btn.addEventListener("animationend", (ev) => {
+        if (ev.animationName === "fxTogglePop") btn.classList.remove("fx-toggle-pop");
+      });
+      row.appendChild(btn);
+    }
+  }
+
+  for (const toggle of toggles) {
+    const btn = row.querySelector(`[data-toggle-key="${toggle.key}"]`);
+    btn.textContent = toggle.label;
+    btn.classList.toggle("active", !!toggle.active);
+    btn.disabled = !!toggle.disabled;
+    btn.onclick = () => {
+      btn.classList.remove("fx-toggle-pop");
+      void btn.offsetWidth;
+      btn.classList.add("fx-toggle-pop");
+      toggle.onToggle(!toggle.active);
+    };
+  }
 }
 
-export function simpleAddedFilterGroup(panel, storageKey, currentValue, onChange) {
-  renderFilterOptionsRow(panel, "added-" + storageKey, "Показывать",
-    [["all", "Все"], ["hide", "Не добавленные"], ["only", "Уже добавленные"]], currentValue, (value) => {
-      setLS(storageKey, value);
-      onChange(value);
-    });
-}
-export function loadSimpleAddedFilter(storageKey) {
-  return getLS(storageKey, "all");
-}
+export const ADDED_OPTIONS = [["all", "Все"], ["hide", "Не добавленные"], ["only", "Уже добавленные"]];
+export const TYPE_OPTIONS = [["all", "Все"], ["movie", "Фильмы"], ["series", "Сериалы"]];
+export const SERIES_STATUS_OPTIONS = [
+  ["all", "Все"], ["new_series", "Новые сериалы"], ["new_season", "Новые сезоны"], ["airing", "Уже выходят"],
+];
+export const DIGITAL_OPTIONS = [["all", "Все"], ["digital", "Уже в цифре"], ["cinema", "Только в кино"]];

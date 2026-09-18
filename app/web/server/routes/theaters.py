@@ -35,6 +35,28 @@ router = APIRouter()
 
 _THEATERS_CACHE_CONTROL = "private, max-age=45, stale-while-revalidate=180"
 
+ORDERS = ("default", "date")
+
+
+def _ordered(items: list[dict[str, Any]], order: str) -> list[dict[str, Any]]:
+    """Optionally re-sort a listing by release date, ascending.
+
+    This exists for the "По дням" view. Both theatrical listings arrive
+    in TMDb's popularity order, so slicing them into pages and then
+    grouping each page by day gave every page its own calendar starting
+    from that page's earliest date — page 2 read as a restart of page 1
+    rather than a continuation. Ordering has to happen here, across the
+    whole list, because paginate() runs below.
+
+    Undated entries sort last rather than first, which an empty string
+    would otherwise do.
+    """
+    if order not in ORDERS:
+        raise HTTPException(400, f"Unknown order: {order!r}")
+    if order != "date":
+        return items
+    return sorted(items, key=lambda m: (not m.get("release_date"), m.get("release_date") or ""))
+
 _PROCESSED_CACHE_TTL = 300
 _processed_cache: dict[str, tuple[list[dict[str, Any]], float]] = {}
 
@@ -85,6 +107,8 @@ async def api_theaters(
     upcoming_page: int = 1,
     added: str = "all",
     hide_local_only: bool | None = None,
+    digital: str = "all",
+    order: str = "default",
 ) -> dict:
     """TMDb's own "now playing" / "upcoming" theatrical calendars — global,
     not tied to any studio, unlike /api/showcase/{studio}. Movies and
@@ -100,6 +124,11 @@ async def api_theaters(
     no matter what the DB setting says. When the param is omitted (older
     cached pages, non-browser callers), fall back to reading the setting
     from the DB as before.
+
+    `digital` is applied here rather than in the browser because this
+    endpoint paginates: narrowing a page the server had already cut to
+    THEATERS_PAGE_SIZE would leave the page counter describing the
+    unfiltered list. `order` is here for the same reason — see _ordered().
     """
     response.headers["Cache-Control"] = _THEATERS_CACHE_CONTROL
     if hide_local_only is None:
@@ -139,11 +168,21 @@ async def api_theaters(
         now_playing = [m for m in now_playing if m["in_list"]]
         upcoming = [m for m in upcoming if m["in_list"]]
 
+    # "Уже в цифре" / "Только в кино" is a now-playing-only distinction:
+    # nothing in the upcoming column has a digital release yet by
+    # definition, so the filter deliberately doesn't touch that list.
+    if digital == "digital":
+        now_playing = [m for m in now_playing if m.get("digitally_released")]
+    elif digital == "cinema":
+        now_playing = [m for m in now_playing if not m.get("digitally_released")]
+    elif digital != "all":
+        raise HTTPException(400, f"Unknown digital filter: {digital!r}")
+
     now_playing_items, now_playing_page, now_playing_total_pages = paginate(
-        now_playing, now_playing_page, THEATERS_PAGE_SIZE
+        _ordered(now_playing, order), now_playing_page, THEATERS_PAGE_SIZE
     )
     upcoming_items, upcoming_page, upcoming_total_pages = paginate(
-        upcoming, upcoming_page, THEATERS_PAGE_SIZE
+        _ordered(upcoming, order), upcoming_page, THEATERS_PAGE_SIZE
     )
     return {
         "now_playing": now_playing_items,
@@ -155,11 +194,23 @@ async def api_theaters(
     }
 
 
+SERIES_STATUSES = ("all", "new_series", "new_season", "airing")
+
+
 @router.get("/api/series-releases")
-async def api_series_releases(response: Response, page: int = 1, added: str = "all") -> dict:
+async def api_series_releases(
+    response: Response, page: int = 1, added: str = "all", status: str = "all", order: str = "default"
+) -> dict:
     """Popular TV shows airing new seasons/episodes soon — global TMDb
     discovery (not tied to the user's own series list), separate from the
-    movies/cartoons-only /api/theaters tab. Rating 7+ only."""
+    movies/cartoons-only /api/theaters tab. Rating 7+ only.
+
+    `status` narrows by what kind of premiere a row actually is — a
+    debuting show, the start of a new season, or a season already midway
+    through airing. The date line has always distinguished the three
+    visually, but nothing could filter on them. As with `digital` on
+    /api/theaters, this runs before paginate() so the page counter keeps
+    describing the list actually being shown."""
     response.headers["Cache-Control"] = _THEATERS_CACHE_CONTROL
     releases, own_series, skipped = await asyncio.gather(
         get_series_releases(), get_items("series"), get_skipped("series_releases"),
@@ -174,7 +225,17 @@ async def api_series_releases(response: Response, page: int = 1, added: str = "a
         releases = [m for m in releases if not m["in_list"]]
     elif added == "only":
         releases = [m for m in releases if m["in_list"]]
-    items, page, total_pages = paginate(releases, page, THEATERS_PAGE_SIZE)
+
+    if status not in SERIES_STATUSES:
+        raise HTTPException(400, f"Unknown status: {status!r}")
+    if status == "new_series":
+        releases = [m for m in releases if m.get("is_new_series")]
+    elif status == "new_season":
+        releases = [m for m in releases if m.get("is_new_season")]
+    elif status == "airing":
+        releases = [m for m in releases if m.get("airing_now")]
+
+    items, page, total_pages = paginate(_ordered(releases, order), page, THEATERS_PAGE_SIZE)
     return {"releases": items, "page": page, "total_pages": total_pages}
 
 

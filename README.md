@@ -41,6 +41,9 @@ data and the same SQLite database as the bot:
 - 🎟 **In theaters** — what's currently playing and what's coming to
   theaters next, paginated.
 - 📺 **Series premieres** — upcoming season/episode premiere dates.
+- 🎛 **Filters** — every catalog tab (Marvel/DC, In theaters, Series
+  premieres) shares one filter panel, including a day-by-day grouping of
+  the results. See [Filters](#-filters) below.
 - 🔔 **Series tracking** — search and follow specific shows to keep
   an eye on new releases.
 - 📋 **Watchlists** — one searchable list screen with a category
@@ -51,6 +54,42 @@ data and the same SQLite database as the bot:
 - 🕰 **Upcoming** — a personal list of anticipated titles not out yet.
 - 📜 **History** — everything the roulette has already picked, with
   the ability to resolve or delete entries.
+
+## 🎛 Filters
+
+The three catalog tabs are all release calendars, so they share one
+filter panel (`app/web/static/js/showcase/filters.js`). Choices persist
+per tab in `localStorage`; on narrow screens the panel collapses behind a
+`Фильтры · N` button that counts how many filters are currently off their
+default.
+
+| Filter | Marvel / DC | In theaters | Series premieres |
+| --- | :---: | :---: | :---: |
+| Показывать (added to my list) | ✅ | ✅ | ✅ |
+| Тип (movies / series) | ✅ | — | — |
+| Доступность (уже в цифре / только в кино) | — | ✅ | — |
+| Что именно (дебют / новый сезон / уже выходит) | — | — | ✅ |
+| Дополнительно — По дням | ✅ | ✅ | ✅ |
+| Дополнительно — Только мировой прокат | — | ✅ | — |
+
+**Дополнительно** holds the on/off pills. They're one titled group rather
+than one group each, so they read as a category alongside the others
+instead of as untitled leftovers at the end of the panel.
+
+**По дням** buckets the rows under a heading per release day
+(`showcase/date-filters.js`), always running from the earliest date
+forwards. The sections themselves disagree about direction on purpose —
+"уже вышло" and "сейчас в прокате" read newest-first, everything upcoming
+reads soonest-first — so inheriting that order would make two neighbouring
+columns produce calendars running opposite ways.
+
+**Where filtering happens.** The studio showcase ships its whole catalog
+in one response, so it filters in the browser. The theaters and series
+tabs paginate server-side, so `digital`, `status` and `order` travel as
+query params and are applied *before* `paginate()` — narrowing or
+re-sorting an already-cut page would leave the page counter describing
+the wrong list, and in the day view would restart the calendar on every
+page instead of continuing it.
 
 ## 🤖 Telegram bot
 

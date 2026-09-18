@@ -102,7 +102,14 @@ async def get_series_releases(region: str = "UA", pages: int = 3) -> list[dict[s
             "overview": r.get("overview") or "",
             "rating": round(r["vote_average"], 1) if r.get("vote_average") else "—",
             "is_series": True,
+            "season_number": season_no,
             "is_new_season": season_no > 1 and ep_no == 1,
+            # A debuting show (season 1, episode 1) reads very differently
+            # from "season 4 of something you already follow", but until now
+            # both fell under the same catch-all row — flag it so the tab can
+            # offer a "новые сериалы" filter instead of making the user infer
+            # it from the date line.
+            "is_new_series": season_no == 1 and ep_no == 1,
             "airing_now": airing_now,
         })
     out.sort(key=lambda m: m["release_date"])

@@ -31,6 +31,38 @@ export function showcaseGroup(title, items, cat, isNewSeasons, addMode, skipScop
   return group;
 }
 
+// Same group, but with the rows bucketed under a day heading ("пт, 25
+// сентября"). Release calendars cluster hard on particular weekdays —
+// theatrical wide releases on Thursdays and Fridays, streaming premieres
+// on Wednesdays — and a flat date-sorted list makes that invisible, so the
+// "По дням" toggle on the theaters and series tabs swaps in this renderer.
+// Buckets always run from the earliest date forwards — see groupByDay()
+// in date-filters.js for why that ignores the section's own order.
+export function showcaseDayGroup(title, dayBuckets, cat, isNewSeasons, addMode, skipScope, onSkipSettled) {
+  const group = document.createElement("div");
+  group.className = "check-group";
+  const h3 = document.createElement("h3");
+  h3.textContent = title;
+  group.appendChild(h3);
+  if (!dayBuckets.length) {
+    const empty = document.createElement("div");
+    empty.className = "muted";
+    empty.textContent = "—";
+    group.appendChild(empty);
+    return group;
+  }
+  for (const [heading, items] of dayBuckets) {
+    const dayHead = document.createElement("div");
+    dayHead.className = "showcase-day-heading";
+    dayHead.innerHTML = `<span>${escapeHtml(heading)}</span><span class="showcase-day-count">${items.length}</span>`;
+    group.appendChild(dayHead);
+    for (const item of items) {
+      group.appendChild(showcaseRow(item, cat, isNewSeasons, addMode, skipScope, onSkipSettled));
+    }
+  }
+  return group;
+}
+
 export function showcaseRow(item, cat, isNewSeasons, addMode, skipScope, onSkipSettled) {
   const wrap = document.createElement("div");
   wrap.className = "showcase-item-wrap";

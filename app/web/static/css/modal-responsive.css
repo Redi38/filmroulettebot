@@ -139,8 +139,9 @@
   main > #home-section.active { max-width: none; width: 100%; }
 
   main > #theaters-section.active { max-width: 1500px; }
-  #theaters-container { display: flex; align-items: flex-start; gap: clamp(24px, 6vw, 128px); }
-  .theaters-col { flex: 1 1 0; min-width: 0; }
+  #theaters-container { display: flex; align-items: stretch; gap: clamp(24px, 6vw, 128px); }
+  .theaters-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
+  .theaters-col > .pagination-row { margin-top: auto; }
 
   main > #series-releases-section.active { max-width: 900px; }
   #series-releases-section #series-releases-filters { margin-bottom: 20px; }
@@ -154,9 +155,6 @@
   .showcase-poster-placeholder { font-size: 2rem; }
   .showcase-title { font-size: 1.15rem; white-space: normal; }
   .showcase-date { font-size: 0.92rem; margin-top: 5px; }
-  /* Keep the loading placeholder in step with the poster size bumped above —
-     otherwise the skeleton (still 46x68) visibly resizes to 74x110 the
-     moment real rows land. */
   .skel-showcase-poster { width: 74px; height: 110px; border-radius: 10px; }
 
   #add-search-box {

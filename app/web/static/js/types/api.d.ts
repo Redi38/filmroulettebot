@@ -660,6 +660,11 @@ export interface paths {
          *     no matter what the DB setting says. When the param is omitted (older
          *     cached pages, non-browser callers), fall back to reading the setting
          *     from the DB as before.
+         *
+         *     `digital` is applied here rather than in the browser because this
+         *     endpoint paginates: narrowing a page the server had already cut to
+         *     THEATERS_PAGE_SIZE would leave the page counter describing the
+         *     unfiltered list. `order` is here for the same reason — see _ordered().
          */
         get: operations["api_theaters_api_theaters_get"];
         put?: never;
@@ -682,6 +687,13 @@ export interface paths {
          * @description Popular TV shows airing new seasons/episodes soon — global TMDb
          *     discovery (not tied to the user's own series list), separate from the
          *     movies/cartoons-only /api/theaters tab. Rating 7+ only.
+         *
+         *     `status` narrows by what kind of premiere a row actually is — a
+         *     debuting show, the start of a new season, or a season already midway
+         *     through airing. The date line has always distinguished the three
+         *     visually, but nothing could filter on them. As with `digital` on
+         *     /api/theaters, this runs before paginate() so the page counter keeps
+         *     describing the list actually being shown.
          */
         get: operations["api_series_releases_api_series_releases_get"];
         put?: never;
@@ -2054,6 +2066,8 @@ export interface operations {
                 upcoming_page?: number;
                 added?: string;
                 hide_local_only?: boolean | null;
+                digital?: string;
+                order?: string;
             };
             header?: never;
             path?: never;
@@ -2088,6 +2102,8 @@ export interface operations {
             query?: {
                 page?: number;
                 added?: string;
+                status?: string;
+                order?: string;
             };
             header?: never;
             path?: never;

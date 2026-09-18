@@ -1,10 +1,24 @@
 import { api } from "../core/api.js";
+import { createFilterStore } from "../core/filter-store.js";
 import { skeletonShowcaseHtml } from "../core/skeleton.js";
 import { TAB_REVISIT_STALE_MS, ensureFilterPanel, escapeHtml, fadeIn, fadeOut, placeholderHtml } from "../core/utils.js";
 import { VIEW_LOADERS, showSection } from "../core/views.js";
 import { paginationRow } from "../list/list-items.js";
-import { loadSimpleAddedFilter, simpleAddedFilterGroup } from "../showcase/filters.js";
-import { showcaseGroup, showcaseRow } from "../showcase/row.js";
+import { groupByDay } from "../showcase/date-filters.js";
+import {
+  ADDED_OPTIONS,
+  DIGITAL_OPTIONS,
+  SERIES_STATUS_OPTIONS,
+  segmentedGroup,
+  setFilterPanelCount,
+  togglesGroup,
+} from "../showcase/filters.js";
+import { showcaseDayGroup, showcaseGroup, showcaseRow } from "../showcase/row.js";
+
+// Both tabs paginate server-side, so unlike the studio showcase their
+// filters travel to the API as query params and the response comes back
+// already narrowed — filtering a page the server had already cut to size
+// would leave the pagination row counting the unfiltered list.
 
 // "Афиша" (global now-playing/upcoming theatrical) and "Премьеры сериалов"
 // (global series releases) tabs — both are TMDb discovery data with their
@@ -14,57 +28,40 @@ let theatersLoaded = false;
 let theatersLoadedAt = 0;
 let theatersNowPlayingPage = 1;
 let theatersUpcomingPage = 1;
-const THEATERS_FILTER_KEY = "filmroulette_theaters_filter";
-let theatersAddedFilter = loadSimpleAddedFilter(THEATERS_FILTER_KEY);
+const theatersFilters = createFilterStore("filmroulette_theaters_filters", {
+  added: "all",
+  digital: "all",
+  group: "none",
+}, {
+  allowed: {
+    added: ["all", "hide", "only"],
+    digital: ["all", "digital", "cinema"],
+    group: ["none", "day"],
+  },
+});
 
+// Unlike everything else on this panel, the "мировой прокат" flag is a
+// server-side account setting rather than a local preference, so it keeps
+// its own async load/save path and starts as null ("not known yet").
 let theatersHideLocalOnly = null;
 
-function appendGlobalOnlyToggle(panel) {
-  let wrap = panel.querySelector('[data-filter-key="theaters-global-only"]');
-  let btn;
-  if (!wrap) {
-    wrap = document.createElement("div");
-    wrap.className = "showcase-filter-group";
-    wrap.dataset.filterKey = "theaters-global-only";
-    const row = document.createElement("div");
-    row.className = "showcase-filter-options";
-    btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "showcase-filter-btn";
-    btn.textContent = "Только мировой прокат";
-    btn.addEventListener("animationend", (ev) => {
-      if (ev.animationName === "fxTogglePop") btn.classList.remove("fx-toggle-pop");
+async function setHideLocalOnly(next) {
+  theatersHideLocalOnly = next;
+  renderTheatersFilters();
+  try {
+    await api("/api/settings/hide_local_only_afisha", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ value: next }),
     });
-    row.appendChild(btn);
-    wrap.appendChild(row);
-    panel.appendChild(wrap);
-  } else {
-    btn = wrap.querySelector(".showcase-filter-btn");
-  }
-  btn.classList.toggle("active", !!theatersHideLocalOnly);
-  btn.disabled = theatersHideLocalOnly === null;
-  btn.onclick = async () => {
-    const next = !theatersHideLocalOnly;
-    theatersHideLocalOnly = next;
-    btn.classList.remove("fx-toggle-pop");
-    void btn.offsetWidth;
-    btn.classList.add("fx-toggle-pop");
+  } catch (e) {
+    theatersHideLocalOnly = !next;
     renderTheatersFilters();
-    try {
-      await api("/api/settings/hide_local_only_afisha", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ value: next }),
-      });
-    } catch (e) {
-      theatersHideLocalOnly = !next;
-      renderTheatersFilters();
-      return;
-    }
-    theatersNowPlayingPage = 1;
-    theatersUpcomingPage = 1;
-    loadTheaters();
-  };
+    return;
+  }
+  theatersNowPlayingPage = 1;
+  theatersUpcomingPage = 1;
+  loadTheaters();
 }
 
 async function ensureTheatersSettingsLoaded() {
@@ -80,15 +77,63 @@ async function ensureTheatersSettingsLoaded() {
 
 function renderTheatersFilters() {
   const panel = ensureFilterPanel("theaters-filters", "theaters-section", "theaters-container");
-  simpleAddedFilterGroup(panel, THEATERS_FILTER_KEY, theatersAddedFilter, (value) => {
-    theatersAddedFilter = value;
+
+  const reload = () => {
     theatersNowPlayingPage = 1;
     theatersUpcomingPage = 1;
     renderTheatersFilters();
     loadTheaters();
-  });
-  appendGlobalOnlyToggle(panel);
+  };
+  const setAndReload = (key) => (value) => {
+    theatersFilters.set(key, value);
+    reload();
+  };
+
+  segmentedGroup(panel, "theaters-added", "Показывать", ADDED_OPTIONS,
+    theatersFilters.get("added"), setAndReload("added"));
+  segmentedGroup(panel, "theaters-digital", "Доступность", DIGITAL_OPTIONS,
+    theatersFilters.get("digital"), setAndReload("digital"));
+  togglesGroup(panel, "theaters-extras", "Дополнительно", [
+    {
+      key: "group-day",
+      label: "По дням",
+      active: theatersFilters.get("group") === "day",
+      // Grouping changes the order the server sorts in (see
+      // theatersQuery), so it refetches from page 1 like any other
+      // filter rather than just re-rendering what's on screen.
+      onToggle: (next) => {
+        theatersFilters.set("group", next ? "day" : "none");
+        reload();
+      },
+    },
+    {
+      key: "global-only",
+      label: "Только мировой прокат",
+      active: !!theatersHideLocalOnly,
+      disabled: theatersHideLocalOnly === null,
+      onToggle: setHideLocalOnly,
+    },
+  ]);
+  setFilterPanelCount(panel, theatersFilters.activeCount() + (theatersHideLocalOnly ? 1 : 0));
   if (theatersHideLocalOnly === null) ensureTheatersSettingsLoaded();
+}
+
+function theatersQuery() {
+  return [
+    `now_playing_page=${theatersNowPlayingPage}`,
+    `upcoming_page=${theatersUpcomingPage}`,
+    `added=${theatersFilters.get("added")}`,
+    `hide_local_only=${theatersHideLocalOnly ? 1 : 0}`,
+    `digital=${theatersFilters.get("digital")}`,
+    `order=${theatersFilters.get("group") === "day" ? "date" : "default"}`,
+  ].join("&");
+}
+
+function theatersColumnGroup(title, items, addMode, skipScope, onSkipSettled) {
+  if (theatersFilters.get("group") === "day") {
+    return showcaseDayGroup(title, groupByDay(items), "movies", false, addMode, skipScope, onSkipSettled);
+  }
+  return showcaseGroup(title, items, "movies", false, addMode, skipScope, onSkipSettled);
 }
 
 // `fromNav` is only true when showSection() calls this on a plain tab
@@ -112,7 +157,7 @@ export async function loadTheaters(trigger, fromNav) {
       <div class="theaters-col theaters-col-upcoming">${skeletonShowcaseHtml()}</div>`;
   }
 
-  const dataPromise = api(`/api/theaters?now_playing_page=${theatersNowPlayingPage}&upcoming_page=${theatersUpcomingPage}&added=${theatersAddedFilter}&hide_local_only=${theatersHideLocalOnly ? 1 : 0}`);
+  const dataPromise = api(`/api/theaters?${theatersQuery()}`);
 
   const singleColumnGuess = (trigger === "now" || trigger === "upcoming")
     && container.querySelector(".theaters-col-now") && container.querySelector(".theaters-col-upcoming");
@@ -126,9 +171,10 @@ export async function loadTheaters(trigger, fromNav) {
     if (!data.now_playing.length && !data.upcoming.length
         && data.now_playing_total_pages <= 1 && data.upcoming_total_pages <= 1) {
       if (singleColumnGuess) await fadeOut(container);
+      const filtered = theatersFilters.activeCount() > 0;
       container.innerHTML = placeholderHtml(
-        theatersAddedFilter === "all" ? "Пока нет данных о прокате — загляни попозже" : "Ничего не подходит под выбранный фильтр",
-        theatersAddedFilter === "all" ? "🎬" : "🔍"
+        filtered ? "Ничего не подходит под выбранные фильтры" : "Пока нет данных о прокате — загляни попозже",
+        filtered ? "🔍" : "🎬"
       );
       fadeIn(container);
       return;
@@ -150,8 +196,8 @@ export async function loadTheaters(trigger, fromNav) {
     if (!singleColumn || trigger === "now") {
       if (singleColumn) await fadeOut(colNow);
       colNow.innerHTML = "";
-      colNow.appendChild(showcaseGroup(
-        "🎬 Сейчас в прокате / вышло", data.now_playing, "movies", false, "now-playing",
+      colNow.appendChild(theatersColumnGroup(
+        "🎬 Сейчас в прокате / вышло", data.now_playing, "now-playing",
         "theaters_now_playing", () => loadTheaters("now"),
       ));
       if (data.now_playing_total_pages > 1) {
@@ -166,8 +212,8 @@ export async function loadTheaters(trigger, fromNav) {
     if (!singleColumn || trigger === "upcoming") {
       if (singleColumn) await fadeOut(colUpcoming);
       colUpcoming.innerHTML = "";
-      colUpcoming.appendChild(showcaseGroup(
-        "⏳ Скоро в кино", data.upcoming, "movies", false, "upcoming",
+      colUpcoming.appendChild(theatersColumnGroup(
+        "⏳ Скоро в кино", data.upcoming, "upcoming",
         "theaters_upcoming", () => loadTheaters("upcoming"),
       ));
       if (data.upcoming_total_pages > 1) {
@@ -188,17 +234,53 @@ export async function loadTheaters(trigger, fromNav) {
 let seriesReleasesLoaded = false;
 let seriesReleasesLoadedAt = 0;
 let seriesReleasesPage = 1;
-const SERIES_RELEASES_FILTER_KEY = "filmroulette_series_releases_filter";
-let seriesReleasesAddedFilter = loadSimpleAddedFilter(SERIES_RELEASES_FILTER_KEY);
+const seriesReleasesFilters = createFilterStore("filmroulette_series_releases_filters", {
+  added: "all",
+  status: "all",
+  group: "none",
+}, {
+  allowed: {
+    added: ["all", "hide", "only"],
+    status: ["all", "new_series", "new_season", "airing"],
+    group: ["none", "day"],
+  },
+});
 
 function renderSeriesReleasesFilters() {
   const panel = ensureFilterPanel("series-releases-filters", "series-releases-section", "series-releases-container");
-  simpleAddedFilterGroup(panel, SERIES_RELEASES_FILTER_KEY, seriesReleasesAddedFilter, (value) => {
-    seriesReleasesAddedFilter = value;
+  const reload = () => {
     seriesReleasesPage = 1;
     renderSeriesReleasesFilters();
     loadSeriesReleases();
-  });
+  };
+  const setAndReload = (key) => (value) => {
+    seriesReleasesFilters.set(key, value);
+    reload();
+  };
+
+  segmentedGroup(panel, "series-added", "Показывать", ADDED_OPTIONS,
+    seriesReleasesFilters.get("added"), setAndReload("added"));
+  segmentedGroup(panel, "series-status", "Что именно", SERIES_STATUS_OPTIONS,
+    seriesReleasesFilters.get("status"), setAndReload("status"));
+  togglesGroup(panel, "series-extras", "Дополнительно", [{
+    key: "group-day",
+    label: "По дням",
+    active: seriesReleasesFilters.get("group") === "day",
+    onToggle: (next) => {
+      seriesReleasesFilters.set("group", next ? "day" : "none");
+      reload();
+    },
+  }]);
+  setFilterPanelCount(panel, seriesReleasesFilters.activeCount());
+}
+
+function seriesReleasesQuery() {
+  return [
+    `page=${seriesReleasesPage}`,
+    `added=${seriesReleasesFilters.get("added")}`,
+    `status=${seriesReleasesFilters.get("status")}`,
+    `order=${seriesReleasesFilters.get("group") === "day" ? "date" : "default"}`,
+  ].join("&");
 }
 
 export async function loadSeriesReleases(fromNav) {
@@ -215,7 +297,7 @@ export async function loadSeriesReleases(fromNav) {
     container.innerHTML = skeletonShowcaseHtml();
   }
 
-  const dataPromise = api(`/api/series-releases?page=${seriesReleasesPage}&added=${seriesReleasesAddedFilter}`);
+  const dataPromise = api(`/api/series-releases?${seriesReleasesQuery()}`);
   const fadeOutPromise = isFreshView ? Promise.resolve() : fadeOut(container);
 
   try {
@@ -226,18 +308,23 @@ export async function loadSeriesReleases(fromNav) {
     const releases = data.releases || [];
 
     if (!releases.length && data.total_pages <= 1) {
+      const filtered = seriesReleasesFilters.activeCount() > 0;
       container.innerHTML = placeholderHtml(
-        seriesReleasesAddedFilter === "all" ? "Пока нет анонсированных премьер с рейтингом 7+ — загляни попозже" : "Ничего не подходит под выбранный фильтр",
-        seriesReleasesAddedFilter === "all" ? "📺" : "🔍"
+        filtered
+          ? "Ничего не подходит под выбранные фильтры"
+          : "Пока нет анонсированных премьер с рейтингом 7+ — загляни попозже",
+        filtered ? "🔍" : "📺"
       );
       fadeIn(container);
       return;
     }
 
-    container.appendChild(showcaseGroup(
-      "📺 Премьеры и новые сезоны", releases, "series", false, null,
-      "series_releases", loadSeriesReleases,
-    ));
+    const seriesTitle = "📺 Премьеры и новые сезоны";
+    container.appendChild(seriesReleasesFilters.get("group") === "day"
+      ? showcaseDayGroup(seriesTitle, groupByDay(releases), "series", false, null,
+        "series_releases", loadSeriesReleases)
+      : showcaseGroup(seriesTitle, releases, "series", false, null,
+        "series_releases", loadSeriesReleases));
 
     if (data.total_pages > 1) {
       container.appendChild(paginationRow(data.page, data.total_pages, (p) => {

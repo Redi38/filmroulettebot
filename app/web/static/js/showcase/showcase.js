@@ -4,12 +4,35 @@ import { skeletonShowcaseHtml } from "../core/skeleton.js";
 import { uiState } from "../core/state.js";
 import { TAB_REVISIT_STALE_MS, escapeHtml, fadeIn, fadeOut, placeholderHtml, showToast } from "../core/utils.js";
 import { VIEW_LOADERS, showSection } from "../core/views.js";
-import { showcaseAddedMatches, showcaseFilterGroup, showcaseTypeMatches } from "./filters.js";
-import { showcaseGroup } from "./row.js";
+import { createFilterStore } from "../core/filter-store.js";
+import { groupByDay } from "./date-filters.js";
+import {
+  ADDED_OPTIONS,
+  TYPE_OPTIONS,
+  segmentedGroup,
+  setFilterPanelCount,
+  togglesGroup,
+} from "./filters.js";
+import { showcaseDayGroup, showcaseGroup } from "./row.js";
 
 // Studio showcase (Marvel/DC catalog browsing) and the user's own
 // tracked-series list. Filter helpers live in filters.js, and
 // row/group rendering (shared with theaters.js) lives in row.js.
+
+// One store for the whole studio showcase (both Marvel and DC share it —
+// the filters are about what you want to watch, not which studio tab
+// you're on, so carrying them across the two is the expected behaviour).
+const showcaseFilters = createFilterStore("filmroulette_showcase_filters", {
+  type: "all",
+  added: "all",
+  group: "none",
+}, {
+  allowed: {
+    type: ["all", "movie", "series"],
+    added: ["all", "hide", "only"],
+    group: ["none", "day"],
+  },
+});
 
 let currentShowcaseStudio = null;
 let lastShowcaseData = null;
@@ -63,14 +86,43 @@ export async function loadShowcase(fromNav) {
   }
 }
 
+// The studio catalog arrives whole (no pagination), so every filter here
+// runs in the browser — unlike the theaters/series tabs, which have to
+// filter server-side or their page counter would describe the wrong list.
+function typeMatches(item) {
+  const type = showcaseFilters.get("type");
+  if (type === "movie") return !item.is_series;
+  if (type === "series") return !!item.is_series;
+  return true;
+}
+
+function addedMatches(item) {
+  const added = showcaseFilters.get("added");
+  if (added === "hide") return !item.in_list;
+  if (added === "only") return !!item.in_list;
+  return true;
+}
+
+function commonMatches(item) {
+  return typeMatches(item) && addedMatches(item);
+}
+
+function appendGroup(container, title, items, isNewSeasons) {
+  if (showcaseFilters.get("group") === "day") {
+    container.appendChild(showcaseDayGroup(title, groupByDay(items), uiState.currentCat, isNewSeasons));
+    return;
+  }
+  container.appendChild(showcaseGroup(title, items, uiState.currentCat, isNewSeasons));
+}
+
 export async function renderShowcaseContent(alreadyFadedOut) {
   const container = document.getElementById("showcase-container");
   const data = lastShowcaseData;
   if (!data) return;
 
-  const upcoming = data.upcoming.filter(m => showcaseTypeMatches(m) && showcaseAddedMatches(m));
-  const released = data.released.filter(m => showcaseTypeMatches(m) && showcaseAddedMatches(m));
-  const newSeasons = (data.new_seasons || []).filter(m => showcaseTypeMatches(m) && showcaseAddedMatches(m));
+  const upcoming = data.upcoming.filter(commonMatches);
+  const released = data.released.filter(commonMatches);
+  const newSeasons = (data.new_seasons || []).filter(commonMatches);
 
   // A filter-change call (see filters.js) has to fade the container itself,
   // since nothing else is in flight to run the fade alongside — only skip
@@ -90,10 +142,10 @@ export async function renderShowcaseContent(alreadyFadedOut) {
   }
 
   if (newSeasons.length) {
-    container.appendChild(showcaseGroup("🔔 Новые сезоны", newSeasons, uiState.currentCat, true));
+    appendGroup(container, "🔔 Новые сезоны", newSeasons, true);
   }
-  container.appendChild(showcaseGroup("⏳ Скоро выйдет", upcoming, uiState.currentCat));
-  container.appendChild(showcaseGroup("✅ Уже вышло", released, uiState.currentCat));
+  appendGroup(container, "⏳ Скоро выйдет", upcoming);
+  appendGroup(container, "✅ Уже вышло", released);
   fadeIn(container);
 }
 
@@ -103,6 +155,7 @@ export function renderShowcaseFilters() {
   if (!panel) {
     panel = document.createElement("div");
     panel.id = "showcase-filters";
+    panel.className = "filter-panel";
     const section = document.getElementById("showcase-section");
     section.insertBefore(panel, document.getElementById("showcase-container"));
   }
@@ -113,12 +166,28 @@ export function renderShowcaseFilters() {
     panel.classList.add("fade-in");
   }
 
-  showcaseFilterGroup(panel, "Тип", [
-    ["all", "Все"], ["movie", "Фильмы"], ["series", "Сериалы"],
-  ], "type");
-  showcaseFilterGroup(panel, "Показывать", [
-    ["all", "Все"], ["hide", "Не добавленные"], ["only", "Уже добавленные"],
-  ], "added");
+  const rerender = () => {
+    renderShowcaseFilters();
+    renderShowcaseContent();
+  };
+  const setAndRerender = (key) => (value) => {
+    showcaseFilters.set(key, value);
+    rerender();
+  };
+
+  segmentedGroup(panel, "showcase-type", "Тип", TYPE_OPTIONS, showcaseFilters.get("type"), setAndRerender("type"));
+  segmentedGroup(panel, "showcase-added", "Показывать", ADDED_OPTIONS,
+    showcaseFilters.get("added"), setAndRerender("added"));
+  togglesGroup(panel, "showcase-extras", "Дополнительно", [{
+    key: "group-day",
+    label: "По дням",
+    active: showcaseFilters.get("group") === "day",
+    onToggle: (next) => {
+      showcaseFilters.set("group", next ? "day" : "none");
+      rerender();
+    },
+  }]);
+  setFilterPanelCount(panel, showcaseFilters.activeCount());
 }
 
 let trackedSeriesLoaded = false;

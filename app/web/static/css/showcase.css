@@ -35,8 +35,6 @@
   width: 46px; height: 68px; border-radius: 8px; object-fit: cover; flex-shrink: 0;
   background: var(--card);
 }
-/* Posters arrive from TMDB after the row is already on screen; fade them in
-   instead of letting them pop. The placeholder background stays underneath. */
 img.showcase-poster { transition: opacity var(--dur-base) ease, width 0.3s ease, height 0.3s ease, border-radius 0.3s ease; }
 img.showcase-poster.img-pending { opacity: 0; }
 .showcase-poster-placeholder {
@@ -85,11 +83,38 @@ img.showcase-poster.img-pending { opacity: 0; }
 .btn-ghost.confirming { border-color: var(--danger); color: var(--danger); background: rgba(242, 89, 107, 0.12); }
 
 #showcase-filters, .filter-panel {
-  display: flex; flex-wrap: wrap; gap: 10px 18px;
   margin-bottom: 16px; padding: 12px 14px;
   background: var(--card); border: 1px solid var(--border); border-radius: 14px;
 }
 #showcase-filters.fade-in { animation: fadeIn 0.3s ease; animation-fill-mode: backwards; }
+.filter-panel-inner { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px 18px; }
+
+.filter-panel-toggle {
+  display: none; width: 100%; align-items: center; gap: 8px;
+  background: none; border: none; padding: 0; cursor: pointer;
+  font-family: inherit; font-size: 0.85rem; font-weight: 700; color: var(--text);
+}
+.filter-panel-count {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px;
+  background: linear-gradient(90deg, var(--primary), var(--primary-2));
+  color: white; font-size: 0.72rem; font-weight: 800;
+}
+.filter-panel-chevron { margin-left: auto; transition: transform 0.25s var(--ease-standard); color: var(--muted); }
+.filter-panel.open > .filter-panel-chevron, .filter-panel.open .filter-panel-chevron { transform: rotate(180deg); }
+
+.showcase-day-heading {
+  display: flex; align-items: center; gap: 8px;
+  margin: 14px 0 6px; padding-bottom: 5px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.78rem; font-weight: 800; letter-spacing: 0.03em;
+  text-transform: uppercase; color: var(--muted);
+}
+.showcase-day-heading:first-of-type { margin-top: 4px; }
+.showcase-day-count {
+  margin-left: auto; text-transform: none; letter-spacing: 0;
+  font-weight: 700; color: var(--muted); opacity: 0.7;
+}
 .showcase-filter-group { display: flex; flex-direction: column; gap: 6px; justify-content: flex-end; }
 .showcase-filter-group h4 {
   margin: 0; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.03em;
@@ -123,3 +148,20 @@ img.showcase-poster.img-pending { opacity: 0; }
   animation: spinnerPulse 1.3s ease-in-out infinite;
 }
 @keyframes spinnerPulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+
+@media (max-width: 899px) {
+  .filter-panel-collapsible > .filter-panel-toggle { display: flex; }
+  .filter-panel-collapsible > .filter-panel-body {
+    overflow: hidden; height: 0;
+    transition: height 0.28s var(--ease-standard);
+  }
+  .filter-panel-collapsible.open > .filter-panel-body { height: auto; }
+  .filter-panel-collapsible > .filter-panel-body > .filter-panel-inner { padding-top: 12px; }
+  .filter-panel-collapsible.has-active-filters { border-color: var(--primary); }
+  .showcase-filter-group { flex: 1 1 100%; }
+}
+
+@media (max-width: 899px) and (prefers-reduced-motion: reduce) {
+  .filter-panel-collapsible > .filter-panel-body,
+  .filter-panel-chevron { transition: none; }
+}

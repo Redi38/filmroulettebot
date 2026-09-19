@@ -41,13 +41,21 @@ document.addEventListener("keydown", (e) => {
 export function renderSoundThemeToggle(containerId) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  el.innerHTML = "";
   el.className = "sound-theme-wrap" + (spinMode === "wheel" && !wheelMuted ? " visible" : "");
 
-  const current =
-    WHEEL_SOUND_THEME_OPTIONS.find(([val]) => val === wheelSoundTheme) ||
-    WHEEL_SOUND_THEME_OPTIONS[0];
+  // Built once and then only updated: picking a theme re-renders this control,
+  // and rebuilding it would cut the menu's close animation short (see
+  // renderCatSelect for the same reasoning).
+  let wrap = el.querySelector(":scope > .sound-theme-dropdown");
+  if (!wrap) {
+    wrap = buildSoundThemeDropdown();
+    el.innerHTML = "";
+    el.appendChild(wrap);
+  }
+  syncSoundThemeDropdown(wrap);
+}
 
+function buildSoundThemeDropdown() {
   const wrap = document.createElement("div");
   wrap.className = "sound-theme-dropdown";
 
@@ -58,7 +66,7 @@ export function renderSoundThemeToggle(containerId) {
   btn.setAttribute("aria-expanded", "false");
   btn.title = "Тема звука колеса";
   btn.innerHTML =
-    `<span class="sound-theme-btn-label">${current[1]}</span>` +
+    `<span class="sound-theme-btn-label"></span>` +
     `<span class="sound-theme-chevron">${SOUND_THEME_CHEVRON_SVG}</span>`;
   btn.onclick = (e) => {
     e.stopPropagation();
@@ -78,10 +86,10 @@ export function renderSoundThemeToggle(containerId) {
   for (const [val, label] of WHEEL_SOUND_THEME_OPTIONS) {
     const item = document.createElement("button");
     item.type = "button";
-    item.className = "sound-theme-item" + (val === wheelSoundTheme ? " active" : "");
+    item.className = "sound-theme-item";
+    item.dataset.value = val;
     item.textContent = label;
     item.setAttribute("role", "option");
-    item.setAttribute("aria-selected", val === wheelSoundTheme ? "true" : "false");
     item.onclick = () => {
       closeSoundThemeMenus();
       if (wheelSoundTheme !== val) {
@@ -95,5 +103,17 @@ export function renderSoundThemeToggle(containerId) {
 
   wrap.appendChild(btn);
   wrap.appendChild(menu);
-  el.appendChild(wrap);
+  return wrap;
+}
+
+function syncSoundThemeDropdown(wrap) {
+  const current =
+    WHEEL_SOUND_THEME_OPTIONS.find(([val]) => val === wheelSoundTheme) ||
+    WHEEL_SOUND_THEME_OPTIONS[0];
+  wrap.querySelector(".sound-theme-btn-label").textContent = current[1];
+  for (const item of wrap.querySelectorAll(".sound-theme-item")) {
+    const isActive = item.dataset.value === wheelSoundTheme;
+    item.classList.toggle("active", isActive);
+    item.setAttribute("aria-selected", isActive ? "true" : "false");
+  }
 }

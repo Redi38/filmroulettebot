@@ -305,18 +305,27 @@ body.dock-ready .wheel-audio-controls { opacity: 1; pointer-events: auto; }
 }
 .sound-theme-btn-label { display: none; }
 .sound-theme-btn:hover { border-color: var(--primary); }
-.sound-theme-chevron { display: flex; align-items: center; transition: transform 0.15s ease; }
+.sound-theme-chevron { display: flex; align-items: center; transition: transform 0.18s var(--ease-standard); }
 .sound-theme-chevron svg { width: 14px; height: 14px; display: block; }
 .sound-theme-dropdown.open .sound-theme-chevron { transform: rotate(180deg); }
 .sound-theme-dropdown.open .sound-theme-btn { border-color: var(--primary); }
 .sound-theme-menu {
-  display: none; flex-direction: column;
+  display: flex; flex-direction: column;
   position: absolute; top: calc(100% + 6px); left: 0; z-index: 10;
   min-width: 140px; padding: 6px;
   background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm);
   box-shadow: var(--shadow-1);
+  /* Closed = invisible rather than display:none, so it can fade and slide
+     both ways. `visibility` flips after the fade on close (the 0.16s delay)
+     and at once on open, and keeps the hidden menu out of tab order. */
+  visibility: hidden; opacity: 0; pointer-events: none;
+  transform: translateY(-6px) scale(0.97); transform-origin: top left;
+  transition: opacity 0.16s var(--ease-standard), transform 0.16s var(--ease-standard), visibility 0s linear 0.16s;
 }
-.sound-theme-dropdown.open .sound-theme-menu { display: flex; }
+.sound-theme-dropdown.open .sound-theme-menu {
+  visibility: visible; opacity: 1; pointer-events: auto; transform: none;
+  transition: opacity 0.18s var(--ease-standard), transform 0.18s var(--ease-standard), visibility 0s;
+}
 .sound-theme-item {
   display: block; width: 100%; text-align: left;
   padding: 8px 10px; border-radius: 8px; border: none;
@@ -609,18 +618,25 @@ body.dock-ready .wheel-audio-controls { opacity: 1; pointer-events: auto; }
 .cat-select-btn-label { overflow: hidden; text-overflow: ellipsis; }
 .cat-select-btn:hover { border-color: var(--primary); }
 .cat-select-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.cat-select-chevron { display: flex; align-items: center; transition: transform 0.15s ease; }
+.cat-select-chevron { display: flex; align-items: center; transition: transform 0.18s var(--ease-standard); }
 .cat-select-chevron svg { width: 14px; height: 14px; display: block; }
 .cat-select-dropdown.open .cat-select-chevron { transform: rotate(180deg); }
 .cat-select-dropdown.open .cat-select-btn { border-color: var(--primary); }
 .cat-select-menu {
-  display: none; flex-direction: column;
+  display: flex; flex-direction: column;
   position: absolute; top: calc(100% + 6px); left: 0; z-index: 10;
   min-width: 100%; padding: 6px;
   background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm);
   box-shadow: var(--shadow-1);
+  /* See .sound-theme-menu: fade + slide in both directions. */
+  visibility: hidden; opacity: 0; pointer-events: none;
+  transform: translateY(-6px) scale(0.97); transform-origin: top center;
+  transition: opacity 0.16s var(--ease-standard), transform 0.16s var(--ease-standard), visibility 0s linear 0.16s;
 }
-.cat-select-dropdown.open .cat-select-menu { display: flex; }
+.cat-select-dropdown.open .cat-select-menu {
+  visibility: visible; opacity: 1; pointer-events: auto; transform: none;
+  transition: opacity 0.18s var(--ease-standard), transform 0.18s var(--ease-standard), visibility 0s;
+}
 .cat-select-item {
   display: block; width: 100%; text-align: left;
   padding: 8px 10px; border-radius: 8px; border: none;
@@ -633,4 +649,10 @@ body.dock-ready .wheel-audio-controls { opacity: 1; pointer-events: auto; }
 @media (min-width: 900px) {
   .cat-select-btn { padding: 11px 18px; font-size: 1.05rem; border-radius: 999px; }
   .cat-select-item { font-size: 1.05rem; padding: 10px 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sound-theme-menu, .cat-select-menu,
+  .sound-theme-dropdown.open .sound-theme-menu, .cat-select-dropdown.open .cat-select-menu,
+  .sound-theme-chevron, .cat-select-chevron { transition: none; transform: none; }
 }

@@ -99,12 +99,27 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeCatSe
 export function renderCatSelect(containerId, { options, value, onChange, label }) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  el.innerHTML = "";
-  el.className = "cat-select-wrap";
 
   const current = options.find(([val]) => String(val) === String(value)) || options[0];
   if (!current) return;
+  el.className = "cat-select-wrap";
 
+  // Rebuild only when the set of options (or a label) changed. Picking an
+  // item re-renders the dock, and tearing the dropdown down at that moment
+  // would cut its close animation short — the menu would vanish with the old
+  // DOM instead of fading out. Same idea as renderCatChips' `sameShape`.
+  const keys = options.map(([val, text]) => `${val}:${text}`).join("|");
+  let dropdown = el.querySelector(":scope > .cat-select-dropdown");
+  if (!dropdown || dropdown.dataset.keys !== keys) {
+    el.innerHTML = "";
+    dropdown = buildCatSelect(options);
+    dropdown.dataset.keys = keys;
+    el.appendChild(dropdown);
+  }
+  syncCatSelect(dropdown, options, current, value, onChange, label);
+}
+
+function buildCatSelect(options) {
   const dropdown = document.createElement("div");
   dropdown.className = "cat-select-dropdown";
 
@@ -113,9 +128,7 @@ export function renderCatSelect(containerId, { options, value, onChange, label }
   btn.className = "cat-select-btn";
   btn.setAttribute("aria-haspopup", "listbox");
   btn.setAttribute("aria-expanded", "false");
-  if (label) btn.title = label;
   btn.innerHTML = `<span class="cat-select-btn-label"></span><span class="cat-select-chevron">${CAT_SELECT_CHEVRON_SVG}</span>`;
-  btn.querySelector(".cat-select-btn-label").textContent = current[1];
   btn.onclick = (ev) => {
     ev.stopPropagation();
     const wasOpen = dropdown.classList.contains("open");
@@ -131,22 +144,36 @@ export function renderCatSelect(containerId, { options, value, onChange, label }
   menu.setAttribute("role", "listbox");
   menu.onclick = (ev) => ev.stopPropagation();
 
-  for (const [val, text] of options) {
-    const isActive = String(val) === String(value);
+  for (const [, text] of options) {
     const item = document.createElement("button");
     item.type = "button";
-    item.className = "cat-select-item" + (isActive ? " active" : "");
+    item.className = "cat-select-item";
     item.textContent = text;
     item.setAttribute("role", "option");
-    item.setAttribute("aria-selected", isActive ? "true" : "false");
-    item.onclick = () => {
-      closeCatSelectMenus();
-      if (!isActive) onChange(String(val));
-    };
     menu.appendChild(item);
   }
 
   dropdown.appendChild(btn);
   dropdown.appendChild(menu);
-  el.appendChild(dropdown);
+  return dropdown;
+}
+
+// Everything that can change without the option set changing: the shown
+// value, which item is active, and the onChange the items call.
+function syncCatSelect(dropdown, options, current, value, onChange, label) {
+  const btn = dropdown.querySelector(".cat-select-btn");
+  if (label) btn.title = label;
+  btn.querySelector(".cat-select-btn-label").textContent = current[1];
+
+  const items = dropdown.querySelectorAll(".cat-select-item");
+  options.forEach(([val], i) => {
+    const item = items[i];
+    const isActive = String(val) === String(value);
+    item.classList.toggle("active", isActive);
+    item.setAttribute("aria-selected", isActive ? "true" : "false");
+    item.onclick = () => {
+      closeCatSelectMenus();
+      if (!isActive) onChange(String(val));
+    };
+  });
 }

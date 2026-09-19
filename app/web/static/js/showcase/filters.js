@@ -10,18 +10,22 @@ function matches(query) {
 function setPanelOpen(panel, head, open) {
   const body = panel.querySelector(":scope > .filter-panel-body");
   const inner = body && body.querySelector(":scope > .filter-panel-inner");
-  panel.classList.toggle("open", open);
   head.setAttribute("aria-expanded", open ? "true" : "false");
-  if (!body || !inner) return;
 
-  if (!matches(COLLAPSE_MQ) || matches("(prefers-reduced-motion: reduce)")) {
-    body.style.height = "";
+  if (!body || !inner || !matches(COLLAPSE_MQ) || matches("(prefers-reduced-motion: reduce)")) {
+    clearTimeout(body && body._collapseTimer);
+    if (body) body.style.height = "";
+    panel.classList.toggle("open", open);
     return;
   }
 
+  // The starting height has to be read, and pinned inline, *before* the class
+  // flips: `.open` alone snaps the body to `auto` (or back to 0), so measuring
+  // afterwards gave from === to and the panel jumped instead of sliding.
   const from = body.getBoundingClientRect().height;
-  const to = open ? inner.getBoundingClientRect().height : 0;
   body.style.height = `${from}px`;
+  panel.classList.toggle("open", open);
+  const to = open ? inner.getBoundingClientRect().height : 0;
   void body.offsetHeight;
   body.style.height = `${to}px`;
 

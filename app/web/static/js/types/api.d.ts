@@ -524,6 +524,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/random/wheel-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Api Random Wheel Preview
+         * @description Idle pool of the random wheel: every title from every roulette list.
+         *     Like the per-category preview, no winner is picked and nothing is saved.
+         */
+        get: operations["api_random_wheel_preview_api_random_wheel_preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/random/wheel-weights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Api Random Wheel Weights
+         * @description Random-wheel counterpart of `/api/{cat}/wheel-weights`: resize the
+         *     segments already on screen when weighted/normal mode is toggled.
+         */
+        post: operations["api_random_wheel_weights_api_random_wheel_weights_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/{cat}/wheel-preview": {
         parameters: {
             query?: never;
@@ -1824,6 +1866,74 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["RenameByIdBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    api_random_wheel_preview_api_random_wheel_preview_get: {
+        parameters: {
+            query?: {
+                weighted?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    api_random_wheel_weights_api_random_wheel_weights_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WheelWeightsBody"];
             };
         };
         responses: {

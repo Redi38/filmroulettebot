@@ -38,6 +38,7 @@ from .constants import (
     FEATURED_CACHE_TTL,
     LIST_PAGE_SIZE,
     NOW_PLAYING_MAX_AGE_DAYS,
+    RANDOM_WHEEL_POOL_SIZE,
     ROULETTE_CATEGORIES,
     SPIN_COOLDOWN,
     STATIC_DIR,
@@ -47,11 +48,15 @@ from .constants import (
 )
 from .posters import FRANCHISE_CATEGORIES
 from .spin_state import _SPIN_STATE_MAX_ENTRIES, _BoundedDict, _last_spin_at, _last_spin_title
+from .spin_state import build_random_wheel_pool as _build_random_wheel_pool
 from .spin_state import build_wheel_pool as _build_wheel_pool
 from .spin_state import check_spin_cooldown as _check_spin_cooldown
 from .spin_state import client_ip as _client_ip
+from .spin_state import pick_random_entry as _pick_random_entry
 from .spin_state import pick_title_for_client as _pick_title
 from .spin_state import pool_weights as _pool_weights
+from .spin_state import random_entries as _random_entries
+from .spin_state import random_pool_weights as _random_pool_weights
 from .validation import add_or_conflict as _add_or_conflict
 from .validation import check_category as _check_category
 from .validation import valid_category
@@ -112,6 +117,7 @@ __all__ = [
     "STATIC_DIR",
     "SPIN_COOLDOWN",
     "WHEEL_POOL_SIZE",
+    "RANDOM_WHEEL_POOL_SIZE",
     "FEATURED_CACHE_TTL",
     "TitleBody",
     "RenameBody",
@@ -137,6 +143,10 @@ __all__ = [
     "_pick_title",
     "_build_wheel_pool",
     "_pool_weights",
+    "_build_random_wheel_pool",
+    "_pick_random_entry",
+    "_random_entries",
+    "_random_pool_weights",
     "_card_data",
     "_BoundedDict",
     "_SPIN_STATE_MAX_ENTRIES",

@@ -1,8 +1,7 @@
 import { renderCard } from "../card/card-render.js";
 import { api } from "../core/api.js";
-import { CATS } from "../core/constants.js";
 import { skeletonCardHtml } from "../core/skeleton.js";
-import { isRandomSpin, spinnableCats, uiState } from "../core/state.js";
+import { isRandomSpin, uiState } from "../core/state.js";
 import { escapeHtml, fadeIn, fadeOut, showToast } from "../core/utils.js";
 import { isAutoWatchEnabled } from "./settings/auto-watch-toggle.js";
 import { isConfettiEnabled } from "./settings/confetti-toggle.js";
@@ -72,31 +71,6 @@ function applySpinButtonLockState() {
   if (btn) btn.disabled = disabled;
 }
 
-// The pre-spin wheel that "Наугад" shows to reveal *which* category it landed
-// on. Built from the categories the picker is currently offering, so a list
-// that has been emptied out (no cartoons left to watch, say) is not shown as a
-// segment the spin could never land on — the server skips empty categories in
-// /api/random-spin for the same reason.
-function randomCategoryOrder(category) {
-  const cats = spinnableCats();
-  if (category && !cats.includes(category)) cats.push(category);
-  return cats.length ? cats : Object.keys(CATS);
-}
-
-async function spinCategoryWheel(wheel, wheelWrapId, category) {
-  const order = randomCategoryOrder(category);
-  const labels = order.map((c) => CATS[c] || c);
-  let winnerIndex = order.indexOf(category);
-  if (winnerIndex === -1) winnerIndex = 0;
-  if (labels.length < 2) return; // nothing to reveal — one category is all there is
-
-  const canvas = wheel.buildWheel(wheelWrapId, labels);
-  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-  const categorySpinMs = Math.max(1200, Math.round(spinSpeedSeconds * 1000 * 0.6));
-  await wheel.spinWheelTo(canvas, labels.length, winnerIndex, categorySpinMs);
-  await new Promise((r) => setTimeout(r, 550));
-}
-
 async function doWheelSpin(cat, isRandom) {
   if (spinCooldown.until > Date.now()) return;
   cancelAutoWatchOpen();
@@ -138,10 +112,6 @@ async function doWheelSpin(cat, isRandom) {
     // buildSettledWheel()/revealSettledWheel() — so the new wheel was
     // rendered invisible and the spin played out on a blank wrap.
     wrap.classList.remove("wheel-wrap--settling");
-
-    if (isRandom) {
-      await spinCategoryWheel(wheel, wheelWrapId, data.category);
-    }
 
     const pool = (data.wheel_pool && data.wheel_pool.length >= 2) ? data.wheel_pool : [data.original_title, data.original_title];
     const weights = (data.wheel_pool && data.wheel_pool.length >= 2) ? data.wheel_weights : undefined;

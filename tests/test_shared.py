@@ -13,11 +13,15 @@ from app.web.server.shared import (
     ROULETTE_CATEGORIES,
     SPIN_COOLDOWN,
     _BoundedDict,
+    _build_random_wheel_pool,
     _build_wheel_pool,
     _check_category,
     _check_spin_cooldown,
     _last_spin_at,
+    _pick_random_entry,
     _pick_title,
+    _random_entries,
+    _random_pool_weights,
 )
 
 # --- _BoundedDict ------------------------------------------------------
@@ -159,6 +163,89 @@ def test_build_wheel_pool_weighted_gives_earlier_items_more_weight():
     assert weight_by_title["A"] == 3
     assert weight_by_title["B"] == 2
     assert weight_by_title["C"] == 1
+
+
+# --- random wheel (all roulette lists on one wheel) -------------------------
+
+def test_random_entries_flatten_every_list_with_flat_weights():
+    entries, weights = _random_entries({"movies": ["A", "B"], "series": ["C"]})
+    assert entries == [("movies", "A"), ("movies", "B"), ("series", "C")]
+    assert weights == [1, 1, 1]
+
+
+def test_random_entries_weighted_gives_the_same_position_the_same_weight_in_every_list():
+    entries, weights = _random_entries(
+        {"movies": ["A", "B", "C", "D"], "cartoons": ["E", "F"], "series": ["G", "H", "I"]}, weighted=True,
+    )
+    by_entry = dict(zip(entries, weights))
+    # Counted from the longest list (4), so position 0 is 4 everywhere, 1 is 3, ...
+    assert [by_entry[("movies", t)] for t in "ABCD"] == [4, 3, 2, 1]
+    assert [by_entry[("series", t)] for t in "GHI"] == [4, 3, 2]
+    assert [by_entry[("cartoons", t)] for t in "EF"] == [4, 3]
+
+
+def test_build_random_wheel_pool_holds_every_title_from_every_list():
+    entries, weights = _random_entries({"movies": ["A", "B"], "cartoons": ["C"], "series": ["D"]})
+    pool, pool_weights = _build_random_wheel_pool(entries, weights, ("series", "D"))
+    assert sorted(pool) == ["A", "B", "C", "D"]
+    assert len(pool_weights) == len(pool)
+
+
+def test_build_random_wheel_pool_keeps_weights_aligned_with_titles():
+    entries, weights = _random_entries({"movies": ["A", "B", "C"]}, weighted=True)
+    pool, pool_weights = _build_random_wheel_pool(entries, weights)
+    assert dict(zip(pool, pool_weights)) == {"A": 3, "B": 2, "C": 1}
+
+
+def test_build_random_wheel_pool_caps_size_and_keeps_the_winner():
+    titles = [f"t{i}" for i in range(50)]
+    entries, weights = _random_entries({"movies": titles})
+    pool, pool_weights = _build_random_wheel_pool(entries, weights, ("movies", "t0"), size=10)
+    assert len(pool) == len(pool_weights) == 10
+    assert "t0" in pool
+
+
+def test_build_random_wheel_pool_without_winner_still_caps_size():
+    entries, weights = _random_entries({"movies": [f"t{i}" for i in range(50)]})
+    pool, _ = _build_random_wheel_pool(entries, weights, None, size=10)
+    assert len(pool) == 10
+
+
+def test_pick_random_entry_returns_an_entry_from_any_list():
+    entries, weights = _random_entries({"movies": ["A"], "series": ["B"]})
+    for client in ("c1", "c2", "c3"):
+        assert _pick_random_entry(client, entries, weights) in entries
+
+
+def test_pick_random_entry_does_not_repeat_the_previous_title():
+    entries, weights = _random_entries({"movies": ["A", "B"]})
+    first = _pick_random_entry("repeat-client", entries, weights)
+    for _ in range(20):
+        nxt = _pick_random_entry("repeat-client", entries, weights)
+        assert nxt != first
+        first = nxt
+
+
+def test_pick_random_entry_with_a_single_entry_may_repeat():
+    entries, weights = _random_entries({"movies": ["Only"]})
+    assert _pick_random_entry("solo", entries, weights) == ("movies", "Only")
+    assert _pick_random_entry("solo", entries, weights) == ("movies", "Only")
+
+
+def test_random_pool_weights_normal_mode_is_flat():
+    assert _random_pool_weights({"movies": ["A", "B"]}, ["B", "A"]) == [1, 1]
+
+
+def test_random_pool_weights_weighted_follows_the_pool_order():
+    weights = _random_pool_weights({"movies": ["A", "B", "C"]}, ["C", "A", "B"], weighted=True)
+    assert weights == [1, 3, 2]
+
+
+def test_random_pool_weights_weighted_matches_random_entries_across_lists():
+    lists = {"movies": ["A", "B", "C"], "series": ["D", "E"]}
+    entries, weights = _random_entries(lists, weighted=True)
+    pool = [t for _, t in entries]
+    assert _random_pool_weights(lists, pool, weighted=True) == weights
 
 
 def test_roulette_categories_are_a_subset_of_all_categories():

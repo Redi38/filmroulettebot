@@ -13,7 +13,7 @@ from fastapi import HTTPException, Request
 from app.config import settings
 from app.services.titles import pick_title, pick_title_weighted, title_weights
 
-from .constants import SPIN_COOLDOWN, WHEEL_POOL_SIZE
+from .constants import RANDOM_WHEEL_POOL_SIZE, SPIN_COOLDOWN, WHEEL_POOL_SIZE
 
 _SPIN_STATE_MAX_ENTRIES = 5000
 
@@ -123,3 +123,87 @@ def pool_weights(items: list[str], pool: list[str], weighted: bool = False) -> l
         return [1] * len(pool)
     weight_map = title_weights(items)
     return [weight_map.get(t, 1) for t in pool]
+
+
+# --- "Рандом": one wheel over every roulette list -----------------------------
+#
+# The random roulette used to be two-stage (spin a wheel of categories, then a
+# wheel of that category's titles). It is now a single wheel holding the titles
+# of all roulette lists, so a pick is made across the combined list instead of
+# category-first. An "entry" is a (category, title) pair: the same title can sit
+# in two lists, and the card for the winner has to come from the list it was
+# actually drawn from.
+
+_RANDOM_LAST_KEY = "*random*"
+
+Entry = tuple[str, str]
+
+
+def random_weight(index: int, longest: int) -> int:
+    """Weight of the title at `index` (0-based) in weighted mode. Counted from
+    the longest roulette list, not from the title's own list, so the same
+    position carries the same odds in every list: the first movie, the first
+    series and the first cartoon are equally likely, as are all the seconds,
+    and so on. Always >= 1, since no list is longer than `longest`."""
+    return longest - index
+
+
+def random_entries(items_by_cat: dict[str, list[str]], weighted: bool = False) -> tuple[list[Entry], list[int]]:
+    """Flatten per-category lists into (category, title) entries plus a weight
+    per entry. Weighted mode ranks by position (see random_weight()); normal
+    mode is a flat 1 per entry, so every title on the wheel is equally likely."""
+    longest = max((len(items) for items in items_by_cat.values()), default=0)
+    entries: list[Entry] = []
+    weights: list[int] = []
+    for cat, items in items_by_cat.items():
+        for i, title in enumerate(items):
+            entries.append((cat, title))
+            weights.append(random_weight(i, longest) if weighted else 1)
+    return entries, weights
+
+
+def pick_random_entry(client_key: str, entries: list[Entry], weights: list[int]) -> Entry:
+    """Pick the winner across all lists. Same no-immediate-repeat rule as the
+    per-list pickers, but remembered under one shared per-client key."""
+    last = _last_spin_title.get((client_key, _RANDOM_LAST_KEY))
+    idxs = [i for i, (_, title) in enumerate(entries) if title != last] or list(range(len(entries)))
+    chosen = random.choices(idxs, weights=[weights[i] for i in idxs], k=1)[0]
+    _last_spin_title[(client_key, _RANDOM_LAST_KEY)] = entries[chosen][1]
+    return entries[chosen]
+
+
+def build_random_wheel_pool(
+    entries: list[Entry],
+    weights: list[int],
+    winner: Entry | None = None,
+    size: int = RANDOM_WHEEL_POOL_SIZE,
+) -> tuple[list[str], list[int]]:
+    """Titles (and matching weights) for the combined wheel. Every entry is a
+    segment, winner included, unless the library exceeds `size`, in which case
+    it is sampled down with the winner guaranteed to stay. `winner` is None for
+    the idle preview, where nothing has been picked yet."""
+    idxs = list(range(len(entries)))
+    if len(idxs) > size:
+        win_idx = entries.index(winner) if winner in entries else None
+        others = [i for i in idxs if i != win_idx]
+        random.shuffle(others)
+        idxs = others[: size - (1 if win_idx is not None else 0)]
+        if win_idx is not None:
+            idxs.append(win_idx)
+    random.shuffle(idxs)
+    return [entries[i][1] for i in idxs], [weights[i] for i in idxs]
+
+
+def random_pool_weights(items_by_cat: dict[str, list[str]], pool: list[str], weighted: bool = False) -> list[int]:
+    """Recompute segment weights for an already-shown combined `pool` (see
+    pool_weights() for why the order must not change). A title that exists in
+    more than one list gets its best rank, since the pool alone can't say which
+    list a segment came from."""
+    if not weighted:
+        return [1] * len(pool)
+    longest = max((len(items) for items in items_by_cat.values()), default=0)
+    best: dict[str, int] = {}
+    for items in items_by_cat.values():
+        for i, title in enumerate(items):
+            best[title] = max(best.get(title, 0), random_weight(i, longest))
+    return [best.get(t, 1) for t in pool]

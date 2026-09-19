@@ -1,4 +1,4 @@
-import { isRandomSpin, uiState } from "../../core/state.js";
+import { uiState } from "../../core/state.js";
 import { getLS, setLS } from "../../core/storage.js";
 import { DOCK_PREFIXES, renderAllDockControls, renderChoiceToggle } from "./dock-controls.js";
 import { resetSpinResult } from "./spin-category.js";
@@ -34,7 +34,7 @@ export function renderSpinModeToggle(containerId) {
         if (uiState.currentCardData) return;
 
         if (uiState.currentView !== "spin") return;
-        if (spinMode === "wheel" && !isRandomSpin()) wheel.showIdleWheel(uiState.spinCat);
+        if (spinMode === "wheel") wheel.showIdleWheel(uiState.spinCat);
         else resetSpinResult();
       });
     },

@@ -2,7 +2,7 @@ import { VIEW_TITLES, viewTitleFor } from "./constants.js";
 import { renderMenu } from "./menu.js";
 import { closeModal, closePosterInfoModal, closeRenameModal } from "./modal.js";
 import { VIEWS_WITH_CAT, hashCatFor, pushViewToHistory } from "./router.js";
-import { isRandomSpin, saveState, uiState } from "./state.js";
+import { saveState, uiState } from "./state.js";
 import { TAB_REVISIT_STALE_MS, reducedMotion, runViewTransition } from "./utils.js";
 import { loadHistory } from "../history/shell.js";
 import { homeLoaded, loadHome, pauseHomeMarquee, resumeHomeMarquee, syncMarqueeSize } from "../home/home.js";
@@ -35,7 +35,7 @@ export async function switchSpinCat(code) {
   const wheel = await loadWheel();
   // Same as showSection(): the outgoing wheel stays put until the incoming
   // one is ready, so switching category is a swap rather than a blank gap.
-  if (spinMode === "wheel" && !isRandomSpin()) wheel.showIdleWheel(uiState.spinCat);
+  if (spinMode === "wheel") wheel.showIdleWheel(uiState.spinCat);
   else { wheel.resetWheelWraps(); resetSpinResult(); }
   wheel.syncSpinResultClearance();
 }
@@ -139,7 +139,7 @@ export async function showSection() {
     for (const [view, id] of Object.entries(SECTION_IDS)) {
       document.getElementById(id).classList.toggle("active", uiState.currentView === view);
     }
-    if (wheel && spinMode === "wheel" && !isRandomSpin()) {
+    if (wheel && spinMode === "wheel") {
       wheel.prepIdleWheelSkeleton(uiState.spinCat);
     }
     updateHeaderTitle();
@@ -172,7 +172,7 @@ export async function showSection() {
   if (uiState.currentView === "spin") {
     renderAllDockControls("spin");
     uiState.currentCardData = null;
-    if (spinMode === "wheel" && !isRandomSpin()) wheel.showIdleWheel(uiState.spinCat);
+    if (spinMode === "wheel") wheel.showIdleWheel(uiState.spinCat);
     else { wheel.resetWheelWraps(); resetSpinResult(); }
     wheel.syncSpinResultClearance();
   }

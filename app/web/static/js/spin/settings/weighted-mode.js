@@ -1,5 +1,5 @@
 import { api } from "../../core/api.js";
-import { isRandomSpin, uiState } from "../../core/state.js";
+import { uiState } from "../../core/state.js";
 import { getLS, setLS } from "../../core/storage.js";
 import { renderChoiceToggle, renderControlOnAllDocks } from "./dock-controls.js";
 import { spinMode } from "./spin-mode.js";
@@ -51,7 +51,7 @@ async function resizeIdleWheelForWeightedMode(weighted) {
       wheel.resetWheelWraps();
       wheel.syncSpinResultClearance();
       if (uiState.currentCardData) return;
-      if (spinMode === "wheel" && uiState.currentView === "spin" && !isRandomSpin()) wheel.showIdleWheel(uiState.spinCat);
+      if (spinMode === "wheel" && uiState.currentView === "spin") wheel.showIdleWheel(uiState.spinCat);
     });
     return;
   }
@@ -70,6 +70,6 @@ async function resizeIdleWheelForWeightedMode(weighted) {
     if (token !== weightResizeToken) return;
     wheel.resetWheelWraps();
     wheel.syncSpinResultClearance();
-    if (!uiState.currentCardData && spinMode === "wheel" && uiState.currentView === "spin" && !isRandomSpin()) wheel.showIdleWheel(uiState.spinCat);
+    if (!uiState.currentCardData && spinMode === "wheel" && uiState.currentView === "spin") wheel.showIdleWheel(uiState.spinCat);
   }
 }

@@ -84,6 +84,56 @@ def test_wheel_preview_400_for_non_roulette_category(client):
     assert r.status_code == 400
 
 
+# --- random wheel preview / weights ----------------------------------------
+
+def test_random_wheel_preview_has_titles_from_all_roulette_lists(client):
+    _seed("movies", "M1", "M2")
+    _seed("cartoons", "C1")
+    _seed("series", "S1")
+    r = client.get("/api/random/wheel-preview")
+    assert r.status_code == 200
+    body = r.json()
+    assert sorted(body["wheel_pool"]) == ["C1", "M1", "M2", "S1"]
+    assert len(body["wheel_weights"]) == len(body["wheel_pool"])
+
+
+def test_random_wheel_preview_excludes_marvel_and_dc(client):
+    _seed("movies", "M1")
+    _seed("marvel", "Железный человек")
+    _seed("dc", "Бэтмен")
+    body = client.get("/api/random/wheel-preview").json()
+    assert body["wheel_pool"] == ["M1"]
+
+
+def test_random_wheel_preview_weighted_same_position_same_weight_across_lists(client):
+    _seed("movies", "A", "B", "C")
+    _seed("series", "D", "E")
+    body = client.get("/api/random/wheel-preview?weighted=true").json()
+    assert dict(zip(body["wheel_pool"], body["wheel_weights"])) == {"A": 3, "B": 2, "C": 1, "D": 3, "E": 2}
+
+
+def test_random_wheel_preview_404_when_all_roulettes_are_empty(client):
+    assert client.get("/api/random/wheel-preview").status_code == 404
+
+
+def test_random_wheel_weights_follow_the_pool_order_sent(client):
+    _seed("movies", "A", "B", "C")
+    r = client.post("/api/random/wheel-weights", json={"pool": ["C", "A", "B"], "weighted": True})
+    assert r.status_code == 200
+    assert r.json()["wheel_weights"] == [1, 3, 2]
+
+
+def test_random_wheel_weights_flat_in_normal_mode(client):
+    _seed("movies", "A", "B")
+    r = client.post("/api/random/wheel-weights", json={"pool": ["A", "B"], "weighted": False})
+    assert r.json()["wheel_weights"] == [1, 1]
+
+
+def test_random_wheel_weights_404_when_all_roulettes_are_empty(client):
+    r = client.post("/api/random/wheel-weights", json={"pool": [], "weighted": True})
+    assert r.status_code == 404
+
+
 # --- spin / random-spin --------------------------------------------------
 
 def test_spin_returns_a_card_and_saves_history(client):
@@ -114,6 +164,34 @@ def test_random_spin_picks_from_any_non_empty_roulette_category(client):
     r = client.post("/api/random-spin", json={})
     assert r.status_code == 200
     assert r.json()["category"] == "series"
+
+
+def test_random_spin_returns_the_single_combined_wheel(client):
+    _seed("movies", "M1", "M2")
+    _seed("cartoons", "C1")
+    _seed("series", "S1")
+    _seed("dc", "Бэтмен")
+    body = client.post("/api/random-spin", json={}).json()
+    # One wheel with every roulette title (and no Marvel/DC ones); the winner
+    # is one of its segments and its card comes from the list it was drawn from.
+    assert sorted(body["wheel_pool"]) == ["C1", "M1", "M2", "S1"]
+    assert len(body["wheel_weights"]) == len(body["wheel_pool"])
+    assert body["original_title"] in body["wheel_pool"]
+    assert body["category"] in {"movies", "cartoons", "series"}
+
+
+def test_random_spin_winner_card_matches_the_list_it_came_from(client):
+    _seed("movies", "MovieOnly")
+    _seed("series", "SeriesOnly")
+    body = client.post("/api/random-spin", json={}).json()
+    expected = {"MovieOnly": "movies", "SeriesOnly": "series"}
+    assert body["category"] == expected[body["original_title"]]
+
+
+def test_random_spin_never_picks_from_marvel_or_dc(client):
+    _seed("dc", "Бэтмен")
+    _seed("marvel", "Железный человек")
+    assert client.post("/api/random-spin", json={}).status_code == 404
 
 
 def test_random_spin_404_when_all_roulettes_are_empty(client):

@@ -5,11 +5,11 @@ import { isRandomSpin, spinnableCats, uiState } from "../../core/state.js";
 import { placeholderHtml } from "../../core/utils.js";
 import { showSection, switchSpinCat } from "../../core/views.js";
 
-// ---- roulette category ("Наугад" / Фильмы / Сериалы / …) ------------------
+// ---- roulette category ("Рандом" / Фильмы / Сериалы / …) ------------------
 //
 // Replaces what used to be four separate menu entries and two separate spin
-// screens. "Наугад" keeps the old random-across-categories behaviour
-// (POST /api/random-spin, with the little category pre-spin animation);
+// screens. "Рандом" is one wheel holding the titles of every roulette list
+// (POST /api/random-spin; Marvel/DC are reference-only and not part of it);
 // anything else spins that one list.
 function spinCatOptions() {
   return [
@@ -36,7 +36,7 @@ export function resetSpinResult() {
   if (!el) return;
   el.innerHTML = placeholderHtml(
     isRandomSpin()
-      ? "Нажми «Крутить», и рулетка сама выберет категорию и тайтл 🍿"
+      ? "Нажми «Крутить», и рулетка выберет тайтл из всех списков 🍿"
       : `Нажми «Крутить», чтобы узнать, что посмотреть 🎬`,
   );
 }

@@ -36,8 +36,9 @@ data and the same SQLite database as the bot:
 - 🏠 **Home feed** — a curated poster feed across everything tracked.
 - 🌀 **Spin wheel** — a single animated wheel-of-fortune roulette. The
   category picker on the dock switches between one list (movies /
-  series / cartoons) and "Наугад", which picks the category for you
-  too. Weighted spins and a customizable center-hub image.
+  series / cartoons) and "Рандом" — a single wheel with the titles of
+  all those lists at once (Marvel/DC are not included). Weighted spins
+  and a customizable center-hub image.
 - 🎟 **In theaters** — what's currently playing and what's coming to
   theaters next, paginated.
 - 📺 **Series premieres** — upcoming season/episode premiere dates.

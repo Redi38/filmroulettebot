@@ -19,4 +19,8 @@ STATIC_DIR = Path(__file__).parent.parent.parent / "static"
 
 SPIN_COOLDOWN = 1.5  # seconds
 WHEEL_POOL_SIZE = 120  # safety cap on wheel segments (perf/readability), winner included
+# The "Рандом" wheel shows every title of every roulette list at once, so it
+# needs more headroom than a single list's wheel; still capped so a runaway
+# library can't produce an unrenderable disc.
+RANDOM_WHEEL_POOL_SIZE = 400
 FEATURED_CACHE_TTL = 600  # 10 min

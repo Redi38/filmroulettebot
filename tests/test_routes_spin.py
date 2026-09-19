@@ -97,12 +97,20 @@ def test_random_wheel_preview_has_titles_from_all_roulette_lists(client):
     assert len(body["wheel_weights"]) == len(body["wheel_pool"])
 
 
-def test_random_wheel_preview_excludes_marvel_and_dc(client):
+def test_random_wheel_preview_adds_marvel_and_dc_lots_not_their_titles(client):
     _seed("movies", "M1")
-    _seed("marvel", "Железный человек")
+    _seed("marvel", "Железный человек", "Тор")
     _seed("dc", "Бэтмен")
     body = client.get("/api/random/wheel-preview").json()
-    assert body["wheel_pool"] == ["M1"]
+    # One lot per franchise, labelled with its name; the titles themselves stay off the wheel.
+    assert sorted(body["wheel_pool"]) == ["DC", "M1", "Marvel"]
+
+
+def test_random_wheel_preview_has_no_lot_for_an_empty_franchise_list(client):
+    _seed("movies", "M1", "M2")
+    _seed("dc", "Бэтмен")
+    body = client.get("/api/random/wheel-preview").json()
+    assert sorted(body["wheel_pool"]) == ["DC", "M1", "M2"]
 
 
 def test_random_wheel_preview_weighted_same_position_same_weight_across_lists(client):
@@ -110,6 +118,13 @@ def test_random_wheel_preview_weighted_same_position_same_weight_across_lists(cl
     _seed("series", "D", "E")
     body = client.get("/api/random/wheel-preview?weighted=true").json()
     assert dict(zip(body["wheel_pool"], body["wheel_weights"])) == {"A": 3, "B": 2, "C": 1, "D": 3, "E": 2}
+
+
+def test_random_wheel_preview_weighted_lot_weighs_a_first_position(client):
+    _seed("movies", "A", "B", "C")
+    _seed("marvel", "Железный человек")
+    body = client.get("/api/random/wheel-preview?weighted=true").json()
+    assert dict(zip(body["wheel_pool"], body["wheel_weights"])) == {"A": 3, "B": 2, "C": 1, "Marvel": 3}
 
 
 def test_random_wheel_preview_404_when_all_roulettes_are_empty(client):
@@ -121,6 +136,13 @@ def test_random_wheel_weights_follow_the_pool_order_sent(client):
     r = client.post("/api/random/wheel-weights", json={"pool": ["C", "A", "B"], "weighted": True})
     assert r.status_code == 200
     assert r.json()["wheel_weights"] == [1, 3, 2]
+
+
+def test_random_wheel_weights_include_the_lots(client):
+    _seed("movies", "A", "B")
+    _seed("marvel", "Железный человек")
+    r = client.post("/api/random/wheel-weights", json={"pool": ["Marvel", "B", "A"], "weighted": True})
+    assert r.json()["wheel_weights"] == [2, 1, 2]
 
 
 def test_random_wheel_weights_flat_in_normal_mode(client):
@@ -172,12 +194,14 @@ def test_random_spin_returns_the_single_combined_wheel(client):
     _seed("series", "S1")
     _seed("dc", "Бэтмен")
     body = client.post("/api/random-spin", json={}).json()
-    # One wheel with every roulette title (and no Marvel/DC ones); the winner
-    # is one of its segments and its card comes from the list it was drawn from.
-    assert sorted(body["wheel_pool"]) == ["C1", "M1", "M2", "S1"]
+    # One wheel with every roulette title plus the DC lot (a franchise's own
+    # titles are never drawn); the winner is one of its segments and its card
+    # comes from the list it was drawn from.
+    assert sorted(body["wheel_pool"]) == ["C1", "DC", "M1", "M2", "S1"]
     assert len(body["wheel_weights"]) == len(body["wheel_pool"])
-    assert body["original_title"] in body["wheel_pool"]
-    assert body["category"] in {"movies", "cartoons", "series"}
+    assert body["category"] in {"movies", "cartoons", "series", "dc"}
+    label = "DC" if body["category"] == "dc" else body["original_title"]
+    assert body["wheel_pool"][body["wheel_winner_index"]] == label
 
 
 def test_random_spin_winner_card_matches_the_list_it_came_from(client):
@@ -188,15 +212,97 @@ def test_random_spin_winner_card_matches_the_list_it_came_from(client):
     assert body["category"] == expected[body["original_title"]]
 
 
-def test_random_spin_never_picks_from_marvel_or_dc(client):
-    _seed("dc", "Бэтмен")
+def test_random_spin_can_land_on_a_lot_and_shows_the_first_title_of_that_list(client):
+    from app.web.server.shared import _last_spin_at
+
+    _seed("marvel", "Железный человек", "Тор")
+    seen = set()
+    for _ in range(3):
+        _last_spin_at.clear()  # skip the per-client cooldown between spins
+        body = client.post("/api/random-spin", json={}).json()
+        seen.add((body["category"], body["original_title"]))
+        assert body["wheel_pool"] == ["Marvel"]
+    # Only a Marvel lot exists, so that is what every spin lands on — and it
+    # is always the first title of the list, never the second.
+    assert seen == {("marvel", "Железный человек")}
+
+
+def test_random_spin_lot_pick_is_saved_to_history_under_the_franchise(client):
     _seed("marvel", "Железный человек")
-    assert client.post("/api/random-spin", json={}).status_code == 404
+    body = client.post("/api/random-spin", json={}).json()
+    assert body["history_timestamp"] is not None
+    hist = client.get("/api/history").json()["items"]
+    assert any(h["category"] == "marvel" and h["title"] == "Железный человек" for h in hist)
+
+
+def test_random_spin_lot_pick_can_be_resolved_like_any_other_pick(client):
+    _seed("dc", "Бэтмен")
+    body = client.post("/api/random-spin", json={}).json()
+    r = client.post("/api/history/resolve", json={
+        "category": body["category"], "title": body["original_title"],
+        "timestamp": body["history_timestamp"], "resolved_type": "watched", "new_title": None,
+    })
+    assert r.status_code == 200
 
 
 def test_random_spin_404_when_all_roulettes_are_empty(client):
     r = client.post("/api/random-spin", json={})
     assert r.status_code == 404
+
+
+# --- movies wheel: Marvel/DC lots -------------------------------------------
+
+def test_movies_wheel_preview_adds_marvel_and_dc_lots(client):
+    _seed("movies", "A", "B")
+    _seed("marvel", "Железный человек")
+    _seed("dc", "Бэтмен")
+    body = client.get("/api/movies/wheel-preview").json()
+    assert sorted(body["wheel_pool"]) == ["A", "B", "DC", "Marvel"]
+
+
+def test_cartoons_and_series_wheels_have_no_lots(client):
+    _seed("cartoons", "C")
+    _seed("series", "S")
+    _seed("marvel", "Железный человек")
+    assert client.get("/api/cartoons/wheel-preview").json()["wheel_pool"] == ["C"]
+    assert client.get("/api/series/wheel-preview").json()["wheel_pool"] == ["S"]
+
+
+def test_movies_wheel_weights_include_the_lots(client):
+    _seed("movies", "A", "B", "C")
+    _seed("dc", "Бэтмен")
+    r = client.post("/api/movies/wheel-weights", json={"pool": ["DC", "C", "A", "B"], "weighted": True})
+    assert r.json()["wheel_weights"] == [3, 1, 3, 2]
+
+
+def test_movies_spin_can_land_on_a_lot_and_shows_the_first_title_of_the_list(client):
+    _seed("dc", "Бэтмен", "Супермен")
+    body = client.post("/api/movies/spin", json={}).json()
+    # Movies list is empty, DC has one lot: the spin lands on it and the card is the list's first title.
+    assert body["category"] == "dc"
+    assert body["original_title"] == "Бэтмен"
+    assert body["wheel_pool"] == ["DC"]
+    assert body["wheel_winner_index"] == 0
+
+
+def test_movies_spin_winner_index_points_at_the_landed_segment(client):
+    _seed("movies", "A", "B")
+    _seed("marvel", "Железный человек")
+    body = client.post("/api/movies/spin", json={}).json()
+    label = "Marvel" if body["category"] == "marvel" else body["original_title"]
+    assert body["wheel_pool"][body["wheel_winner_index"]] == label
+
+
+def test_movies_spin_still_404s_when_movies_and_franchise_lists_are_empty(client):
+    assert client.post("/api/movies/spin", json={}).status_code == 404
+
+
+def test_cartoons_spin_has_no_winner_index_and_no_lot(client):
+    _seed("cartoons", "C1", "C2")
+    _seed("marvel", "Железный человек")
+    body = client.post("/api/cartoons/spin", json={}).json()
+    assert body["category"] == "cartoons"
+    assert "wheel_winner_index" not in body
 
 
 # --- featured (the persistent-cache fix) ---------------------------------

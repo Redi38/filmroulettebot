@@ -113,9 +113,15 @@ async function doWheelSpin(cat, isRandom) {
     // rendered invisible and the spin played out on a blank wrap.
     wrap.classList.remove("wheel-wrap--settling");
 
-    const pool = (data.wheel_pool && data.wheel_pool.length >= 2) ? data.wheel_pool : [data.original_title, data.original_title];
-    const weights = (data.wheel_pool && data.wheel_pool.length >= 2) ? data.wheel_weights : undefined;
-    let winnerIndex = pool.indexOf(data.original_title);
+    const hasPool = !!(data.wheel_pool && data.wheel_pool.length >= 2);
+    const pool = hasPool ? data.wheel_pool : [data.original_title, data.original_title];
+    const weights = hasPool ? data.wheel_weights : undefined;
+    // The movies and random wheels send the winner's segment explicitly: a
+    // Marvel/DC lot is drawn as "Marvel"/"DC" while the card is for the first
+    // title of that list, so the card's title can't be looked up on the wheel.
+    let winnerIndex = (hasPool && Number.isInteger(data.wheel_winner_index))
+      ? data.wheel_winner_index
+      : pool.indexOf(data.original_title);
     if (winnerIndex === -1) winnerIndex = 0;
 
     const canvas = wheel.buildWheel(wheelWrapId, pool, weights);

@@ -533,8 +533,9 @@ export interface paths {
         };
         /**
          * Api Random Wheel Preview
-         * @description Idle pool of the random wheel: every title from every roulette list.
-         *     Like the per-category preview, no winner is picked and nothing is saved.
+         * @description Idle pool of the random wheel: every title from every roulette list,
+         *     plus the Marvel/DC lots. Like the per-category preview, no winner is picked
+         *     and nothing is saved.
          */
         get: operations["api_random_wheel_preview_api_random_wheel_preview_get"];
         put?: never;

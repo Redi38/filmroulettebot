@@ -13,6 +13,14 @@ CATEGORIES = CATEGORY_LABELS
 CATEGORY_SHORT = CATEGORY_SHORT_LABELS
 ROULETTE_CATEGORIES = ("movies", "cartoons", "series")
 
+# Marvel/DC have no roulette of their own (reference lists only), but the movies
+# wheel and the combined "Рандом" wheel carry one lot for each of them: landing
+# on a lot shows the first title of that list. Their cards keep the marvel/dc
+# category, which is what lets the confirm/sequel/delete flow act on that list.
+LOT_CATEGORIES = ("marvel", "dc")
+LOT_WHEEL_CATEGORIES = ("movies",)
+RANDOM_WHEEL = "random"  # the combined wheel's stand-in for a category code
+
 WEB_USER_ID = 0
 
 STATIC_DIR = Path(__file__).parent.parent.parent / "static"

@@ -6,14 +6,14 @@ from __future__ import annotations
 import random
 import time
 from collections import OrderedDict
-from typing import Hashable, TypeVar
+from typing import Hashable, NamedTuple, TypeVar
 
 from fastapi import HTTPException, Request
 
 from app.config import settings
 from app.services.titles import pick_title, pick_title_weighted, title_weights
 
-from .constants import RANDOM_WHEEL_POOL_SIZE, SPIN_COOLDOWN, WHEEL_POOL_SIZE
+from .constants import CATEGORY_SHORT, RANDOM_WHEEL_POOL_SIZE, SPIN_COOLDOWN, WHEEL_POOL_SIZE
 
 _SPIN_STATE_MAX_ENTRIES = 5000
 
@@ -125,18 +125,26 @@ def pool_weights(items: list[str], pool: list[str], weighted: bool = False) -> l
     return [weight_map.get(t, 1) for t in pool]
 
 
-# --- "Рандом": one wheel over every roulette list -----------------------------
+# --- wheels with Marvel/DC lots: the combined "Рандом" wheel and the movies wheel --
 #
 # The random roulette used to be two-stage (spin a wheel of categories, then a
 # wheel of that category's titles). It is now a single wheel holding the titles
 # of all roulette lists, so a pick is made across the combined list instead of
-# category-first. An "entry" is a (category, title) pair: the same title can sit
-# in two lists, and the card for the winner has to come from the list it was
-# actually drawn from.
+# category-first. The movies wheel is built the same way, from one list.
+#
+# Both also carry a "lot" for Marvel and for DC: one segment labelled with the
+# franchise, which resolves to the first title of that franchise's list. So a
+# wheel entry is a (category, title, label) triple: category + title say which
+# card the segment stands for, label is the text drawn on the wheel. For a plain
+# title the label is the title itself; for a lot it is "Marvel" / "DC". The same
+# title can also sit in two lists, and the card for the winner has to come from
+# the list it was actually drawn from.
 
-_RANDOM_LAST_KEY = "*random*"
 
-Entry = tuple[str, str]
+class WheelEntry(NamedTuple):
+    cat: str
+    title: str
+    label: str
 
 
 def random_weight(index: int, longest: int) -> int:
@@ -148,62 +156,83 @@ def random_weight(index: int, longest: int) -> int:
     return longest - index
 
 
-def random_entries(items_by_cat: dict[str, list[str]], weighted: bool = False) -> tuple[list[Entry], list[int]]:
-    """Flatten per-category lists into (category, title) entries plus a weight
-    per entry. Weighted mode ranks by position (see random_weight()); normal
-    mode is a flat 1 per entry, so every title on the wheel is equally likely."""
+def random_entries(
+    items_by_cat: dict[str, list[str]],
+    weighted: bool = False,
+    lots: dict[str, str] | None = None,
+) -> tuple[list[WheelEntry], list[int]]:
+    """Flatten per-category lists into wheel entries plus a weight per entry,
+    then append one lot per `lots` item ({franchise category: first title}).
+    Weighted mode ranks by position (see random_weight()); a lot stands for the
+    first title of its list, so it weighs what a first position weighs. Normal
+    mode is a flat 1 per entry, so every segment on the wheel is equally likely."""
     longest = max((len(items) for items in items_by_cat.values()), default=0)
-    entries: list[Entry] = []
+    entries: list[WheelEntry] = []
     weights: list[int] = []
     for cat, items in items_by_cat.items():
         for i, title in enumerate(items):
-            entries.append((cat, title))
+            entries.append(WheelEntry(cat, title, title))
             weights.append(random_weight(i, longest) if weighted else 1)
+    for cat, title in (lots or {}).items():
+        entries.append(WheelEntry(cat, title, CATEGORY_SHORT[cat]))
+        weights.append(random_weight(0, max(longest, 1)) if weighted else 1)
     return entries, weights
 
 
-def pick_random_entry(client_key: str, entries: list[Entry], weights: list[int]) -> Entry:
-    """Pick the winner across all lists. Same no-immediate-repeat rule as the
-    per-list pickers, but remembered under one shared per-client key."""
-    last = _last_spin_title.get((client_key, _RANDOM_LAST_KEY))
-    idxs = [i for i, (_, title) in enumerate(entries) if title != last] or list(range(len(entries)))
+def pick_random_entry(
+    client_key: str, last_key: str, entries: list[WheelEntry], weights: list[int]
+) -> WheelEntry:
+    """Pick the winner across every entry. Same no-immediate-repeat rule as the
+    per-list pickers; `last_key` (the wheel it was picked on) keeps the last
+    title per client per wheel."""
+    last = _last_spin_title.get((client_key, last_key))
+    idxs = [i for i, e in enumerate(entries) if e.title != last] or list(range(len(entries)))
     chosen = random.choices(idxs, weights=[weights[i] for i in idxs], k=1)[0]
-    _last_spin_title[(client_key, _RANDOM_LAST_KEY)] = entries[chosen][1]
+    _last_spin_title[(client_key, last_key)] = entries[chosen].title
     return entries[chosen]
 
 
 def build_random_wheel_pool(
-    entries: list[Entry],
+    entries: list[WheelEntry],
     weights: list[int],
-    winner: Entry | None = None,
+    winner: WheelEntry | None = None,
     size: int = RANDOM_WHEEL_POOL_SIZE,
-) -> tuple[list[str], list[int]]:
-    """Titles (and matching weights) for the combined wheel. Every entry is a
-    segment, winner included, unless the library exceeds `size`, in which case
-    it is sampled down with the winner guaranteed to stay. `winner` is None for
-    the idle preview, where nothing has been picked yet."""
+) -> tuple[list[str], list[int], int | None]:
+    """Segment labels (and matching weights) for the wheel, plus the winner's
+    segment index. Every entry is a segment, winner included, unless the
+    library exceeds `size`, in which case it is sampled down with the winner
+    guaranteed to stay. `winner` is None for the idle preview, where nothing has
+    been picked yet (the index is then None too).
+
+    The index is sent to the client because the winner's card title no longer
+    has to appear on the wheel: a lot is drawn as "Marvel" but shows a film."""
     idxs = list(range(len(entries)))
+    win_idx = entries.index(winner) if winner is not None and winner in entries else None
     if len(idxs) > size:
-        win_idx = entries.index(winner) if winner in entries else None
         others = [i for i in idxs if i != win_idx]
         random.shuffle(others)
         idxs = others[: size - (1 if win_idx is not None else 0)]
         if win_idx is not None:
             idxs.append(win_idx)
     random.shuffle(idxs)
-    return [entries[i][1] for i in idxs], [weights[i] for i in idxs]
+    winner_index = idxs.index(win_idx) if win_idx is not None else None
+    return [entries[i].label for i in idxs], [weights[i] for i in idxs], winner_index
 
 
-def random_pool_weights(items_by_cat: dict[str, list[str]], pool: list[str], weighted: bool = False) -> list[int]:
-    """Recompute segment weights for an already-shown combined `pool` (see
-    pool_weights() for why the order must not change). A title that exists in
-    more than one list gets its best rank, since the pool alone can't say which
-    list a segment came from."""
+def random_pool_weights(
+    items_by_cat: dict[str, list[str]],
+    pool: list[str],
+    weighted: bool = False,
+    lots: dict[str, str] | None = None,
+) -> list[int]:
+    """Recompute segment weights for an already-shown `pool` of labels (see
+    pool_weights() for why the order must not change). A label that exists more
+    than once gets its best weight, since the pool alone can't say which list a
+    segment came from."""
     if not weighted:
         return [1] * len(pool)
-    longest = max((len(items) for items in items_by_cat.values()), default=0)
+    entries, weights = random_entries(items_by_cat, True, lots)
     best: dict[str, int] = {}
-    for items in items_by_cat.values():
-        for i, title in enumerate(items):
-            best[title] = max(best.get(title, 0), random_weight(i, longest))
-    return [best.get(t, 1) for t in pool]
+    for entry, weight in zip(entries, weights):
+        best[entry.label] = max(best.get(entry.label, 0), weight)
+    return [best.get(label, 1) for label in pool]

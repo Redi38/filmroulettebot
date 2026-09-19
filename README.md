@@ -37,7 +37,8 @@ data and the same SQLite database as the bot:
 - 🌀 **Spin wheel** — a single animated wheel-of-fortune roulette. The
   category picker on the dock switches between one list (movies /
   series / cartoons) and "Рандом" — a single wheel with the titles of
-  all those lists at once (Marvel/DC are not included). Weighted spins
+  all those lists at once, plus a "Marvel" and a "DC" lot that open the
+  first title of that list (the movies wheel has them too). Weighted spins
   and a customizable center-hub image.
 - 🎟 **In theaters** — what's currently playing and what's coming to
   theaters next, paginated.

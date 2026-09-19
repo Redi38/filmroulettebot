@@ -9,8 +9,8 @@ import { showSection, switchSpinCat } from "../../core/views.js";
 //
 // Replaces what used to be four separate menu entries and two separate spin
 // screens. "Рандом" is one wheel holding the titles of every roulette list
-// (POST /api/random-spin; Marvel/DC are reference-only and not part of it);
-// anything else spins that one list.
+// plus a Marvel and a DC lot (POST /api/random-spin); anything else spins that
+// one list (the movies wheel carries the same two lots).
 function spinCatOptions() {
   return [
     [RANDOM_CAT, "Рандом"],

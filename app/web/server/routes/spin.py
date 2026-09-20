@@ -94,15 +94,18 @@ def _entry_is_series(entry, lot_is_series: dict[str, bool | None]) -> bool | Non
     return lot_is_series.get(entry.cat) if entry.cat in LOT_CATEGORIES else None
 
 
+async def _pool_posters(pool_entries, lot_is_series: dict[str, bool | None]) -> list[str | None]:
+    """Cache-only poster URL per segment of a lot-carrying wheel, in pool order."""
+    return await _resolve_wheel_posters([(e.cat, e.title, _entry_is_series(e, lot_is_series)) for e in pool_entries])
+
+
 async def _lot_wheel_preview(wheel: str, weighted: bool, empty_msg: str) -> dict:
     items_by_cat, lots, lot_is_series = await _lot_wheel_sources(wheel)
     entries, weights = _random_entries(items_by_cat, weighted, lots)
     if not entries:
         raise HTTPException(404, empty_msg)
     pool, pool_weights, _, pool_entries = _build_random_wheel_pool(entries, weights)
-    posters = await _resolve_wheel_posters(
-        [(e.cat, e.title, _entry_is_series(e, lot_is_series)) for e in pool_entries]
-    )
+    posters = await _pool_posters(pool_entries, lot_is_series)
     return {"wheel_pool": pool, "wheel_weights": pool_weights, "wheel_posters": posters}
 
 
@@ -124,9 +127,7 @@ async def _lot_wheel_spin(request: Request, wheel: str, weighted: bool, empty_ms
     data["wheel_pool"], data["wheel_weights"], data["wheel_winner_index"], pool_entries = _build_random_wheel_pool(
         entries, weights, winner
     )
-    data["wheel_posters"] = await _resolve_wheel_posters(
-        [(e.cat, e.title, _entry_is_series(e, lot_is_series)) for e in pool_entries]
-    )
+    data["wheel_posters"] = await _pool_posters(pool_entries, lot_is_series)
     return data
 
 

@@ -93,23 +93,57 @@ const WHEEL_LABEL_MIN_ARC_PX = 14;
 // rather than noise, so this is a stricter cutoff than WHEEL_LABEL_MIN_ARC_PX.
 const WHEEL_POSTER_MIN_ARC_PX = 26;
 
+// Decoded poster images, shared by every wheel and kept across rebuilds. A
+// per-canvas cache would be thrown away on each buildWheel() (resize, weighted
+// toggle, appearance toggle), so every rebuild flashed flat colours until the
+// posters had been re-decoded. Insertion order doubles as LRU order.
+const POSTER_IMAGE_CACHE_MAX = 200;
+const posterImageCache = new Map();
+
+// Canvases waiting on images that were still loading when they last drew. A
+// wheel of 40 posters used to trigger 40 full-canvas redraws as they arrived;
+// they are now coalesced into one redraw per animation frame.
+const posterRedrawQueue = new Set();
+let posterRedrawQueued = false;
+
+function queuePosterRedraw(canvas) {
+  posterRedrawQueue.add(canvas);
+  if (posterRedrawQueued) return;
+  posterRedrawQueued = true;
+  requestAnimationFrame(() => {
+    posterRedrawQueued = false;
+    const canvases = [...posterRedrawQueue];
+    posterRedrawQueue.clear();
+    for (const c of canvases) {
+      if (wheelSpinState.active || !c.isConnected || !c._wheelBoundaries) continue;
+      drawWheelSegments(c, c._wheelItems, c._wheelDprLast || getWheelDPR(), c._wheelBoundaries);
+    }
+  });
+}
+
 function getLoadedPosterImage(canvas, url) {
   if (!url) return null;
-  if (!canvas._wheelPosterImages) canvas._wheelPosterImages = new Map();
-  let img = canvas._wheelPosterImages.get(url);
-  if (!img) {
+  let img = posterImageCache.get(url);
+  if (img) {
+    posterImageCache.delete(url); // re-insert: most recently used goes last
+  } else {
     img = new Image();
     img.decoding = "async";
+    img._waiting = new Set();
     img.onload = () => {
-      if (wheelSpinState.active || !canvas.isConnected) return;
-      if (canvas._wheelBoundaries) {
-        drawWheelSegments(canvas, canvas._wheelItems, canvas._wheelDprLast || getWheelDPR(), canvas._wheelBoundaries);
-      }
+      for (const c of img._waiting) queuePosterRedraw(c);
+      img._waiting.clear();
     };
+    img.onerror = () => img._waiting.clear();
     img.src = url;
-    canvas._wheelPosterImages.set(url, img);
+    if (posterImageCache.size >= POSTER_IMAGE_CACHE_MAX) {
+      posterImageCache.delete(posterImageCache.keys().next().value);
+    }
   }
-  return img.complete && img.naturalWidth ? img : null;
+  posterImageCache.set(url, img);
+  if (img.complete && img.naturalWidth) return img;
+  img._waiting.add(canvas);
+  return null;
 }
 
 // Draws `img` into the (dx, dy, dw, dh) box, cropped (not stretched) to
@@ -121,6 +155,26 @@ function drawCoverImage(ctx, img, dx, dy, dw, dh) {
   const sw = dw / scale, sh = dh / scale;
   const sx = (iw - sw) / 2, sy = (ih - sh) / 2;
   ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
+}
+
+// Paints a poster into one wedge, oriented to the wedge instead of the screen.
+// The wedge's own frame has +x running from the hub out to the rim (the same
+// axis the label is drawn along); turning it a further quarter turn puts the
+// poster's top at the rim and its long side along the radius, so each wedge
+// shows its own poster's centre strip, upright, spanning hub to rim. Drawing
+// one screen-aligned poster across the whole wheel and clipping it per wedge
+// (what this used to do) showed every wedge the same zoomed-in patch of a
+// poster, and the wedges at the top and bottom of the wheel the same region.
+//
+// The caller has already built and clipped to the wedge path.
+function drawWedgePoster(ctx, img, cx, cy, r, startRad, endRad) {
+  const half = Math.min((endRad - startRad) / 2, Math.PI / 2);
+  const chord = 2 * r * Math.sin(half); // wedge width at the rim, its widest point
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate((startRad + endRad) / 2 + Math.PI / 2);
+  drawCoverImage(ctx, img, -chord / 2, -r, chord, r);
+  ctx.restore();
 }
 
 function hexToRgb(hex) {
@@ -162,7 +216,12 @@ export function drawWheelSegments(canvas, items, dpr, boundaries, {animating = f
     return g;
   };
 
-  const postersOn = isWheelPostersEnabled() && !animating && !wheelSpinState.active;
+  // Only the per-frame weight animation drops posters (it redraws at dpr 1
+  // every frame). A spin does not: the canvas turns via a CSS transform, so
+  // the one redraw at spin start (clearing hover dimming) is a single frame,
+  // and skipping posters there made them vanish for the whole spin and pop
+  // back at the landing highlight.
+  const postersOn = isWheelPostersEnabled() && !animating;
   const posters = postersOn ? canvas._wheelPosters : null;
   canvas._wheelDprLast = dpr;
 
@@ -184,7 +243,7 @@ export function drawWheelSegments(canvas, items, dpr, boundaries, {animating = f
     if (posterImg) {
       ctx.save();
       ctx.clip();
-      drawCoverImage(ctx, posterImg, cx - r, cy - r, r * 2, r * 2);
+      drawWedgePoster(ctx, posterImg, cx, cy, r, start, end);
       ctx.fillStyle = dimmed ? "rgba(9,12,22,0.72)" : "rgba(9,12,22,0.32)";
       ctx.fill();
       ctx.restore();

@@ -61,3 +61,35 @@ def _reset_spin_state():
     yield
     _last_spin_at.clear()
     _last_spin_title.clear()
+
+
+@pytest.fixture(autouse=True)
+def _no_poster_backfill(monkeypatch):
+    """resolve_wheel_posters() fires schedule_poster_backfill() for every
+    segment with no cached poster, which spawns a fire-and-forget task doing
+    a real TMDb request (app/web/server/shared/posters.py). In a test that
+    task outlives the request: it keeps running (and holding the shared DB
+    locks / TMDb semaphore) on the TestClient's event loop while the test
+    seeds via asyncio.run() on another one, or is left mid-flight when that
+    loop is torn down. Either way a later test trips "Lock ... is bound to a
+    different event loop". Tests are about routing, not TMDb, so make the
+    backfill a recorder — `backfill_calls` (below) exposes what was
+    scheduled for the tests that care.
+    """
+    from app.web.server.shared import posters
+
+    calls: list[tuple[str, str, bool | None]] = []
+
+    def _record(cat, title, is_series=None):
+        calls.append((cat, title, is_series))
+
+    _record.original = posters.schedule_poster_backfill  # type: ignore[attr-defined]
+    monkeypatch.setattr(posters, "schedule_poster_backfill", _record)
+    posters._backfill_inflight.clear()
+    yield calls
+    posters._backfill_inflight.clear()
+
+
+@pytest.fixture
+def backfill_calls(_no_poster_backfill):
+    return _no_poster_backfill

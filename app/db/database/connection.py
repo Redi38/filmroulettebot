@@ -106,14 +106,25 @@ async def read_conn() -> AsyncIterator[aiosqlite.Connection]:
 
 
 async def close_db() -> None:
-    """Close the shared connections. Call once on process shutdown."""
-    global _db_conn, _read_db_conn
+    """Close the shared connections. Call once on process shutdown.
+
+    Also replaces the two locks. An asyncio.Lock binds itself to whichever
+    event loop first has to *wait* on it and then refuses every other loop
+    ("is bound to a different event loop"). In production there is one loop
+    for the process's lifetime so that never matters, but a lock that keeps
+    its old loop (or was left locked by a task that died with it) across a
+    close/reopen would poison the next loop — the tests' per-test TestClient
+    loops are the case that hit this. A fresh lock per open cycle is free.
+    """
+    global _db_conn, _read_db_conn, _db_conn_lock, _read_db_conn_lock
     if _db_conn is not None:
         await _db_conn.close()
         _db_conn = None
     if _read_db_conn is not None:
         await _read_db_conn.close()
         _read_db_conn = None
+    _db_conn_lock = asyncio.Lock()
+    _read_db_conn_lock = asyncio.Lock()
 
 
 def check_table(name: str) -> None:

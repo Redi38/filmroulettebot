@@ -270,7 +270,6 @@ export function buildWheel(wrapId, items, weights, posters, opts) {
   wrap.appendChild(countEl);
 
   canvas._wheelPosters = posters;
-  canvas._wheelPosterImages = new Map();
   drawWheel(canvas, items, dpr, weights);
   canvas._wheelItems = items;
   canvas._wheelTitleEl = titleEl;

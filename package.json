@@ -2,7 +2,7 @@
   "name": "filmroulettebot-web-assets",
   "private": true,
   "version": "1.0.0",
-  "description": "Build tooling for app/web/static/js. Not a frontend framework project — the app itself stays plain JS with no import/export; esbuild here is used purely to concatenate + minify the existing global-scope scripts into one file.",
+  "description": "Build tooling for app/web/static. The frontend itself is plain ES modules with no framework; esbuild only bundles/minifies them (JS, with code-splitting) and scripts/build-css.mjs concatenates the CSS.",
   "type": "module",
   "scripts": {
     "build:js": "node scripts/build-js.mjs",

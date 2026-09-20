@@ -32,6 +32,27 @@ FRANCHISE_CATEGORIES = ("dc", "marvel")
 _POSTER_CACHE_TTL = 365 * 24 * 3600
 
 _backfill_inflight: set[tuple[str, str]] = set()
+# The event loop only keeps a weak reference to a running task, so a
+# fire-and-forget create_task() whose result nobody holds can be garbage-
+# collected mid-flight (documented asyncio behaviour). Hold them here until done.
+_backfill_tasks: set[asyncio.Task] = set()
+
+# The cached poster_url is the w500 one built for the big result card, but a
+# wheel segment is a thin wedge — see helpers.POSTER_LARGE vs POSTER_CARD. A
+# wheel can carry 40+ posters at once, so ask TMDb for the medium size.
+# A cold wheel can miss on every one of its 40+ segments. Fire a real TMDb
+# lookup for a handful per call rather than all of them at once: the pool is
+# reshuffled on every load, so successive loads warm different segments and
+# the whole wheel fills in within a few spins, without a burst of requests
+# (each backfill is a search plus a details call) every time someone opens it.
+WHEEL_BACKFILL_PER_CALL = 8
+
+_WHEEL_POSTER_FROM = "/t/p/w500/"
+_WHEEL_POSTER_TO = "/t/p/w342/"
+
+
+def _wheel_poster_size(url: str) -> str:
+    return url.replace(_WHEEL_POSTER_FROM, _WHEEL_POSTER_TO, 1)
 
 
 async def _cached_poster(cache_key: str) -> dict | None:
@@ -153,7 +174,9 @@ def schedule_poster_backfill(cat: str, title: str, is_series: bool | None = None
         finally:
             _backfill_inflight.discard(key)
 
-    asyncio.create_task(_run())
+    task = asyncio.create_task(_run())
+    _backfill_tasks.add(task)
+    task.add_done_callback(_backfill_tasks.discard)
 
 
 async def resolve_wheel_posters(entries: list[tuple[str, str, bool | None]]) -> list[str | None]:
@@ -167,7 +190,8 @@ async def resolve_wheel_posters(entries: list[tuple[str, str, bool | None]]) -> 
 
     Stays cache-only like the rest of this module: a miss gets a background
     schedule_poster_backfill() so the *next* spin has it, and this call
-    returns None for that segment instead of waiting on a network lookup.
+    returns None for that segment instead of waiting on a network lookup. At
+    most WHEEL_BACKFILL_PER_CALL misses are scheduled per call.
     """
     if not entries:
         return []
@@ -176,14 +200,16 @@ async def resolve_wheel_posters(entries: list[tuple[str, str, bool | None]]) -> 
         by_cat.setdefault(cat, []).append((title, is_series))
 
     resolved: dict[tuple[str, str], str | None] = {}
+    backfills = 0
     for cat, rows in by_cat.items():
         info_by_title = await lookup_poster_info_many(cat, rows)
         for title, is_series in rows:
             info = info_by_title.get(title)
-            url = info["poster_url"] if info else None
+            url = _wheel_poster_size(info["poster_url"]) if info else None
             resolved[(cat, title)] = url
-            if url is None:
+            if url is None and backfills < WHEEL_BACKFILL_PER_CALL:
                 schedule_poster_backfill(cat, title, is_series)
+                backfills += 1
 
     return [resolved[(cat, title)] for cat, title, _ in entries]
 

@@ -1,0 +1,91 @@
+/* History panel: a pill button in the lower-right corner of the roulette
+   screen and the small panel it opens above itself. Both live inside
+   #spin-section (see index.html), so they are only on screen with the roulette.
+
+   z-index 9 keeps them under the mobile menu overlay (10) and its drawer (11),
+   the toasts (20) and every modal (30) — a toast such as "История очищена"
+   must stay visible over the panel that triggered it. */
+
+:root { --history-fab-h: 44px; --history-corner: 12px; }
+@media (min-width: 900px) { :root { --history-corner: 16px; } }
+
+.history-fab {
+  position: fixed; z-index: 9;
+  right: var(--history-corner);
+  bottom: calc(var(--history-corner) + env(safe-area-inset-bottom, 0px));
+  height: var(--history-fab-h); box-sizing: border-box;
+  display: inline-flex; align-items: center; gap: 8px;
+  font: inherit; font-size: 1rem; font-weight: 700; color: var(--text);
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+  padding: 0 14px; box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+  cursor: pointer; touch-action: manipulation;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s var(--ease-out);
+}
+.history-fab svg { flex: none; }
+/* On a phone a picked title's card can run to the bottom of the page; leave
+   room under it so its last buttons are not hidden behind the pill. Only while
+   a card is showing (the empty placeholder fits a screen without it), and only
+   below the desktop breakpoint: there the card sits centred, clear of the corner. */
+@media (max-width: 899px) {
+  #spin-result:has(.card) {
+    padding-bottom: calc(var(--history-fab-h) + var(--history-corner) + 12px + env(safe-area-inset-bottom, 0px));
+  }
+}
+.history-fab:active { transform: scale(0.96); }
+.history-fab.open { border-color: var(--primary); }
+@media (hover: hover) {
+  .history-fab:hover { border-color: var(--primary); }
+}
+
+.history-panel {
+  position: fixed; z-index: 9;
+  right: var(--history-corner);
+  bottom: calc(var(--history-corner) + var(--history-fab-h) + 10px + env(safe-area-inset-bottom, 0px));
+  width: min(400px, calc(100vw - 2 * var(--history-corner)));
+  max-height: 70vh;
+  max-height: min(70vh, calc(100dvh - var(--header-h) - var(--history-fab-h) - 48px));
+  display: flex; flex-direction: column; box-sizing: border-box;
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+  transform-origin: bottom right; transform: translateY(10px) scale(0.97);
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.25s var(--ease-out), visibility 0s linear 0.25s;
+}
+.history-panel.open {
+  transform: none; opacity: 1; visibility: visible; pointer-events: auto;
+  transition: opacity 0.2s ease, transform 0.25s var(--ease-out);
+}
+
+/* Height glide while the content changes (history/height-anim.js sets the inline
+   height; this only says how to animate it). The list is clipped meanwhile so a
+   scrollbar does not flicker in and out. */
+.history-panel.open.resizing {
+  transition: opacity 0.2s ease, transform 0.25s var(--ease-out), height 0.28s var(--ease-out);
+}
+.history-panel.resizing #history-container { overflow-y: hidden; }
+
+.history-panel-head {
+  flex: none; display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 12px 6px 16px;
+}
+.history-panel-head h3 { margin: 0; font-size: 1.05rem; }
+.history-panel-close {
+  width: 32px; height: 32px; border-radius: 50%; border: none;
+  background: rgba(5,4,15,0.55); color: var(--text); font-size: 1rem; line-height: 1;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+
+/* The list scrolls inside the panel, not the page behind it. */
+#history-container {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  padding: 4px 14px 14px;
+}
+/* Rows sit on the panel's own card colour, so give them a slightly lifted
+   surface to stay distinguishable. */
+.history-panel .hist-item { background: rgba(255,255,255,0.035); }
+.history-panel .hist-tabs { margin-bottom: 12px; }
+.history-panel .hist-clear-row { margin-bottom: 12px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .history-panel, .history-panel.open { transition: opacity 0.01s linear, visibility 0s; transform: none; }
+}

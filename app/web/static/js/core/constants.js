@@ -13,7 +13,7 @@ export const LIST_CATS = {...CATS, ...REF_CATS};
 export const RANDOM_CAT = "random";
 
 export const VIEW_TITLES = {
-  home: "Афиша", upcoming: "Ожидаемые", history: "История",
+  home: "Афиша", upcoming: "Ожидаемые",
   theaters: "В прокате", series_releases: "Премьеры сериалов",
   tracked_series: "Отслеживание сериалов",
 };

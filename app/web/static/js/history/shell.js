@@ -1,16 +1,17 @@
 import { api } from "../core/api.js";
 import { CATS } from "../core/constants.js";
 import { skeletonHistoryHtml } from "../core/skeleton.js";
-import { escapeHtml, fadeIn, fadeOut, showToast } from "../core/utils.js";
+import { escapeHtml, fadeIn, fadeOut, setNavDirection, showToast } from "../core/utils.js";
+import { animatePanelHeight } from "./height-anim.js";
 import { renderHistoryList } from "./list.js";
 import { historyState } from "./state.js";
 
-// History module: page shell (tabs + clear button) and data loading.
+// History module: panel content shell (tabs + clear button) and data loading.
+// Opened and closed by history/panel.js.
 // Relies on state/storage from history-state.js and renderHistoryList()
 // from history-list.js (loaded after this file).
 
 export async function loadHistory() {
-  const container = document.getElementById("history-container");
   ensureHistoryShell();
   const list = document.getElementById("history-list");
   const isFreshView = list.dataset.loaded !== "1";
@@ -32,7 +33,7 @@ export async function loadHistory() {
     list.dataset.loaded = "1";
     if (unchanged) return;
     await fadeOut(list);
-    renderHistoryList();
+    animatePanelHeight(renderHistoryList);
     fadeIn(list);
   } catch (e) {
     list.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
@@ -53,12 +54,19 @@ function ensureHistoryShell() {
     btn.textContent = label;
     btn.onclick = async () => {
       if (historyState.filter === code) return;
+      // The new list slides in from the side the picked tab is on.
+      const codes = Object.keys(CATS);
+      const dir = Math.sign(codes.indexOf(code) - codes.indexOf(historyState.filter));
       historyState.filter = code;
       [...tabs.children].forEach((c) => c.classList.toggle("active", c === btn));
       resetClearButton();
       const list = document.getElementById("history-list");
+      setNavDirection(list, dir);
       await fadeOut(list);
-      renderHistoryList();
+      // Out of sight now: start the next list from the top, and let the panel
+      // glide to the new list's height while the list fades back in.
+      container.scrollTop = 0;
+      animatePanelHeight(renderHistoryList);
       fadeIn(list);
     };
     tabs.appendChild(btn);
@@ -117,7 +125,7 @@ async function clearHistoryCategory(cat) {
     historyState.items = historyState.items.filter((e) => e.category !== cat);
     resetClearButton();
     await fadeOut(list);
-    renderHistoryList();
+    animatePanelHeight(renderHistoryList);
     fadeIn(list);
     showToast(`История «${CATS[cat]}» очищена`);
   } catch (e) {

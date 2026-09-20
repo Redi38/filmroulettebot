@@ -78,7 +78,6 @@ export function renderMenu() {
 
   addGroup("Прочее");
   addItem("upcoming", "Ожидаемые", () => switchView("upcoming"), uiState.currentView === "upcoming");
-  addItem("history", "История", () => switchView("history"), uiState.currentView === "history");
 
   syncMenuIndicator(activeItem);
 }

@@ -35,6 +35,16 @@ def test_index_is_rendered_not_served_raw(client):
     assert re.search(r'bundle\.min\.js\?v=[0-9a-f]{12}|bundle\.min\.js\?v=dev', html)
 
 
+def test_history_is_a_panel_on_the_roulette_screen_not_a_section(client):
+    html = client.get("/").text
+    assert 'id="history-section"' not in html
+    spin = html[html.index('id="spin-section"'):html.index('id="list-section"')]
+    for needle in ('id="history-fab"', 'id="history-panel"', 'id="history-container"'):
+        assert needle in spin, f"{needle} should sit inside the roulette section"
+    # The inlined constants no longer name a "history" view for the header.
+    assert 'history: "История"' not in html
+
+
 def test_asset_version_tracks_file_contents(tmp_path):
     from app.web.server.shared.assets import asset_version
 

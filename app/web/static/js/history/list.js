@@ -1,6 +1,7 @@
 import { api, performDelete, performSequel } from "../core/api.js";
 import { CATS } from "../core/constants.js";
 import { escapeHtml, fadeIn, fadeOut, placeholderHtml, showToast } from "../core/utils.js";
+import { animatePanelHeight } from "./height-anim.js";
 import { updateClearButtonState } from "./shell.js";
 import { histKey, historyState, loadResolvedMap, markResolved, resolveOnServer } from "./state.js";
 
@@ -65,9 +66,9 @@ const HIST_ACTIONS = {
   confirm: histConfirm, clear: histClearEntry,
   sequel: histSequel, delete: histDelete, watched: histWatched,
 };
-// Listens on the static section: #history-list itself is created lazily by
-// history/shell.js the first time the view opens.
-document.getElementById("history-section").addEventListener("click", (ev) => {
+// Listens on the static panel: #history-list itself is created lazily by
+// history/shell.js the first time the panel opens.
+document.getElementById("history-panel").addEventListener("click", (ev) => {
   const btn = ev.target.closest("[data-hist-action]");
   if (!btn) return;
   const row = btn.closest(".hist-item");
@@ -102,18 +103,20 @@ async function histClearEntry(row) {
     historyState.items = historyState.items.filter((_, i) => i !== idx);
     const list = document.getElementById("history-list");
     await fadeOut(list);
-    renderHistoryList();
+    animatePanelHeight(renderHistoryList);
     fadeIn(list);
     showToast(`Запись «${entry.title}» удалена из истории`);
   } catch (e) { showToast(e.message); }
 }
 
 function histConfirm(row) {
-  row.querySelector(".hist-actions").innerHTML = `
+  animatePanelHeight(() => {
+    row.querySelector(".hist-actions").innerHTML = `
     <button class="btn btn-success" data-hist-action="sequel">Сиквел</button>
     <button class="btn btn-danger" data-hist-action="delete">Удалить</button>
     <button class="btn btn-primary" data-hist-action="watched" title="Просмотрено — без сиквела и без удаления из списка">Просмотрено</button>
     ${HIST_CLEAR_BTN}`;
+  });
 }
 
 async function histWatched(div) {
@@ -121,10 +124,12 @@ async function histWatched(div) {
   const {category, title, timestamp, key} = div.dataset;
   markResolved(key, { type: "watched" });
   resolveOnServer(category, title, timestamp, "watched", null);
-  div.classList.add("resolved");
-  actionsEl.innerHTML = `
+  animatePanelHeight(() => {
+    div.classList.add("resolved");
+    actionsEl.innerHTML = `
     <span class="muted">${resolvedOutcomeLabel(title, { type: "watched" })}</span>
     ${HIST_CLEAR_BTN}`;
+  });
 }
 
 async function histSequel(div) {
@@ -135,10 +140,12 @@ async function histSequel(div) {
     showToast(`${title} → ${newTitle}`);
     markResolved(key, { type: "sequel", newTitle });
     resolveOnServer(category, title, timestamp, "sequel", newTitle);
-    div.classList.add("resolved");
-    actionsEl.innerHTML = `
+    animatePanelHeight(() => {
+      div.classList.add("resolved");
+      actionsEl.innerHTML = `
       <span class="muted">${resolvedOutcomeLabel(title, { type: "sequel", newTitle })}</span>
       ${HIST_CLEAR_BTN}`;
+    });
   } catch (e) { showToast(e.message); }
 }
 
@@ -150,9 +157,11 @@ async function histDelete(div) {
     showToast(`${title} удалён`);
     markResolved(key, { type: "delete" });
     resolveOnServer(category, title, timestamp, "delete", null);
-    div.classList.add("resolved");
-    actionsEl.innerHTML = `
+    animatePanelHeight(() => {
+      div.classList.add("resolved");
+      actionsEl.innerHTML = `
       <span class="muted">${resolvedOutcomeLabel(title, { type: "delete" })}</span>
       ${HIST_CLEAR_BTN}`;
+    });
   } catch (e) { showToast(e.message); }
 }

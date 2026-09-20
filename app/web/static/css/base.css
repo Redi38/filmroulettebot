@@ -13,6 +13,10 @@
   --header-tint-2: var(--primary-2); --header-tint-2-rgb: var(--primary-2-rgb);
   --error-toast-offset: 135px;
 
+  /* Scrollbars: dark and thin so they sit on the dark UI instead of showing
+     the browser's default light bar. */
+  --scrollbar-thumb: #3b3642; --scrollbar-thumb-hover: #4f4959;
+
   /* Motion system: every press/hover/enter animation in the app should use
      one of these so timing feels consistent from screen to screen. */
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);  /* press / toggle pop */
@@ -30,6 +34,24 @@
   --shadow-2: 0 12px 40px rgba(0, 0, 0, 0.4);  /* modals */
 
   --focus-ring: 2px solid var(--primary);
+}
+
+/* Dark scrollbars everywhere (page, history panel, modals, dropdowns).
+   `color-scheme: dark` also darkens the browser's own controls and any
+   scrollbar that is not styled below. The standard properties cover Chrome
+   121+, Firefox and current Safari; the ::-webkit-scrollbar rules are only for
+   older WebKit, because Chrome ignores them once scrollbar-color is set.
+   Elements that hide their scrollbar (#side-menu-scroll) win on specificity. */
+:root { color-scheme: dark; }
+* { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) transparent; }
+@supports not (scrollbar-color: auto) {
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb); border-radius: 8px;
+    border: 2px solid transparent; background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); background-clip: padding-box; }
 }
 
 /* One switch for the whole app. Individual components no longer need their

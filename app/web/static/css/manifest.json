@@ -9,6 +9,7 @@
     "loading.css",
     "spin-wheel.css",
     "feedback-history.css",
+    "history-panel.css",
     "modal-responsive.css"
   ]
 }

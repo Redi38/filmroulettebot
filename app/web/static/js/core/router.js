@@ -1,4 +1,5 @@
 import { CATS, LIST_CATS, RANDOM_CAT } from "./constants.js";
+import { openHistoryPanel } from "../history/panel.js";
 import { renderMenu } from "./menu.js";
 import { uiState } from "./state.js";
 import { showSection } from "./views.js";
@@ -21,7 +22,7 @@ function stateToHash(view, cat) {
 function hashToState(hash) {
   const parts = hash.replace(/^#\/?/, "").split("/").filter(Boolean);
   let view = parts[0] || "home";
-  if (view === "random") view = "spin"; // legacy bookmarks from the old split views
+  if (view === "random" || view === "history") view = "spin"; // legacy bookmarks from the old split views
   return { view, cat: parts[1] || null };
 }
 
@@ -43,6 +44,7 @@ function adoptCat(view, cat) {
 }
 
 function applyHistoryState(view, cat) {
+  if (view === "history") view = "spin";
   uiState.currentView = view;
   adoptCat(view, cat);
   renderMenu();
@@ -55,6 +57,9 @@ window.addEventListener("popstate", (e) => {
 });
 
 export function initRouting() {
+  // An old #/history bookmark lands on the roulette with the panel open. Noted
+  // up front: the replaceState below rewrites the hash to #/spin/....
+  const openHistory = /^#\/?history\b/.test(location.hash);
   if (location.hash) {
     const { view, cat } = hashToState(location.hash);
     uiState.currentView = view;
@@ -66,4 +71,5 @@ export function initRouting() {
   history.replaceState({ view: uiState.currentView, cat }, "", stateToHash(uiState.currentView, cat));
   renderMenu();
   showSection();
+  if (openHistory) openHistoryPanel();
 }

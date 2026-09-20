@@ -55,7 +55,8 @@ data and the same SQLite database as the bot:
   the option to add titles straight to your list.
 - 🕰 **Upcoming** — a personal list of anticipated titles not out yet.
 - 📜 **History** — everything the roulette has already picked, with
-  the ability to resolve or delete entries.
+  the ability to resolve or delete entries. It opens from the button in
+  the lower-right corner of the roulette screen.
 
 ## 🎛 Filters
 

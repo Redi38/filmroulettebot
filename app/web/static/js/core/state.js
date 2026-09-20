@@ -12,7 +12,8 @@ function loadState() {
   if (!s) return { cat: "movies", view: "home", spinCat: RANDOM_CAT };
   // "random" used to be its own view alongside three per-category spin views;
   // both now fold into a single "spin" view with a category picker.
-  const view = s.view === "random" ? "spin" : (s.view || "home");
+  // The same goes for "history", which is now a panel on the roulette screen.
+  const view = (s.view === "random" || s.view === "history") ? "spin" : (s.view || "home");
   let spinCat = s.spinCat || (s.view === "random" ? RANDOM_CAT : null);
   if (!spinCat) spinCat = (s.view === "spin" && CATS[s.cat]) ? s.cat : RANDOM_CAT;
   return { cat: LIST_CATS[s.cat] ? s.cat : "movies", view, spinCat };

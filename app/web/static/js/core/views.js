@@ -4,7 +4,7 @@ import { closeModal, closePosterInfoModal, closeRenameModal } from "./modal.js";
 import { VIEWS_WITH_CAT, hashCatFor, pushViewToHistory } from "./router.js";
 import { saveState, uiState } from "./state.js";
 import { TAB_REVISIT_STALE_MS, reducedMotion, runViewTransition } from "./utils.js";
-import { loadHistory } from "../history/shell.js";
+import { closeHistoryPanel } from "../history/panel.js";
 import { homeLoaded, loadHome, pauseHomeMarquee, resumeHomeMarquee, syncMarqueeSize } from "../home/home.js";
 import { loadList, renderListCatChips } from "../list/list-items.js";
 import { loadUpcoming } from "../list/upcoming-list.js";
@@ -68,7 +68,7 @@ export function switchView(view) {
 const SECTION_IDS = {
   home: "home-section",
   spin: "spin-section", list: "list-section",
-  upcoming: "upcoming-section", history: "history-section", showcase: "showcase-section",
+  upcoming: "upcoming-section", showcase: "showcase-section",
   theaters: "theaters-section", series_releases: "series-releases-section",
   tracked_series: "tracked-series-section",
 };
@@ -76,7 +76,6 @@ const SECTION_IDS = {
 export const VIEW_LOADERS = {
   list: () => loadList(),
   upcoming: () => loadUpcoming(),
-  history: () => loadHistory(),
   // `true` marks this as a plain tab-revisit call: if the view already has
   // fresh-enough data, the loader skips the fetch-and-fade entirely instead
   // of re-flickering content that source updates only rarely (TMDB
@@ -136,6 +135,8 @@ export async function showSection() {
   const applyDom = () => {
     window.scrollTo(0, 0);
     applyStudioTheme();
+    // The history panel belongs to the roulette screen; leaving it closes the panel.
+    if (uiState.currentView !== "spin") closeHistoryPanel();
     for (const [view, id] of Object.entries(SECTION_IDS)) {
       document.getElementById(id).classList.toggle("active", uiState.currentView === view);
     }

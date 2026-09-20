@@ -116,6 +116,7 @@ async function doWheelSpin(cat, isRandom) {
     const hasPool = !!(data.wheel_pool && data.wheel_pool.length >= 2);
     const pool = hasPool ? data.wheel_pool : [data.original_title, data.original_title];
     const weights = hasPool ? data.wheel_weights : undefined;
+    const posters = hasPool ? data.wheel_posters : undefined;
     // The movies and random wheels send the winner's segment explicitly: a
     // Marvel/DC lot is drawn as "Marvel"/"DC" while the card is for the first
     // title of that list, so the card's title can't be looked up on the wheel.
@@ -124,7 +125,7 @@ async function doWheelSpin(cat, isRandom) {
       : pool.indexOf(data.original_title);
     if (winnerIndex === -1) winnerIndex = 0;
 
-    const canvas = wheel.buildWheel(wheelWrapId, pool, weights);
+    const canvas = wheel.buildWheel(wheelWrapId, pool, weights, posters);
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
     await wheel.spinWheelTo(canvas, pool.length, winnerIndex, Math.round(spinSpeedSeconds * 1000));
     if (typeof isConfettiEnabled !== "function" || isConfettiEnabled()) {

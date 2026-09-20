@@ -156,6 +156,38 @@ def schedule_poster_backfill(cat: str, title: str, is_series: bool | None = None
     asyncio.create_task(_run())
 
 
+async def resolve_wheel_posters(entries: list[tuple[str, str, bool | None]]) -> list[str | None]:
+    """Cache-only poster URLs for a wheel's pool, in pool order.
+
+    `entries` is one (cat, title, is_series) triple per segment — duplicates
+    allowed, since the same title can sit in two categories (a dc/marvel lot
+    resolving to a title that also has its own segment elsewhere). Grouped by
+    cat so each category costs one batched tmdb_cache query via
+    lookup_poster_info_many, same as the home marquee / list rows.
+
+    Stays cache-only like the rest of this module: a miss gets a background
+    schedule_poster_backfill() so the *next* spin has it, and this call
+    returns None for that segment instead of waiting on a network lookup.
+    """
+    if not entries:
+        return []
+    by_cat: dict[str, list[tuple[str, bool | None]]] = {}
+    for cat, title, is_series in entries:
+        by_cat.setdefault(cat, []).append((title, is_series))
+
+    resolved: dict[tuple[str, str], str | None] = {}
+    for cat, rows in by_cat.items():
+        info_by_title = await lookup_poster_info_many(cat, rows)
+        for title, is_series in rows:
+            info = info_by_title.get(title)
+            url = info["poster_url"] if info else None
+            resolved[(cat, title)] = url
+            if url is None:
+                schedule_poster_backfill(cat, title, is_series)
+
+    return [resolved[(cat, title)] for cat, title, _ in entries]
+
+
 async def cache_info_by_id(title: str, tmdb_id: int, is_series: bool) -> None:
     """Resolve `tmdb_id` (a known, disambiguated match — the exact result
     the user picked in the add-search picker) via get_details_by_id and

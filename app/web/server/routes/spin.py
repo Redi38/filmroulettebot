@@ -21,7 +21,7 @@ import random
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from app.db.database import get_items, get_tmdb_cache, save_history, set_tmdb_cache
+from app.db.database import get_items, get_items_with_ids, get_tmdb_cache, save_history, set_tmdb_cache
 
 from ..shared import (
     FEATURED_CACHE_TTL,
@@ -42,6 +42,7 @@ from ..shared import (
     _pool_weights,
     _random_entries,
     _random_pool_weights,
+    _resolve_wheel_posters,
     valid_category,
 )
 
@@ -58,18 +59,23 @@ async def _roulette_items() -> dict[str, list[str]]:
     return items_by_cat
 
 
-async def _lot_titles() -> dict[str, str]:
-    """First title of each non-empty Marvel/DC list — what a lot resolves to.
-    A franchise with an empty list simply has no lot on the wheel."""
+async def _lot_titles() -> tuple[dict[str, str], dict[str, bool | None]]:
+    """First title of each non-empty Marvel/DC list — what a lot resolves to —
+    plus that title's is_series flag. A franchise with an empty list simply
+    has no lot on the wheel. is_series is needed alongside the title because
+    a dc/marvel title can be cached under either movie_info or series_info
+    (see posters.lookup_poster_info)."""
     lots: dict[str, str] = {}
+    lot_is_series: dict[str, bool | None] = {}
     for cat in LOT_CATEGORIES:
-        items = await get_items(cat)
-        if items:
-            lots[cat] = items[0]
-    return lots
+        rows = await get_items_with_ids(cat)
+        if rows:
+            lots[cat] = rows[0]["title"]
+            lot_is_series[cat] = rows[0]["is_series"]
+    return lots, lot_is_series
 
 
-async def _lot_wheel_sources(wheel: str) -> tuple[dict[str, list[str]], dict[str, str]]:
+async def _lot_wheel_sources(wheel: str) -> tuple[dict[str, list[str]], dict[str, str], dict[str, bool | None]]:
     """Lists and lots behind a wheel that carries Marvel/DC lots: the combined
     random wheel (`wheel == RANDOM_WHEEL`) or a single-list one (movies)."""
     if wheel == RANDOM_WHEEL:
@@ -77,35 +83,49 @@ async def _lot_wheel_sources(wheel: str) -> tuple[dict[str, list[str]], dict[str
     else:
         items = await get_items(wheel)
         items_by_cat = {wheel: items} if items else {}
-    return items_by_cat, await _lot_titles()
+    lots, lot_is_series = await _lot_titles()
+    return items_by_cat, lots, lot_is_series
+
+
+def _entry_is_series(entry, lot_is_series: dict[str, bool | None]) -> bool | None:
+    """is_series for a wheel entry's poster lookup: only meaningful for a
+    dc/marvel lot entry (see _lot_titles); every other entry's category
+    settles movie-vs-series on its own, so this is None for it."""
+    return lot_is_series.get(entry.cat) if entry.cat in LOT_CATEGORIES else None
 
 
 async def _lot_wheel_preview(wheel: str, weighted: bool, empty_msg: str) -> dict:
-    items_by_cat, lots = await _lot_wheel_sources(wheel)
+    items_by_cat, lots, lot_is_series = await _lot_wheel_sources(wheel)
     entries, weights = _random_entries(items_by_cat, weighted, lots)
     if not entries:
         raise HTTPException(404, empty_msg)
-    pool, pool_weights, _ = _build_random_wheel_pool(entries, weights)
-    return {"wheel_pool": pool, "wheel_weights": pool_weights}
+    pool, pool_weights, _, pool_entries = _build_random_wheel_pool(entries, weights)
+    posters = await _resolve_wheel_posters(
+        [(e.cat, e.title, _entry_is_series(e, lot_is_series)) for e in pool_entries]
+    )
+    return {"wheel_pool": pool, "wheel_weights": pool_weights, "wheel_posters": posters}
 
 
 async def _lot_wheel_weights(wheel: str, body: WheelWeightsBody, empty_msg: str) -> dict:
-    items_by_cat, lots = await _lot_wheel_sources(wheel)
+    items_by_cat, lots, _ = await _lot_wheel_sources(wheel)
     if not items_by_cat and not lots:
         raise HTTPException(404, empty_msg)
     return {"wheel_weights": _random_pool_weights(items_by_cat, body.pool, body.weighted, lots)}
 
 
 async def _lot_wheel_spin(request: Request, wheel: str, weighted: bool, empty_msg: str) -> dict:
-    items_by_cat, lots = await _lot_wheel_sources(wheel)
+    items_by_cat, lots, lot_is_series = await _lot_wheel_sources(wheel)
     entries, weights = _random_entries(items_by_cat, weighted, lots)
     if not entries:
         raise HTTPException(404, empty_msg)
     winner = _pick_random_entry(_client_ip(request), wheel, entries, weights)
     ts = await save_history(WEB_USER_ID, winner.cat, winner.title)
     data = await _card_data(winner.cat, winner.title, ts)
-    data["wheel_pool"], data["wheel_weights"], data["wheel_winner_index"] = _build_random_wheel_pool(
+    data["wheel_pool"], data["wheel_weights"], data["wheel_winner_index"], pool_entries = _build_random_wheel_pool(
         entries, weights, winner
+    )
+    data["wheel_posters"] = await _resolve_wheel_posters(
+        [(e.cat, e.title, _entry_is_series(e, lot_is_series)) for e in pool_entries]
     )
     return data
 
@@ -143,7 +163,8 @@ async def api_wheel_preview(cat: str = Depends(valid_category), weighted: bool =
         raise HTTPException(404, _EMPTY_LIST_MSG)
     dummy = random.choice(items)
     pool, weights = _build_wheel_pool(items, dummy, weighted)
-    return {"wheel_pool": pool, "wheel_weights": weights}
+    posters = await _resolve_wheel_posters([(cat, t, None) for t in pool])
+    return {"wheel_pool": pool, "wheel_weights": weights, "wheel_posters": posters}
 
 
 @router.post("/api/{cat}/wheel-weights")
@@ -183,6 +204,7 @@ async def api_spin(request: Request, cat: str = Depends(valid_category), body: S
     ts = await save_history(WEB_USER_ID, cat, title)
     data = await _card_data(cat, title, ts)
     data["wheel_pool"], data["wheel_weights"] = _build_wheel_pool(items, title, body.weighted)
+    data["wheel_posters"] = await _resolve_wheel_posters([(cat, t, None) for t in data["wheel_pool"]])
     return data
 
 

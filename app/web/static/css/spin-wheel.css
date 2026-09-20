@@ -175,6 +175,9 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
 .auto-watch-toggle-wrap .showcase-filter-btn.active {
   background: linear-gradient(90deg, var(--grp-fn-b), var(--grp-fn-a));
 }
+.wheel-poster-toggle-wrap .showcase-filter-btn.active {
+  background: linear-gradient(90deg, var(--grp-fn-a), var(--grp-fn-b));
+}
 .confetti-toggle-wrap .showcase-filter-btn.active {
   background: linear-gradient(90deg, var(--grp-fx-b), var(--grp-fx-a));
 }
@@ -183,16 +186,19 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
 }
 
 .auto-watch-toggle-wrap .showcase-filter-btn,
+.wheel-poster-toggle-wrap .showcase-filter-btn,
 .confetti-toggle-wrap .showcase-filter-btn,
 .spin-appearance-wrap .showcase-filter-btn {
   transition: background 0.35s ease, box-shadow 0.15s ease, transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .auto-watch-toggle-wrap .showcase-filter-btn:active,
+.wheel-poster-toggle-wrap .showcase-filter-btn:active,
 .confetti-toggle-wrap .showcase-filter-btn:active,
 .spin-appearance-wrap .showcase-filter-btn:active {
   transform: scale(0.96);
 }
 .auto-watch-toggle-wrap .showcase-filter-btn.fx-toggle-pop,
+.wheel-poster-toggle-wrap .showcase-filter-btn.fx-toggle-pop,
 .confetti-toggle-wrap .showcase-filter-btn.fx-toggle-pop,
 .spin-appearance-wrap .showcase-filter-btn.fx-toggle-pop {
   animation: fxTogglePop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -267,9 +273,8 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
 .confetti-toggle-wrap.visible { display: flex; }
 
 .auto-watch-toggle-wrap { display: flex; justify-content: center; margin: 0; }
-.auto-watch-toggle-wrap .showcase-filter-btn {
-  width: calc(var(--pill-w) * 2 + 6px);
-}
+
+.wheel-poster-toggle-wrap { display: flex; justify-content: center; margin: 0; }
 
 .wheel-audio-controls {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;

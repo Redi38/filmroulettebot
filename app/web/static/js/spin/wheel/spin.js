@@ -169,7 +169,7 @@ export function rebuildVisibleWheels() {
     if (wrap.classList.contains("wheel-wrap--settling")) continue; // already re-measuring
     const predicted = predictWheelSize(wrap);
     if (Math.abs(predicted - (wrap._wheelBuiltSize || 0)) < 3) continue;
-    buildSettledWheel(id, wrap._wheelPool, wrap._wheelWeights);
+    buildSettledWheel(id, wrap._wheelPool, wrap._wheelWeights, wrap._wheelPosters);
   }
 }
 
@@ -178,7 +178,7 @@ export function forceRebuildVisibleWheels() {
   for (const id of WHEEL_WRAP_IDS) {
     const wrap = document.getElementById(id);
     if (!wrap || wrap.style.display === "none" || !wrap._wheelPool) continue;
-    buildSettledWheel(id, wrap._wheelPool, wrap._wheelWeights);
+    buildSettledWheel(id, wrap._wheelPool, wrap._wheelWeights, wrap._wheelPosters);
   }
 }
 

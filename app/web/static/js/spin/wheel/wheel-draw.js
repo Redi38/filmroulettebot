@@ -1,6 +1,7 @@
+import { isWheelPostersEnabled } from "../settings/poster-toggle.js";
 import { computeWheelBoundaries } from "./layout.js";
 import { playWheelTick } from "./wheel-audio.js";
-import { getWheelColors } from "./wheel-constants.js";
+import { getWheelColors, getWheelDPR, wheelSpinState } from "./wheel-constants.js";
 
 // Roulette wheel: canvas rendering — drawing the segments/labels and
 // tracking which segment the pointer currently sits over. DOM construction
@@ -8,9 +9,6 @@ import { getWheelColors } from "./wheel-constants.js";
 
 export function getCanvasRotationDeg(canvas) {
   if (typeof canvas._rotationDeg === "number") return canvas._rotationDeg;
-  // Fallback for canvases that never went through setCanvasRotation (e.g.
-  // a freshly built wheel before its first spin) — parse it out of the
-  // computed matrix, forcing a style recalc only in that rare case.
   const transform = getComputedStyle(canvas).transform;
   if (!transform || transform === "none") return 0;
   const match = transform.match(/matrix\(([^)]+)\)/);
@@ -49,13 +47,6 @@ export function animateWheelWeights(canvas, items, dpr, toWeights, duration = 42
   const startTime = performance.now();
   const ease = (t) => 1 - Math.pow(1 - t, 3);
 
-  // A full redraw touches every segment (fill + stroke + two text passes)
-  // over the whole canvas, so its cost scales with the backing-store pixel
-  // count — at dpr 2-3 that's 4-9x the pixels of a 1x canvas. Doing that on
-  // every animation frame is what reads as jank when switching normal/
-  // weighted mode. So: animate at dpr 1 (the canvas is briefly upscaled by
-  // the browser, which is imperceptible for a 420ms transition) and only
-  // pay the full-resolution cost once, on the settled final frame.
   const cssSize = canvas.width / dpr;
   const animDpr = 1;
   canvas.width = canvas.height = Math.round(cssSize * animDpr);
@@ -98,6 +89,40 @@ export function drawWheel(canvas, items, dpr, weights) {
 // segment is always shown in the pointer title above the wheel.
 const WHEEL_LABEL_MIN_ARC_PX = 14;
 
+// Posters need a bit more room than a label to read as an actual picture
+// rather than noise, so this is a stricter cutoff than WHEEL_LABEL_MIN_ARC_PX.
+const WHEEL_POSTER_MIN_ARC_PX = 26;
+
+function getLoadedPosterImage(canvas, url) {
+  if (!url) return null;
+  if (!canvas._wheelPosterImages) canvas._wheelPosterImages = new Map();
+  let img = canvas._wheelPosterImages.get(url);
+  if (!img) {
+    img = new Image();
+    img.decoding = "async";
+    img.onload = () => {
+      if (wheelSpinState.active || !canvas.isConnected) return;
+      if (canvas._wheelBoundaries) {
+        drawWheelSegments(canvas, canvas._wheelItems, canvas._wheelDprLast || getWheelDPR(), canvas._wheelBoundaries);
+      }
+    };
+    img.src = url;
+    canvas._wheelPosterImages.set(url, img);
+  }
+  return img.complete && img.naturalWidth ? img : null;
+}
+
+// Draws `img` into the (dx, dy, dw, dh) box, cropped (not stretched) to
+// cover it — same idea as CSS `object-fit: cover`, centered on the image.
+function drawCoverImage(ctx, img, dx, dy, dw, dh) {
+  const iw = img.naturalWidth, ih = img.naturalHeight;
+  if (!iw || !ih) return;
+  const scale = Math.max(dw / iw, dh / ih);
+  const sw = dw / scale, sh = dh / scale;
+  const sx = (iw - sw) / 2, sy = (ih - sh) / 2;
+  ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
+}
+
 function hexToRgb(hex) {
   const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
   return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [128, 128, 128];
@@ -137,21 +162,39 @@ export function drawWheelSegments(canvas, items, dpr, boundaries, {animating = f
     return g;
   };
 
+  const postersOn = isWheelPostersEnabled() && !animating && !wheelSpinState.active;
+  const posters = postersOn ? canvas._wheelPosters : null;
+  canvas._wheelDprLast = dpr;
+
   for (let i = 0; i < n; i++) {
     const start = -Math.PI / 2 + boundaries[i].start * Math.PI / 180;
     const end = -Math.PI / 2 + boundaries[i].end * Math.PI / 180;
     const color = wheelColors[i % wheelColors.length];
     const dimmed = highlighting && i !== highlightIndex;
 
+    const segDeg0 = boundaries[i].end - boundaries[i].start;
+    const arcLen0 = (segDeg0 * Math.PI / 180) * r;
+    const posterUrl = posters && arcLen0 >= WHEEL_POSTER_MIN_ARC_PX ? posters[i] : null;
+    const posterImg = posterUrl ? getLoadedPosterImage(canvas, posterUrl) : null;
+
     ctx.beginPath();
     ctx.moveTo(cx, cy);
     ctx.arc(cx, cy, r, start, end);
     ctx.closePath();
-    ctx.fillStyle = segmentFill(color);
-    ctx.fill();
-    if (dimmed) {
-      ctx.fillStyle = "rgba(9,12,22,0.68)";
+    if (posterImg) {
+      ctx.save();
+      ctx.clip();
+      drawCoverImage(ctx, posterImg, cx - r, cy - r, r * 2, r * 2);
+      ctx.fillStyle = dimmed ? "rgba(9,12,22,0.72)" : "rgba(9,12,22,0.32)";
       ctx.fill();
+      ctx.restore();
+    } else {
+      ctx.fillStyle = segmentFill(color);
+      ctx.fill();
+      if (dimmed) {
+        ctx.fillStyle = "rgba(9,12,22,0.68)";
+        ctx.fill();
+      }
     }
     ctx.strokeStyle = "rgba(9,12,22,0.55)";
     ctx.lineWidth = n > 40 ? 1 : 2;

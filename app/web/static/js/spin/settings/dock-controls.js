@@ -1,5 +1,6 @@
 import { renderAutoWatchToggle } from "./auto-watch-toggle.js";
 import { renderConfettiToggle } from "./confetti-toggle.js";
+import { renderPosterToggle } from "./poster-toggle.js";
 import { renderSoundThemeToggle } from "./sound-theme.js";
 import { renderSpinCatChips } from "./spin-category.js";
 import { renderSpinModeToggle } from "./spin-mode.js";
@@ -29,6 +30,7 @@ export function renderAllDockControls(prefix) {
   renderSpinModeToggle(`${prefix}-mode-toggle`);
   renderWeightToggle(`${prefix}-weight-toggle`);
   renderAutoWatchToggle(`${prefix}-watch-toggle`);
+  renderPosterToggle(`${prefix}-poster-toggle`);
   renderConfettiToggle(`${prefix}-confetti-toggle`);
   renderWheelAppearanceToggle(`${prefix}-appearance-toggle`);
   renderSpinSpeedControl(`${prefix}-spin-speed`);

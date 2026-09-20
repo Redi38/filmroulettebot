@@ -31,7 +31,10 @@ function renderSpinDockRow(prefix, { spinBtnId, spinBtnClass }) {
         </div>
         <div class="spin-section" id="${prefix}-autowatch-section">
           <p class="spin-caption">Функции</p>
-          <div id="${prefix}-watch-toggle"></div>
+          <div class="spin-toggle-row">
+            <div id="${prefix}-watch-toggle"></div>
+            <div id="${prefix}-poster-toggle"></div>
+          </div>
         </div>
         <div id="${prefix}-spin-speed"></div>
         <button class="btn ${spinBtnClass}" id="${spinBtnId}"><span>🎲 Крутить</span></button>

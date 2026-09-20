@@ -50,6 +50,7 @@ from .constants import (
     WHEEL_POOL_SIZE,
 )
 from .posters import FRANCHISE_CATEGORIES
+from .posters import resolve_wheel_posters as _resolve_wheel_posters
 from .spin_state import _SPIN_STATE_MAX_ENTRIES, _BoundedDict, _last_spin_at, _last_spin_title
 from .spin_state import build_random_wheel_pool as _build_random_wheel_pool
 from .spin_state import build_wheel_pool as _build_wheel_pool
@@ -153,6 +154,7 @@ __all__ = [
     "_pick_random_entry",
     "_random_entries",
     "_random_pool_weights",
+    "_resolve_wheel_posters",
     "_card_data",
     "_BoundedDict",
     "_SPIN_STATE_MAX_ENTRIES",

@@ -149,7 +149,7 @@ export async function showIdleWheel(cat) {
       if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
       return;
     }
-    buildSettledWheel("spin-wheel-wrap", pool, data.wheel_weights);
+    buildSettledWheel("spin-wheel-wrap", pool, data.wheel_weights, data.wheel_posters);
     wrap._wheelCat = cat;
     if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
   } catch (e) {
@@ -193,9 +193,13 @@ function applyWheelWrapMetrics(wrap, known) {
   return wrap._wheelMetrics;
 }
 
-export function buildWheel(wrapId, items, weights, opts) {
+export function buildWheel(wrapId, items, weights, posters, opts) {
   const skipEnter = !!(opts && opts.skipEnter);
   const wrap = document.getElementById(wrapId);
+  // Rebuild-in-place callers (resize, weight toggle, appearance toggle) only
+  // have the pool/weights already on the wrap and don't refetch posters —
+  // carry the existing ones forward instead of losing them on every rebuild.
+  if (posters === undefined) posters = wrap._wheelPosters;
 
   const prevCanvas = wrap.querySelector(".wheel-canvas");
   const prevPool = wrap._wheelPool;
@@ -212,6 +216,7 @@ export function buildWheel(wrapId, items, weights, opts) {
   wrap.style.display = "flex";
   wrap._wheelPool = items;
   wrap._wheelWeights = weights;
+  wrap._wheelPosters = posters;
 
   const metrics = applyWheelWrapMetrics(wrap) || {cssSize: WHEEL_MIN_SIZE};
   const cssSize = metrics.cssSize;
@@ -264,6 +269,8 @@ export function buildWheel(wrapId, items, weights, opts) {
   countEl.textContent = pluralizeTitles(items.length);
   wrap.appendChild(countEl);
 
+  canvas._wheelPosters = posters;
+  canvas._wheelPosterImages = new Map();
   drawWheel(canvas, items, dpr, weights);
   canvas._wheelItems = items;
   canvas._wheelTitleEl = titleEl;
@@ -288,9 +295,10 @@ export function buildWheel(wrapId, items, weights, opts) {
 const WHEEL_SETTLE_MAX_ATTEMPTS = 3;
 const WHEEL_SETTLE_TOLERANCE_PX = 3;
 
-export function buildSettledWheel(wrapId, items, weights, attempt = 0, token = null, skipEnter = null) {
+export function buildSettledWheel(wrapId, items, weights, posters, attempt = 0, token = null, skipEnter = null) {
   const wrap = document.getElementById(wrapId);
   if (!wrap) return null;
+  if (posters === undefined) posters = wrap._wheelPosters;
   if (attempt === 0) {
     token = wrap._settleToken = (wrap._settleToken || 0) + 1;
     skipEnter = !!wrap.querySelector(".wheel-canvas");
@@ -298,7 +306,7 @@ export function buildSettledWheel(wrapId, items, weights, attempt = 0, token = n
 
   const hadWheel = attempt === 0 ? skipEnter : true;
   wrap.classList.add("wheel-wrap--settling");
-  const canvas = buildWheel(wrapId, items, weights, {skipEnter});
+  const canvas = buildWheel(wrapId, items, weights, posters, {skipEnter});
   if (!hadWheel) mountWheelSettleSkeleton(wrap);
 
   requestAnimationFrame(() => {
@@ -311,7 +319,7 @@ export function buildSettledWheel(wrapId, items, weights, attempt = 0, token = n
       const predicted = predictWheelSize(wrap);
       const drift = Math.abs(predicted - (wrap._wheelBuiltSize || 0));
       if (drift >= WHEEL_SETTLE_TOLERANCE_PX && attempt < WHEEL_SETTLE_MAX_ATTEMPTS) {
-        buildSettledWheel(wrapId, items, weights, attempt + 1, token, skipEnter);
+        buildSettledWheel(wrapId, items, weights, posters, attempt + 1, token, skipEnter);
         return;
       }
       revealSettledWheel(wrap);

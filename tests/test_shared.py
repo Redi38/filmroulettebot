@@ -204,14 +204,14 @@ def test_random_entries_weighted_lots_alone_still_have_a_positive_weight():
 
 def test_build_random_wheel_pool_holds_every_title_from_every_list():
     entries, weights = _random_entries({"movies": ["A", "B"], "cartoons": ["C"], "series": ["D"]})
-    pool, pool_weights, _ = _build_random_wheel_pool(entries, weights, entries[-1])
+    pool, pool_weights, _, _ = _build_random_wheel_pool(entries, weights, entries[-1])
     assert sorted(pool) == ["A", "B", "C", "D"]
     assert len(pool_weights) == len(pool)
 
 
 def test_build_random_wheel_pool_keeps_weights_aligned_with_titles():
     entries, weights = _random_entries({"movies": ["A", "B", "C"]}, weighted=True)
-    pool, pool_weights, winner_index = _build_random_wheel_pool(entries, weights)
+    pool, pool_weights, winner_index, _ = _build_random_wheel_pool(entries, weights)
     assert dict(zip(pool, pool_weights)) == {"A": 3, "B": 2, "C": 1}
     assert winner_index is None
 
@@ -219,13 +219,13 @@ def test_build_random_wheel_pool_keeps_weights_aligned_with_titles():
 def test_build_random_wheel_pool_winner_index_points_at_the_winners_segment():
     entries, weights = _random_entries({"movies": ["A", "B", "C"]}, lots={"marvel": "Железный человек"})
     for winner in entries:
-        pool, _, winner_index = _build_random_wheel_pool(entries, weights, winner)
+        pool, _, winner_index, _ = _build_random_wheel_pool(entries, weights, winner)
         assert pool[winner_index] == winner.label
 
 
 def test_build_random_wheel_pool_draws_a_lot_by_franchise_name_not_by_its_title():
     entries, weights = _random_entries({"movies": ["A"]}, lots={"marvel": "Железный человек"})
-    pool, _, _ = _build_random_wheel_pool(entries, weights, entries[-1])
+    pool, _, _, _ = _build_random_wheel_pool(entries, weights, entries[-1])
     assert "Marvel" in pool
     assert "Железный человек" not in pool
 
@@ -233,14 +233,14 @@ def test_build_random_wheel_pool_draws_a_lot_by_franchise_name_not_by_its_title(
 def test_build_random_wheel_pool_caps_size_and_keeps_the_winner():
     titles = [f"t{i}" for i in range(50)]
     entries, weights = _random_entries({"movies": titles})
-    pool, pool_weights, winner_index = _build_random_wheel_pool(entries, weights, entries[0], size=10)
+    pool, pool_weights, winner_index, _ = _build_random_wheel_pool(entries, weights, entries[0], size=10)
     assert len(pool) == len(pool_weights) == 10
     assert pool[winner_index] == "t0"
 
 
 def test_build_random_wheel_pool_without_winner_still_caps_size():
     entries, weights = _random_entries({"movies": [f"t{i}" for i in range(50)]})
-    pool, _, _ = _build_random_wheel_pool(entries, weights, None, size=10)
+    pool, _, _, _ = _build_random_wheel_pool(entries, weights, None, size=10)
     assert len(pool) == 10
 
 

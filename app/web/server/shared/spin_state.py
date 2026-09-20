@@ -197,7 +197,7 @@ def build_random_wheel_pool(
     weights: list[int],
     winner: WheelEntry | None = None,
     size: int = RANDOM_WHEEL_POOL_SIZE,
-) -> tuple[list[str], list[int], int | None]:
+) -> tuple[list[str], list[int], int | None, list[WheelEntry]]:
     """Segment labels (and matching weights) for the wheel, plus the winner's
     segment index. Every entry is a segment, winner included, unless the
     library exceeds `size`, in which case it is sampled down with the winner
@@ -205,7 +205,13 @@ def build_random_wheel_pool(
     been picked yet (the index is then None too).
 
     The index is sent to the client because the winner's card title no longer
-    has to appear on the wheel: a lot is drawn as "Marvel" but shows a film."""
+    has to appear on the wheel: a lot is drawn as "Marvel" but shows a film.
+
+    Also returns the pool's underlying WheelEntry objects, in the same order
+    as the returned labels — callers that need the real (cat, title) behind a
+    segment (e.g. poster lookups, where a lot's label is "Marvel" but its
+    poster is whatever film it resolved to) can't recover that from the label
+    alone."""
     idxs = list(range(len(entries)))
     win_idx = entries.index(winner) if winner is not None and winner in entries else None
     if len(idxs) > size:
@@ -216,7 +222,8 @@ def build_random_wheel_pool(
             idxs.append(win_idx)
     random.shuffle(idxs)
     winner_index = idxs.index(win_idx) if win_idx is not None else None
-    return [entries[i].label for i in idxs], [weights[i] for i in idxs], winner_index
+    pool_entries = [entries[i] for i in idxs]
+    return [e.label for e in pool_entries], [weights[i] for i in idxs], winner_index, pool_entries
 
 
 def random_pool_weights(

@@ -10,7 +10,8 @@ from app.db.database import (
     resolve_history_entry,
 )
 
-from ..shared import DeleteHistoryEntryBody, ResolveBody, _check_category, valid_category
+from ..shared.bodies import DeleteHistoryEntryBody, ResolveBody
+from ..shared.validation import check_category, valid_category
 
 router = APIRouter()
 
@@ -40,7 +41,7 @@ async def api_history_delete_entry(body: DeleteHistoryEntryBody) -> dict:
     touching the title's list membership or the rest of the category's
     history — distinct from /api/history/{cat}/clear, which wipes the
     whole category."""
-    _check_category(body.category)
+    check_category(body.category)
     ok = await delete_history_entry(body.category, body.title, body.timestamp)
     if not ok:
         raise HTTPException(404, "History entry not found")

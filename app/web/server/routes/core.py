@@ -7,8 +7,10 @@ from fastapi.responses import HTMLResponse
 from app.db.database import add_item, delete_item, get_item_counts
 from app.services.titles import next_sequel_title
 
-from ..shared import CATEGORIES, CATEGORY_SHORT, SequelBody, SequelResponse, valid_category
 from ..shared.assets import render_index_html
+from ..shared.bodies import SequelBody, SequelResponse
+from ..shared.constants import CATEGORIES, CATEGORY_SHORT
+from ..shared.validation import valid_category
 
 router = APIRouter()
 

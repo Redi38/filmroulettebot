@@ -23,18 +23,10 @@ from app.services.tmdb import (
 )
 from app.utils import paginate
 
-from ..shared import (
-    CATEGORIES,
-    LIST_PAGE_SIZE,
-    DeleteByIdBody,
-    RenameByIdBody,
-    ReorderBody,
-    TitleBody,
-    _add_or_conflict,
-    _validate_rename_by_id,
-    valid_category,
-)
+from ..shared.bodies import DeleteByIdBody, RenameByIdBody, ReorderBody, TitleBody
+from ..shared.constants import CATEGORIES, LIST_PAGE_SIZE
 from ..shared.posters import cache_info_by_id, lookup_poster_info_many, schedule_poster_backfill
+from ..shared.validation import add_or_conflict, valid_category, validate_rename_by_id
 
 router = APIRouter()
 
@@ -79,7 +71,7 @@ async def api_search_suggest(cat: str = Depends(valid_category), q: str = "") ->
 
 @router.post("/api/{cat}/add")
 async def api_add(body: TitleBody, cat: str = Depends(valid_category)) -> dict:
-    title = await _add_or_conflict(
+    title = await add_or_conflict(
         lambda t: item_exists(cat, t),
         lambda t: add_item(cat, t, body.is_series),
         body.title,
@@ -124,7 +116,7 @@ async def api_delete_by_title(body: TitleBody, cat: str = Depends(valid_category
 @router.post("/api/{cat}/rename")
 async def api_rename(body: RenameByIdBody, cat: str = Depends(valid_category)) -> dict:
     new_title = body.new_title.strip()
-    if not await _validate_rename_by_id(
+    if not await validate_rename_by_id(
         lambda title, item_id: item_exists_other_id(cat, title, item_id),
         body.id, new_title,
         conflict_msg=f"Не изменено — «{new_title}» уже есть в «{CATEGORIES.get(cat, cat)}»",

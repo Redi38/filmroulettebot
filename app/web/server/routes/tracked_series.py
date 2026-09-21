@@ -8,7 +8,8 @@ from fastapi import APIRouter
 from app.db.database import add_item, delete_item, get_items, item_exists, rename_item
 from app.services.tmdb import get_tracked_series_status, search_series_suggestions
 
-from ..shared import RenameBody, TitleBody, _add_or_conflict, _validate_rename
+from ..shared.bodies import RenameBody, TitleBody
+from ..shared.validation import add_or_conflict, validate_rename
 
 router = APIRouter()
 
@@ -28,7 +29,7 @@ async def api_tracked_series_search_suggest(q: str = "") -> dict:
 
 @router.post("/api/tracked-series/add")
 async def api_tracked_series_add(body: TitleBody) -> dict:
-    await _add_or_conflict(
+    await add_or_conflict(
         lambda t: item_exists("tracked_series", t),
         lambda t: add_item("tracked_series", t),
         body.title,
@@ -47,7 +48,7 @@ async def api_tracked_series_delete(body: TitleBody) -> dict:
 async def api_tracked_series_rename(body: RenameBody) -> dict:
     old_title = body.old_title.strip()
     new_title = body.new_title.strip()
-    if not await _validate_rename(
+    if not await validate_rename(
         lambda t: item_exists("tracked_series", t), old_title, new_title, "",
         conflict_msg=f"«{new_title}» уже отслеживается",
     ):

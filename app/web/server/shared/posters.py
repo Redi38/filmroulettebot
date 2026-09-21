@@ -29,6 +29,10 @@ logger = logging.getLogger(__name__)
 
 FRANCHISE_CATEGORIES = ("dc", "marvel")
 
+# tmdb_cache key prefixes: get_movie_info / get_series_info store under these.
+_MOVIE = "movie_info"
+_SERIES = "series_info"
+
 _POSTER_CACHE_TTL = 365 * 24 * 3600
 
 _backfill_inflight: set[tuple[str, str]] = set()
@@ -55,6 +59,34 @@ def _wheel_poster_size(url: str) -> str:
     return url.replace(_WHEEL_POSTER_FROM, _WHEEL_POSTER_TO, 1)
 
 
+def _cache_key(kind: str, title: str) -> str:
+    return f"{kind}:{title.strip().lower()}"
+
+
+def _lookup_order(cat: str, is_series: bool | None) -> tuple[str, ...]:
+    """Which TMDb info kinds a title in `cat` can be cached under, best first.
+    The single place that decides movie-vs-series for poster lookups and their
+    background backfill.
+
+    Only dc/marvel are ambiguous — a title can have both a movie_info and a
+    series_info entry (e.g. "Фонари" is both a 2026 film and the "Lanterns" TV
+    series) — so there `is_series` (the value stored on the item row, from the
+    result the user picked in the add-search modal) picks which one to prefer.
+    A legacy row added before is_series was tracked (None) keeps the old
+    best-effort guess: movie first. Every other category settles it itself."""
+    if cat == "series":
+        return (_SERIES,)
+    if cat in FRANCHISE_CATEGORIES:
+        return (_SERIES, _MOVIE) if is_series is True else (_MOVIE, _SERIES)
+    return (_MOVIE,)
+
+
+def _fetch_info(kind: str, title: str):
+    # Resolves get_series_info / get_movie_info at call time (not through a
+    # module-level table) so tests can monkeypatch them on this module.
+    return get_series_info(title) if kind == _SERIES else get_movie_info(title)
+
+
 async def _cached_poster(cache_key: str) -> dict | None:
     info = await get_tmdb_cache(cache_key, _POSTER_CACHE_TTL)
     return info if (info or {}).get("poster_url") else None
@@ -63,26 +95,12 @@ async def _cached_poster(cache_key: str) -> dict | None:
 async def lookup_poster_info(cat: str, title: str, is_series: bool | None = None) -> dict | None:
     """Cache-only cached-info dict (poster_url, resolved title, etc.) for
     `title` in category `cat`, or None if it was never resolved elsewhere.
-
-    For dc/marvel, a title can legitimately have both a movie_info and a
-    series_info cache entry (e.g. "Фонари" is both a 2026 film and the
-    "Lanterns" TV series) — when `is_series` is known (the stored value on
-    the item row, set from whichever TMDb result the user actually picked
-    in the add-search modal), it decides which cache entry to prefer so
-    the poster matches what was picked instead of always guessing movie
-    first, which could silently show the wrong title's poster."""
-    key = title.strip().lower()
-    if cat == "series":
-        return await _cached_poster(f"series_info:{key}")
-    if cat in FRANCHISE_CATEGORIES:
-        if is_series is True:
-            return await _cached_poster(f"series_info:{key}") or await _cached_poster(f"movie_info:{key}")
-        if is_series is False:
-            return await _cached_poster(f"movie_info:{key}") or await _cached_poster(f"series_info:{key}")
-        # Legacy row added before is_series was tracked — fall back to the
-        # old best-effort guess (movie first).
-        return await _cached_poster(f"movie_info:{key}") or await _cached_poster(f"series_info:{key}")
-    return await _cached_poster(f"movie_info:{key}")
+    Which cache entry is preferred — see _lookup_order()."""
+    for kind in _lookup_order(cat, is_series):
+        info = await _cached_poster(_cache_key(kind, title))
+        if info:
+            return info
+    return None
 
 
 async def lookup_poster_info_many(
@@ -100,37 +118,14 @@ async def lookup_poster_info_many(
     if not rows:
         return {}
 
-    keys_needed: set[str] = set()
-    for title, is_series in rows:
-        key = title.strip().lower()
-        if cat == "series":
-            keys_needed.add(f"series_info:{key}")
-        elif cat in FRANCHISE_CATEGORIES:
-            keys_needed.add(f"movie_info:{key}")
-            keys_needed.add(f"series_info:{key}")
-        else:
-            keys_needed.add(f"movie_info:{key}")
-
+    orders = {is_series: _lookup_order(cat, is_series) for _, is_series in rows}
+    keys_needed = {_cache_key(kind, title) for title, is_series in rows for kind in orders[is_series]}
     cached = await get_tmdb_cache_many(list(keys_needed), _POSTER_CACHE_TTL)
 
     out: dict[str, dict | None] = {}
     for title, is_series in rows:
-        key = title.strip().lower()
-        info = None
-        if cat == "series":
-            info = cached.get(f"series_info:{key}")
-        elif cat in FRANCHISE_CATEGORIES:
-            movie_info = cached.get(f"movie_info:{key}")
-            series_info = cached.get(f"series_info:{key}")
-            if is_series is True:
-                info = series_info or movie_info
-            elif is_series is False:
-                info = movie_info or series_info
-            else:
-                info = movie_info or series_info
-        else:
-            info = cached.get(f"movie_info:{key}")
-        out[title] = info if (info or {}).get("poster_url") else None
+        infos = (cached.get(_cache_key(kind, title)) for kind in orders[is_series])
+        out[title] = next((info for info in infos if (info or {}).get("poster_url")), None)
     return out
 
 
@@ -156,19 +151,9 @@ def schedule_poster_backfill(cat: str, title: str, is_series: bool | None = None
 
     async def _run() -> None:
         try:
-            if cat == "series":
-                await get_series_info(title)
-            elif cat in FRANCHISE_CATEGORIES:
-                if is_series is True:
-                    if not await get_series_info(title):
-                        await get_movie_info(title)
-                elif is_series is False:
-                    if not await get_movie_info(title):
-                        await get_series_info(title)
-                elif not await get_movie_info(title):
-                    await get_series_info(title)
-            else:
-                await get_movie_info(title)
+            for kind in _lookup_order(cat, is_series):
+                if await _fetch_info(kind, title):
+                    break
         except Exception:
             logger.warning("poster backfill failed for %r (%s)", title, cat, exc_info=True)
         finally:
@@ -226,5 +211,4 @@ async def cache_info_by_id(title: str, tmdb_id: int, is_series: bool) -> None:
     info = await get_details_by_id(tmdb_id, is_series)
     if not info:
         return
-    cache_key = f"{'series' if is_series else 'movie'}_info:{title.strip().lower()}"
-    await set_tmdb_cache(cache_key, info)
+    await set_tmdb_cache(_cache_key(_SERIES if is_series else _MOVIE, title), info)

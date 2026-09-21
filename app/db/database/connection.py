@@ -15,12 +15,18 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-ALLOWED_TABLES = frozenset({"movies", "cartoons", "series", "dc", "marvel", "upcoming_movies", "tracked_series"})
-NOCASE_TABLES = ("movies", "cartoons", "series", "dc", "marvel", "upcoming_movies", "tracked_series")
+# Every title-list table. One source of truth for both jobs below, so a new
+# list table can't end up allowed in dynamic SQL but missing its case-insensitive
+# unique index (or the other way round).
+LIST_TABLES = ("movies", "cartoons", "series", "dc", "marvel", "upcoming_movies", "tracked_series")
+ALLOWED_TABLES = frozenset(LIST_TABLES)  # check_table(): allowlist for dynamic SQL
+NOCASE_TABLES = LIST_TABLES  # schema.py: tables whose title column uses UNICODE_NOCASE
+
 
 def _unicode_nocase(a: str, b: str) -> int:
     a, b = a.casefold(), b.casefold()
     return -1 if a < b else (1 if a > b else 0)
+
 
 _DB_MAX_RETRIES = 4
 _DB_RETRY_BASE = 0.15  # seconds
@@ -53,10 +59,29 @@ _read_db_conn: aiosqlite.Connection | None = None
 _read_db_conn_lock = asyncio.Lock()
 
 
+async def _register_collation(db: aiosqlite.Connection) -> None:
+    """Register UNICODE_NOCASE on `db`. SQLite's built-in NOCASE only folds
+    ASCII, so Cyrillic titles need our own casefold()-based collation.
+
+    aiosqlite (through 0.22) has no public create_collation(), so this reaches
+    for two private attributes: the wrapped sqlite3 connection (`_conn`) and
+    the helper that runs a call on its worker thread (`_execute`). This is the
+    only place that does, so a future aiosqlite upgrade breaks here — loudly,
+    with the message below — and tests/test_db_collation.py pins the behaviour."""
+    try:
+        await db._execute(db._conn.create_collation, "UNICODE_NOCASE", _unicode_nocase)
+    except AttributeError as e:  # pragma: no cover - only on an incompatible aiosqlite
+        raise RuntimeError(
+            "aiosqlite no longer exposes the private hooks needed to register the "
+            "UNICODE_NOCASE collation; update _register_collation() in "
+            "app/db/database/connection.py"
+        ) from e
+
+
 async def _open_connection() -> aiosqlite.Connection:
     db = await aiosqlite.connect(settings.DB_PATH)
     db.row_factory = aiosqlite.Row
-    await db._execute(db._conn.create_collation, "UNICODE_NOCASE", _unicode_nocase)
+    await _register_collation(db)
     await db.execute("PRAGMA journal_mode=WAL")
     await db.execute("PRAGMA busy_timeout=5000")
     return db

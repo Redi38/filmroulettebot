@@ -17,8 +17,9 @@ from fastapi import APIRouter, HTTPException
 
 from app.db.database import get_items_with_ids, item_exists
 
-from ..shared import _card_data, _check_category
+from ..shared.card import card_data
 from ..shared.posters import FRANCHISE_CATEGORIES, lookup_poster_info_many
+from ..shared.validation import check_category
 
 router = APIRouter()
 
@@ -74,7 +75,7 @@ async def api_home_card(category: str, title: str) -> dict:
     `original_title`), not the TMDb-resolved display title — those can
     differ (translated/alternate titles) and item_exists checks the raw
     table."""
-    _check_category(category)
+    check_category(category)
     if not await item_exists(category, title):
         raise HTTPException(404, "Title not found in this category")
-    return await _card_data(category, title)
+    return await card_data(category, title)

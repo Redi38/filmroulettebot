@@ -34,7 +34,7 @@ from .routes import (
     tracked_series,
     upcoming,
 )
-from .shared import STATIC_DIR
+from .shared.constants import STATIC_DIR
 
 logger = logging.getLogger(__name__)
 

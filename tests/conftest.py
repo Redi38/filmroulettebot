@@ -49,12 +49,12 @@ async def initialized_db(db_path):
 
 @pytest.fixture(autouse=True)
 def _reset_spin_state():
-    """_last_spin_at / _last_spin_title (app/web/server/shared.py) are
+    """_last_spin_at / _last_spin_title (app/web/server/shared/spin_state.py) are
     plain module-level state shared by every test in the session — without
     resetting them, one test's cooldown timestamp (keyed by TestClient's
     fixed "testclient" IP) would leak into the next and cause spurious 429s.
     """
-    from app.web.server.shared import _last_spin_at, _last_spin_title
+    from app.web.server.shared.spin_state import _last_spin_at, _last_spin_title
 
     _last_spin_at.clear()
     _last_spin_title.clear()

@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException
 from app.db.database import get_all_settings, set_setting
 from app.db.database.settings import DEFAULTS
 
-from ..shared import SettingBody
+from ..shared.bodies import SettingBody
 
 router = APIRouter()
 

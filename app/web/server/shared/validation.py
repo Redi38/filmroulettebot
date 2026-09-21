@@ -1,9 +1,9 @@
 """Small validation helpers shared by the item/list route modules."""
 from __future__ import annotations
 
-from fastapi import HTTPException
+from fastapi import Depends, HTTPException
 
-from .constants import CATEGORIES
+from .constants import CATEGORIES, ROULETTE_CATEGORIES
 
 
 def check_category(cat: str) -> None:
@@ -22,6 +22,15 @@ async def valid_category(cat: str) -> str:
     (e.g. MoveBody.category) can't be wired through Depends this way —
     those handlers still call check_category(body.category) directly."""
     check_category(cat)
+    return cat
+
+
+async def roulette_category(cat: str = Depends(valid_category)) -> str:
+    """`valid_category` narrowed to the categories that have a roulette. Marvel
+    and DC are reference lists only, so the spin/wheel endpoints reject them
+    with a 400 (a known category, just not one you can spin)."""
+    if cat not in ROULETTE_CATEGORIES:
+        raise HTTPException(400, f"{cat} has no roulette — it's a reference list only")
     return cat
 
 

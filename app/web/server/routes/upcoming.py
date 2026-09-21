@@ -17,15 +17,8 @@ from app.db.database import (
 )
 from app.services.tmdb import check_upcoming_released, search_movie_suggestions
 
-from ..shared import (
-    DeleteByIdBody,
-    MoveBody,
-    RenameByIdBody,
-    TitleBody,
-    _add_or_conflict,
-    _check_category,
-    _validate_rename_by_id,
-)
+from ..shared.bodies import DeleteByIdBody, MoveBody, RenameByIdBody, TitleBody
+from ..shared.validation import add_or_conflict, check_category, validate_rename_by_id
 
 router = APIRouter()
 
@@ -44,7 +37,7 @@ async def api_upcoming_search_suggest(q: str = "") -> dict:
 
 @router.post("/api/upcoming/add")
 async def api_upcoming_add(body: TitleBody) -> dict:
-    await _add_or_conflict(
+    await add_or_conflict(
         lambda t: item_exists("upcoming_movies", t),
         add_upcoming_movie,
         body.title,
@@ -62,7 +55,7 @@ async def api_upcoming_delete(body: DeleteByIdBody) -> dict:
 @router.post("/api/upcoming/rename")
 async def api_upcoming_rename(body: RenameByIdBody) -> dict:
     new_title = body.new_title.strip()
-    if not await _validate_rename_by_id(
+    if not await validate_rename_by_id(
         upcoming_title_taken_by_other, body.id, new_title,
         conflict_msg=f"«{new_title}» уже в списке ожидаемых",
     ):
@@ -74,7 +67,7 @@ async def api_upcoming_rename(body: RenameByIdBody) -> dict:
 
 @router.post("/api/upcoming/move")
 async def api_upcoming_move(body: MoveBody) -> dict:
-    _check_category(body.category)
+    check_category(body.category)
     await add_item(body.category, body.title)
     await delete_upcoming_movie(body.title)
     return {"ok": True}

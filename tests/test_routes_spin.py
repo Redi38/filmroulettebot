@@ -18,9 +18,9 @@ pytestmark = pytest.mark.usefixtures("db_path")
 
 @pytest.fixture
 def resolve_calls(monkeypatch):
-    """Stub app.web.server.shared.resolve_card_data and count calls, so
+    """Stub app.web.server.shared.card.resolve_card_data and count calls, so
     tests can assert on cache hits/misses without any network access."""
-    from app.web.server import shared as shared_module
+    from app.web.server.shared import card as card_module
 
     calls = {"n": 0}
 
@@ -34,7 +34,7 @@ def resolve_calls(monkeypatch):
             "watch_link": f"https://example.test/{title}",
         }
 
-    monkeypatch.setattr(shared_module, "resolve_card_data", _fake_resolve)
+    monkeypatch.setattr(card_module, "resolve_card_data", _fake_resolve)
     return calls
 
 
@@ -82,6 +82,35 @@ def test_wheel_preview_400_for_non_roulette_category(client):
     _seed("dc", "Бэтмен")
     r = client.get("/api/dc/wheel-preview")
     assert r.status_code == 400
+
+
+_ROULETTE_ENDPOINTS = [
+    ("get", "/api/{cat}/wheel-preview", None),
+    ("post", "/api/{cat}/wheel-weights", {"pool": [], "weighted": False}),
+    ("post", "/api/{cat}/spin", {}),
+]
+
+
+@pytest.mark.parametrize(("method", "path", "payload"), _ROULETTE_ENDPOINTS)
+def test_roulette_endpoints_reject_reference_only_categories_with_400(client, method, path, payload):
+    _seed("dc", "Бэтмен")
+    r = client.request(method, path.format(cat="dc"), json=payload)
+    assert r.status_code == 400
+    assert "no roulette" in r.json()["detail"]
+
+
+@pytest.mark.parametrize(("method", "path", "payload"), _ROULETTE_ENDPOINTS)
+def test_roulette_endpoints_404_on_unknown_categories(client, method, path, payload):
+    r = client.request(method, path.format(cat="nope"), json=payload)
+    assert r.status_code == 404
+
+
+def test_rejected_category_does_not_burn_the_spin_cooldown(client):
+    """The category check runs before the cooldown is stamped, so a spin
+    aimed at a reference-only list doesn't make the next real spin a 429."""
+    _seed("movies", "Solo")
+    assert client.post("/api/dc/spin", json={}).status_code == 400
+    assert client.post("/api/movies/spin", json={}).status_code == 200
 
 
 # --- random wheel preview / weights ----------------------------------------
@@ -213,7 +242,7 @@ def test_random_spin_winner_card_matches_the_list_it_came_from(client):
 
 
 def test_random_spin_can_land_on_a_lot_and_shows_the_first_title_of_that_list(client):
-    from app.web.server.shared import _last_spin_at
+    from app.web.server.shared.spin_state import _last_spin_at
 
     _seed("marvel", "Железный человек", "Тор")
     seen = set()

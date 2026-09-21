@@ -64,7 +64,7 @@ def _star_bar(rating) -> str:
 
 
 async def _build_card(category: str, title: str) -> tuple[str, str, str | None]:
-    # Same reason as the web card (app/web/server/shared/_card_data): a
+    # Same reason as the web card (app/web/server/shared/card.py): a
     # dc/marvel row can be a film or a show under one name, so pass the flag
     # the user's pick recorded rather than letting the lookup guess.
     is_series = await get_item_is_series(category, title) if category in ("dc", "marvel") else None

@@ -29,7 +29,8 @@ from app.services.tmdb import (
 )
 from app.utils import paginate
 
-from ..shared import NOW_PLAYING_MAX_AGE_DAYS, THEATERS_PAGE_SIZE, SkipBody
+from ..shared.bodies import SkipBody
+from ..shared.constants import NOW_PLAYING_MAX_AGE_DAYS, THEATERS_PAGE_SIZE
 
 router = APIRouter()
 

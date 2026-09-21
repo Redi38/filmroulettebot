@@ -1,6 +1,6 @@
 """Domain logic for resolving a title into TMDB info + a watch link, shared
 by the bot (app/routers/roulette/common.py renders it as an HTML card) and
-the web frontend (app/web/server/shared.py renders it as JSON). Only the
+the web frontend (app/web/server/shared/card.py renders it as JSON). Only the
 presentation differs between the two interfaces — the lookup rules below
 should stay single-sourced here.
 """

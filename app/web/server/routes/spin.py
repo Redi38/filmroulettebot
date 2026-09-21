@@ -11,7 +11,7 @@ the path parameter.
 The featured card is cached in the `tmdb_cache` SQLite table (the same
 persistent cache TMDB lookups and posters use — see app/db/database/cache.py)
 rather than an in-process dict. Unlike the cooldown/last-title bookkeeping in
-shared.py, this cache is expensive to rebuild (it triggers TMDb lookups), so
+spin_state.py, this cache is expensive to rebuild (it triggers TMDb lookups), so
 losing it on every uvicorn restart (deploy, healthcheck-restart) is worth
 avoiding — persisting it means a redeploy doesn't force a fresh TMDb round
 trip for the first visitor after every restart."""
@@ -23,28 +23,29 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.db.database import get_items, get_items_with_ids, get_tmdb_cache, save_history, set_tmdb_cache
 
-from ..shared import (
+from ..shared.bodies import SpinBody, WheelWeightsBody
+from ..shared.card import card_data
+from ..shared.constants import (
     FEATURED_CACHE_TTL,
     LOT_CATEGORIES,
     LOT_WHEEL_CATEGORIES,
     RANDOM_WHEEL,
     ROULETTE_CATEGORIES,
     WEB_USER_ID,
-    SpinBody,
-    WheelWeightsBody,
-    _build_random_wheel_pool,
-    _build_wheel_pool,
-    _card_data,
-    _check_spin_cooldown,
-    _client_ip,
-    _pick_random_entry,
-    _pick_title,
-    _pool_weights,
-    _random_entries,
-    _random_pool_weights,
-    _resolve_wheel_posters,
-    valid_category,
 )
+from ..shared.posters import resolve_wheel_posters
+from ..shared.spin_state import (
+    build_random_wheel_pool,
+    build_wheel_pool,
+    check_spin_cooldown,
+    client_ip,
+    pick_random_entry,
+    pick_title_for_client,
+    pool_weights,
+    random_entries,
+    random_pool_weights,
+)
+from ..shared.validation import roulette_category, valid_category
 
 router = APIRouter()
 
@@ -96,15 +97,15 @@ def _entry_is_series(entry, lot_is_series: dict[str, bool | None]) -> bool | Non
 
 async def _pool_posters(pool_entries, lot_is_series: dict[str, bool | None]) -> list[str | None]:
     """Cache-only poster URL per segment of a lot-carrying wheel, in pool order."""
-    return await _resolve_wheel_posters([(e.cat, e.title, _entry_is_series(e, lot_is_series)) for e in pool_entries])
+    return await resolve_wheel_posters([(e.cat, e.title, _entry_is_series(e, lot_is_series)) for e in pool_entries])
 
 
 async def _lot_wheel_preview(wheel: str, weighted: bool, empty_msg: str) -> dict:
     items_by_cat, lots, lot_is_series = await _lot_wheel_sources(wheel)
-    entries, weights = _random_entries(items_by_cat, weighted, lots)
+    entries, weights = random_entries(items_by_cat, weighted, lots)
     if not entries:
         raise HTTPException(404, empty_msg)
-    pool, pool_weights, _, pool_entries = _build_random_wheel_pool(entries, weights)
+    pool, pool_weights, _, pool_entries = build_random_wheel_pool(entries, weights)
     posters = await _pool_posters(pool_entries, lot_is_series)
     return {"wheel_pool": pool, "wheel_weights": pool_weights, "wheel_posters": posters}
 
@@ -113,18 +114,18 @@ async def _lot_wheel_weights(wheel: str, body: WheelWeightsBody, empty_msg: str)
     items_by_cat, lots, _ = await _lot_wheel_sources(wheel)
     if not items_by_cat and not lots:
         raise HTTPException(404, empty_msg)
-    return {"wheel_weights": _random_pool_weights(items_by_cat, body.pool, body.weighted, lots)}
+    return {"wheel_weights": random_pool_weights(items_by_cat, body.pool, body.weighted, lots)}
 
 
 async def _lot_wheel_spin(request: Request, wheel: str, weighted: bool, empty_msg: str) -> dict:
     items_by_cat, lots, lot_is_series = await _lot_wheel_sources(wheel)
-    entries, weights = _random_entries(items_by_cat, weighted, lots)
+    entries, weights = random_entries(items_by_cat, weighted, lots)
     if not entries:
         raise HTTPException(404, empty_msg)
-    winner = _pick_random_entry(_client_ip(request), wheel, entries, weights)
+    winner = pick_random_entry(client_ip(request), wheel, entries, weights)
     ts = await save_history(WEB_USER_ID, winner.cat, winner.title)
-    data = await _card_data(winner.cat, winner.title, ts)
-    data["wheel_pool"], data["wheel_weights"], data["wheel_winner_index"], pool_entries = _build_random_wheel_pool(
+    data = await card_data(winner.cat, winner.title, ts)
+    data["wheel_pool"], data["wheel_weights"], data["wheel_winner_index"], pool_entries = build_random_wheel_pool(
         entries, weights, winner
     )
     data["wheel_posters"] = await _pool_posters(pool_entries, lot_is_series)
@@ -151,61 +152,56 @@ async def api_random_wheel_weights(body: WheelWeightsBody) -> dict:
 
 
 @router.get("/api/{cat}/wheel-preview")
-async def api_wheel_preview(cat: str = Depends(valid_category), weighted: bool = False) -> dict:
+async def api_wheel_preview(cat: str = Depends(roulette_category), weighted: bool = False) -> dict:
     """Idle wheel pool for display before the user presses "Крутить" — no
     winner is chosen, no history/cooldown side effects, just titles to show
     on the wheel segments."""
-    if cat not in ROULETTE_CATEGORIES:
-        raise HTTPException(400, f"{cat} has no roulette — it's a reference list only")
     if cat in LOT_WHEEL_CATEGORIES:
         return await _lot_wheel_preview(cat, weighted, _EMPTY_LIST_MSG)
     items = await get_items(cat)
     if not items:
         raise HTTPException(404, _EMPTY_LIST_MSG)
     dummy = random.choice(items)
-    pool, weights = _build_wheel_pool(items, dummy, weighted)
-    posters = await _resolve_wheel_posters([(cat, t, None) for t in pool])
+    pool, weights = build_wheel_pool(items, dummy, weighted)
+    posters = await resolve_wheel_posters([(cat, t, None) for t in pool])
     return {"wheel_pool": pool, "wheel_weights": weights, "wheel_posters": posters}
 
 
 @router.post("/api/{cat}/wheel-weights")
-async def api_wheel_weights(body: WheelWeightsBody, cat: str = Depends(valid_category)) -> dict:
+async def api_wheel_weights(body: WheelWeightsBody, cat: str = Depends(roulette_category)) -> dict:
     """Recompute segment weights for a wheel pool the client already has on
     screen (see `pool_weights`), so toggling weighted/normal mode can resize
     the existing segments in place instead of rebuilding the wheel with a
     freshly-shuffled pool."""
-    if cat not in ROULETTE_CATEGORIES:
-        raise HTTPException(400, f"{cat} has no roulette — it's a reference list only")
     if cat in LOT_WHEEL_CATEGORIES:
         return await _lot_wheel_weights(cat, body, _EMPTY_LIST_MSG)
     items = await get_items(cat)
     if not items:
         raise HTTPException(404, _EMPTY_LIST_MSG)
-    weights = _pool_weights(items, body.pool, body.weighted)
+    weights = pool_weights(items, body.pool, body.weighted)
     return {"wheel_weights": weights}
 
 
 @router.post("/api/random-spin")
 async def api_random_spin(request: Request, body: SpinBody = SpinBody()) -> dict:
-    _check_spin_cooldown(_client_ip(request))
+    check_spin_cooldown(client_ip(request))
     return await _lot_wheel_spin(request, RANDOM_WHEEL, body.weighted, _ALL_EMPTY_MSG)
 
 
 @router.post("/api/{cat}/spin")
-async def api_spin(request: Request, cat: str = Depends(valid_category), body: SpinBody = SpinBody()) -> dict:
-    if cat not in ROULETTE_CATEGORIES:
-        raise HTTPException(400, f"{cat} has no roulette — it's a reference list only")
-    _check_spin_cooldown(_client_ip(request))
+async def api_spin(request: Request, cat: str = Depends(roulette_category), body: SpinBody = SpinBody()) -> dict:
+    ip = client_ip(request)
+    check_spin_cooldown(ip)
     if cat in LOT_WHEEL_CATEGORIES:
         return await _lot_wheel_spin(request, cat, body.weighted, _EMPTY_LIST_MSG)
     items = await get_items(cat)
     if not items:
         raise HTTPException(404, _EMPTY_LIST_MSG)
-    title = _pick_title(_client_ip(request), cat, items, body.weighted)
+    title = pick_title_for_client(ip, cat, items, body.weighted)
     ts = await save_history(WEB_USER_ID, cat, title)
-    data = await _card_data(cat, title, ts)
-    data["wheel_pool"], data["wheel_weights"] = _build_wheel_pool(items, title, body.weighted)
-    data["wheel_posters"] = await _resolve_wheel_posters([(cat, t, None) for t in data["wheel_pool"]])
+    data = await card_data(cat, title, ts)
+    data["wheel_pool"], data["wheel_weights"] = build_wheel_pool(items, title, body.weighted)
+    data["wheel_posters"] = await resolve_wheel_posters([(cat, t, None) for t in data["wheel_pool"]])
     return data
 
 
@@ -213,7 +209,7 @@ async def api_spin(request: Request, cat: str = Depends(valid_category), body: S
 async def api_featured(cat: str = Depends(valid_category)) -> dict:
     items = await get_items(cat)
     if not items:
-        raise HTTPException(404, "Список пуст — добавь тайтлы, чтобы крутить")
+        raise HTTPException(404, _EMPTY_LIST_MSG)
     first = items[0]
 
     cache_key = f"featured:{cat}:{first}"
@@ -221,6 +217,6 @@ async def api_featured(cat: str = Depends(valid_category)) -> dict:
     if cached is not None:
         return cached
 
-    data = await _card_data(cat, first)
+    data = await card_data(cat, first)
     await set_tmdb_cache(cache_key, data)
     return data

@@ -7,7 +7,6 @@ import { reducedMotion, runViewTransition } from "./transitions.js";
 import { closeHistoryPanel } from "../history/panel.js";
 import { homeLoaded, loadHome, pauseHomeMarquee, resumeHomeMarquee, syncMarqueeSize } from "../home/home.js";
 import { loadList, renderListCatChips } from "../list/list-items.js";
-import { loadUpcoming } from "../list/upcoming-list.js";
 import { loadShowcase, loadTrackedSeries, prepShowcaseSkeletonIfStale } from "../showcase/showcase.js";
 import { renderAllDockControls } from "../spin/settings/dock-controls.js";
 import { renderSpinCatChips, resetSpinResult } from "../spin/settings/spin-category.js";
@@ -68,14 +67,13 @@ export function switchView(view) {
 const SECTION_IDS = {
   home: "home-section",
   spin: "spin-section", list: "list-section",
-  upcoming: "upcoming-section", showcase: "showcase-section",
+  showcase: "showcase-section",
   theaters: "theaters-section", series_releases: "series-releases-section",
   tracked_series: "tracked-series-section",
 };
 
 export const VIEW_LOADERS = {
   list: () => loadList(),
-  upcoming: () => loadUpcoming(),
   // `true` marks this as a plain tab-revisit call: if the view already has
   // fresh-enough data, the loader skips the fetch-and-fade entirely instead
   // of re-flickering content that source updates only rarely (TMDB

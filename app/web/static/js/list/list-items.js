@@ -11,13 +11,14 @@ import { debounce, escapeHtml, placeholderHtml } from "../core/utils.js";
 import { showLoadError, showSkeleton } from "../core/view-load.js";
 import { switchListCat } from "../core/views.js";
 import { createEditableRow } from "./list-row.js";
+import { loadUpcoming } from "./upcoming-list.js";
 import { loadShowcase } from "../showcase/showcase.js";
 import { renderSpinCatChips } from "../spin/settings/spin-category.js";
 
 // List rendering for every category: load, search, pagination, add/delete.
 //
 // There is one list screen rather than one per category — the chip row at the
-// top of it is what switches between Фильмы / Сериалы / Marvel / DC / …
+// top of it is what switches between Фильмы / Сериалы / Marvel / DC / Ожидаемые
 
 let currentListPage = 1;
 let currentListCat = null;
@@ -48,6 +49,19 @@ export async function loadList(page) {
   else currentListPage = 1;
 
   renderListCatChips();
+
+  // "Ожидаемые" is the last chip: it swaps the whole body of the list screen
+  // for its own panel (its own add box, check button and list) and has no
+  // /api/<cat>/items endpoint, so it never goes through the loader below.
+  const isUpcoming = uiState.currentCat === "upcoming";
+  document.getElementById("regular-list-panel").hidden = isUpcoming;
+  document.getElementById("upcoming-panel").hidden = !isUpcoming;
+  if (isUpcoming) {
+    // Remember it as the shown category so coming back to a real one is a fresh view.
+    currentListCat = uiState.currentCat;
+    return loadUpcoming();
+  }
+
   document.getElementById("add-row").style.display = "flex";
   const featured = document.getElementById("list-featured");
   const container = document.getElementById("list-container");

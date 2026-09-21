@@ -23,6 +23,8 @@ function hashToState(hash) {
   const parts = hash.replace(/^#\/?/, "").split("/").filter(Boolean);
   let view = parts[0] || "home";
   if (view === "random" || view === "history") view = "spin"; // legacy bookmarks from the old split views
+  // "Ожидаемые" used to be its own view; it is now a chip on the list screen.
+  if (view === "upcoming") return { view: "list", cat: "upcoming" };
   return { view, cat: parts[1] || null };
 }
 

@@ -6,14 +6,16 @@
 export const CATS = {movies: "Фильмы", cartoons: "Мульты", series: "Сериалы"};
 export const REF_CATS = {marvel: "Marvel", dc: "DC"};
 export const ALL_CATS = {...CATS, ...REF_CATS};
-export const LIST_CATS = {...CATS, ...REF_CATS};
+// "upcoming" is the manually-tracked "Ожидаемые" list; it lives on the list screen
+// as the last chip (after DC) rather than being a category with a roulette.
+export const LIST_CATS = {...CATS, ...REF_CATS, upcoming: "Ожидаемые"};
 
 // The roulette is a single view; RANDOM_CAT is the pseudo-category that
 // means "pick the category for me too" (POST /api/random-spin).
 export const RANDOM_CAT = "random";
 
 export const VIEW_TITLES = {
-  home: "Афиша", upcoming: "Ожидаемые",
+  home: "Афиша",
   theaters: "В прокате", series_releases: "Премьеры сериалов",
   tracked_series: "Отслеживание сериалов",
 };

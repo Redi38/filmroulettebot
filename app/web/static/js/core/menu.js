@@ -76,9 +76,6 @@ export function renderMenu() {
     addItem(code, REF_CATS[code], () => switchCat(code, "showcase"), uiState.currentView === "showcase" && uiState.currentCat === code);
   }
 
-  addGroup("Прочее");
-  addItem("upcoming", "Ожидаемые", () => switchView("upcoming"), uiState.currentView === "upcoming");
-
   syncMenuIndicator(activeItem);
 }
 

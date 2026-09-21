@@ -16,6 +16,8 @@ function loadState() {
   const view = (s.view === "random" || s.view === "history") ? "spin" : (s.view || "home");
   let spinCat = s.spinCat || (s.view === "random" ? RANDOM_CAT : null);
   if (!spinCat) spinCat = (s.view === "spin" && CATS[s.cat]) ? s.cat : RANDOM_CAT;
+  // "Ожидаемые" used to be its own view; it is now a chip on the list screen.
+  if (view === "upcoming") return { cat: "upcoming", view: "list", spinCat };
   return { cat: LIST_CATS[s.cat] ? s.cat : "movies", view, spinCat };
 }
 

@@ -85,29 +85,30 @@
 
   <div id="list-section" class="section">
     <div id="list-cat-select" class="cat-select-row"></div>
-    <div id="list-featured"></div>
-    <div class="search-row">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-      <input type="text" id="search-input" placeholder="Поиск по названию…">
+    <div id="regular-list-panel">
+      <div id="list-featured"></div>
+      <div class="search-row">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" id="search-input" placeholder="Поиск по названию…">
+      </div>
+      <div class="add-row" id="add-row">
+        <input type="text" id="add-input" placeholder="Название для добавления…">
+        <button class="btn btn-primary" id="add-btn" aria-label="Добавить"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+      </div>
+      <div id="list-count" class="list-count"></div>
+      <div class="card" id="list-container"></div>
     </div>
-    <div class="add-row" id="add-row">
-      <input type="text" id="add-input" placeholder="Название для добавления…">
-      <button class="btn btn-primary" id="add-btn" aria-label="Добавить"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+    <div id="upcoming-panel" hidden>
+      <div class="add-row">
+        <input type="text" id="up-add-input" placeholder="Название для добавления…">
+        <button class="btn btn-primary" id="up-add-btn" aria-label="Добавить"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+      </div>
+      <div class="actions">
+        <button class="btn btn-success" id="up-check-btn">🔍 Проверить вышедшие</button>
+      </div>
+      <div id="up-check-result"></div>
+      <div class="card" id="up-list-container"></div>
     </div>
-    <div id="list-count" class="list-count"></div>
-    <div class="card" id="list-container"></div>
-  </div>
-
-  <div id="upcoming-section" class="section">
-    <div class="add-row">
-      <input type="text" id="up-add-input" placeholder="Название для добавления…">
-      <button class="btn btn-primary" id="up-add-btn" aria-label="Добавить"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
-    </div>
-    <div class="actions">
-      <button class="btn btn-success" id="up-check-btn">🔍 Проверить вышедшие</button>
-    </div>
-    <div id="up-check-result"></div>
-    <div class="card" id="up-list-container"></div>
   </div>
 
   <div id="showcase-section" class="section">

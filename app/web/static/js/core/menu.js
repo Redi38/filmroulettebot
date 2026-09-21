@@ -63,7 +63,7 @@ export function renderMenu() {
 
   addGroup("Главное");
   addItem("home", "Афиша", () => switchView("home"), uiState.currentView === "home");
-  addItem("shuffle", "Рулетка", () => switchView("spin"), uiState.currentView === "spin");
+  addItem("wheel", "Рулетка", () => switchView("spin"), uiState.currentView === "spin");
   addItem("list", "Списки", () => switchToList(), uiState.currentView === "list");
 
   addGroup("Кино и сериалы");

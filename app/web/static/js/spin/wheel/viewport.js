@@ -80,9 +80,7 @@ function refreshWheelLayout() {
   rebuildVisibleWheels();
   syncSpinResultClearance();
 }
-const debouncedRefreshWheelLayout = typeof debounce === "function"
-  ? debounce(refreshWheelLayout, 150)
-  : refreshWheelLayout;
+const debouncedRefreshWheelLayout = debounce(refreshWheelLayout, 150);
 window.addEventListener("resize", onRealResize(() => { touchWheelLayout(); debouncedRefreshWheelLayout(); }));
 window.addEventListener("orientationchange", debouncedRefreshWheelLayout);
 
@@ -119,9 +117,7 @@ function watchWheelDPR() {
 watchWheelDPR();
 
 if (typeof ResizeObserver !== "undefined") {
-  const debouncedRefreshWheelLayoutForObserver = typeof debounce === "function"
-    ? debounce(refreshWheelLayout, 150)
-    : refreshWheelLayout;
+  const debouncedRefreshWheelLayoutForObserver = debounce(refreshWheelLayout, 150);
   const wheelLayoutObserver = new ResizeObserver(() => {
     touchWheelLayout();
     debouncedRefreshWheelLayoutForObserver();

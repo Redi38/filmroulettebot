@@ -102,7 +102,7 @@
 
 /* `transform` is transitioned as well so page navigation can slide the list
    out and the next page in from the direction the reader is travelling —
-   see setNavDirection()/fadeOut()/fadeIn() in core/utils.js. */
+   see setNavDirection()/fadeOut()/fadeIn() in core/transitions.js. */
 #list-container, #list-featured, #up-list-container, #up-check-result, #history-list, #showcase-container, #theaters-container, #series-releases-container,
 #tracked-series-container,
 .theaters-col, #poster-info-content {

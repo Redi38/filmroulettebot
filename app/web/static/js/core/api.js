@@ -1,6 +1,4 @@
 // @ts-check
-import { showToast } from "./utils.js";
-import { handleSpinError } from "../spin/spin-actions.js";
 
 /** @typedef {import("../types/api.js").paths} ApiPaths */
 /**
@@ -174,6 +172,24 @@ export async function api(path, opts) {
 }
 
 /**
+ * POST `body` as JSON. Typed exactly like api(). With no body it sends a
+ * bare POST (no Content-Type header), for endpoints that only trigger an
+ * action (clear a history tab, run the release check).
+ *
+ * @template {keyof ApiPaths} Path
+ * @param {Path} path
+ * @param {unknown} [body]
+ * @returns {Promise<ApiResponseOf<Path>>}
+ */
+export function apiPost(path, body) {
+  if (body === undefined) return api(path, {method: "POST"});
+  return api(path, {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(body),
+  });
+}
+
+/**
  * @param {string} category
  * @param {string} title
  * @returns {Promise<string>}
@@ -185,10 +201,7 @@ export async function performSequel(category, title) {
   // shape of the matching literal route, /api/{cat}/sequel, so the return
   // type is still real instead of `any`.
   const r = /** @type {ApiResponseOf<"/api/{cat}/sequel">} */ (
-    await api(/** @type {any} */ (`/api/${category}/sequel`), {
-      method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({title}),
-    })
+    await apiPost(/** @type {any} */ (`/api/${category}/sequel`), {title})
   );
   // The route declares response_model=SequelResponse, so `new_title` is a
   // real `string` in api.d.ts — no cast needed.
@@ -201,8 +214,5 @@ export async function performSequel(category, title) {
  * @returns {Promise<void>}
  */
 export async function performDelete(category, title) {
-  await api(/** @type {any} */ (`/api/${category}/delete-by-title`), {
-    method: "POST", headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({title}),
-  });
+  await apiPost(/** @type {any} */ (`/api/${category}/delete-by-title`), {title});
 }

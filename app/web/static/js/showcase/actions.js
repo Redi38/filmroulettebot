@@ -1,7 +1,9 @@
 import { openAddSearchModal } from "../core/add-search.js";
-import { api } from "../core/api.js";
+import { apiPost } from "../core/api.js";
 import { openCategoryModal, openRenameModal } from "../core/modal.js";
-import { PENCIL_ICON_SVG, TRASH_ICON_SVG, collapseAndRemoveRow, expandRowIn, removeRowOptimistically, resetRowCollapse, showInlineUndo, showToast } from "../core/utils.js";
+import { PENCIL_ICON_SVG, TRASH_ICON_SVG } from "../core/icons.js";
+import { collapseAndRemoveRow, expandRowIn, removeRowOptimistically, resetRowCollapse, showInlineUndo } from "../core/rows.js";
+import { showToast } from "../core/toast.js";
 import { loadTrackedSeries } from "./showcase.js";
 
 // Builds the action area on the right of a showcase row: either the
@@ -22,10 +24,7 @@ function buildTrackedSeriesActions(item, wrap, onSkipSettled) {
     openRenameModal(item.title, async (newTitle) => {
       const save = async (finalTitle) => {
         try {
-          await api("/api/tracked-series/rename", {
-            method: "POST", headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({old_title: item.title, new_title: finalTitle}),
-          });
+          await apiPost("/api/tracked-series/rename", {old_title: item.title, new_title: finalTitle});
           loadTrackedSeries();
         } catch (e) {
           showToast(e.message || "Не удалось изменить название");
@@ -50,20 +49,14 @@ function buildTrackedSeriesActions(item, wrap, onSkipSettled) {
     const showUndo = () => {
       showInlineUndo(rowParent, rowNext, `«${item.title}» больше не отслеживается`, "Отменить", async () => {
         try {
-          await api("/api/tracked-series/add", {
-            method: "POST", headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({title: item.title}),
-          });
+          await apiPost("/api/tracked-series/add", {title: item.title});
           if (onSkipSettled) onSkipSettled();
         } catch (e) {
           showToast("Не удалось восстановить");
         }
       });
     };
-    removeRowOptimistically(wrap, () => api("/api/tracked-series/delete", {
-      method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({title: item.title}),
-    }), null, {onCollapseStart: showUndo});
+    removeRowOptimistically(wrap, () => apiPost("/api/tracked-series/delete", {title: item.title}), null, {onCollapseStart: showUndo});
   };
   actionSlot.appendChild(del);
 
@@ -85,10 +78,7 @@ function buildAddActionSlot(item, cat, addMode, skipScope, wrap, onSkipSettled) 
   const addTo = async (endpointCat) => {
     btn.disabled = true;
     try {
-      await api(`/api/${endpointCat}/add`, {
-        method: "POST", headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({title: item.title}),
-      });
+      await apiPost(`/api/${endpointCat}/add`, {title: item.title});
       item.in_list = true;
       actionSlot.innerHTML = `<span class="muted">✓ В списке</span>`;
       showToast(`«${item.title}» добавлен`);
@@ -100,10 +90,7 @@ function buildAddActionSlot(item, cat, addMode, skipScope, wrap, onSkipSettled) 
   const addToUpcoming = async () => {
     btn.disabled = true;
     try {
-      await api(`/api/upcoming/add`, {
-        method: "POST", headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({title: item.title}),
-      });
+      await apiPost(`/api/upcoming/add`, {title: item.title});
       item.in_list = true;
       actionSlot.innerHTML = `<span class="muted">✓ В списке</span>`;
       showToast(`«${item.title}» добавлен в «Скоро в кино»`);
@@ -133,18 +120,12 @@ function buildAddActionSlot(item, cat, addMode, skipScope, wrap, onSkipSettled) 
     const doSkip = async () => {
       skipBtn.disabled = true;
       try {
-        await api("/api/skip", {
-          method: "POST", headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({scope: skipScope, title: item.title}),
-        });
+        await apiPost("/api/skip", {scope: skipScope, title: item.title});
         const rowParent = wrap.parentNode;
         const rowNext = wrap.nextSibling;
         const showUndo = () => showInlineUndo(rowParent, rowNext, `«${item.title}» скрыт`, "Отменить", async () => {
           try {
-            await api("/api/unskip", {
-              method: "POST", headers: {"Content-Type": "application/json"},
-              body: JSON.stringify({scope: skipScope, title: item.title}),
-            });
+            await apiPost("/api/unskip", {scope: skipScope, title: item.title});
             skipBtn.disabled = false;
             skipBtn.classList.remove("confirming");
             skipBtn.textContent = "Скип";

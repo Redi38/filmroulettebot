@@ -3,7 +3,8 @@ import { api } from "./api.js";
 import { CATS } from "./constants.js";
 import { overlay } from "./menu.js";
 import { skeletonCardHtml } from "./skeleton.js";
-import { crossfadeContent, escapeHtml } from "./utils.js";
+import { crossfadeContent } from "./transitions.js";
+import { errorHtml } from "./utils.js";
 
 export function openCategoryModal(titleText, onPick, allowedCats) {
   const overlay = document.getElementById("modal-overlay");
@@ -73,7 +74,7 @@ export function openPosterInfoModal(category, title) {
 
   api(`/api/home/card?category=${encodeURIComponent(category)}&title=${encodeURIComponent(title)}`)
     .then((data) => { crossfadeContent(content, renderCard(data, {actions: false})); })
-    .catch((e) => { crossfadeContent(content, `<div class="muted">❌ ${escapeHtml(e.message)}</div>`); });
+    .catch((e) => { crossfadeContent(content, errorHtml(e)); });
 }
 export function closePosterInfoModal() { document.getElementById("poster-info-overlay").classList.remove("open"); }
 document.getElementById("poster-info-close").onclick = closePosterInfoModal;

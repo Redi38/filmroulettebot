@@ -52,7 +52,7 @@ export function wheelIdleRedraw(canvas, highlightIndex) {
 // "" in normal mode (equal segments — nothing to explain) and when the
 // wheel is mid-resize between the two modes.
 function wheelSegmentOddsText(canvas, idx) {
-  if (typeof isWeightedMode === "function" && !isWeightedMode()) return "";
+  if (!isWeightedMode()) return "";
   const b = canvas._wheelBoundaries && canvas._wheelBoundaries[idx];
   if (!b) return "";
   const pct = ((b.end - b.start) / 360) * 100;

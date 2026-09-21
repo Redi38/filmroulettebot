@@ -1,4 +1,4 @@
-import { api } from "../core/api.js";
+import { apiPost } from "../core/api.js";
 import { CATS } from "../core/constants.js";
 import { RESOLVED_HIST_KEY, initial } from "../core/state.js";
 import { getLSJSON, setLSJSON } from "../core/storage.js";
@@ -40,12 +40,9 @@ export function markResolved(key, outcome) {
 
 export async function resolveOnServer(category, title, timestamp, resolvedType, newTitle) {
   try {
-    await api("/api/history/resolve", {
-      method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({
-        category, title, timestamp: Number(timestamp),
-        resolved_type: resolvedType, new_title: newTitle || null,
-      }),
+    await apiPost("/api/history/resolve", {
+      category, title, timestamp: Number(timestamp),
+      resolved_type: resolvedType, new_title: newTitle || null,
     });
   } catch {
   }

@@ -1,4 +1,4 @@
-import { api } from "../../core/api.js";
+import { apiPost } from "../../core/api.js";
 import { uiState } from "../../core/state.js";
 import { getLS, setLS } from "../../core/storage.js";
 import { renderChoiceToggle, renderControlOnAllDocks } from "./dock-controls.js";
@@ -58,10 +58,7 @@ async function resizeIdleWheelForWeightedMode(weighted) {
 
   const token = ++weightResizeToken;
   try {
-    const data = await api(`/api/${uiState.spinCat}/wheel-weights`, {
-      method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({pool, weighted}),
-    });
+    const data = await apiPost(`/api/${uiState.spinCat}/wheel-weights`, {pool, weighted});
     if (token !== weightResizeToken) return;
     if (wrap._wheelPool !== pool || document.getElementById("spin-wheel-wrap") !== wrap) return;
     wrap._wheelWeights = data.wheel_weights;

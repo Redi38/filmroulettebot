@@ -1,7 +1,9 @@
-import { api } from "../core/api.js";
+import { api, apiPost } from "../core/api.js";
 import { CATS } from "../core/constants.js";
 import { skeletonHistoryHtml } from "../core/skeleton.js";
-import { escapeHtml, fadeIn, fadeOut, setNavDirection, showToast } from "../core/utils.js";
+import { showToast } from "../core/toast.js";
+import { fadeIn, fadeOut, setNavDirection } from "../core/transitions.js";
+import { errorHtml } from "../core/utils.js";
 import { animatePanelHeight } from "./height-anim.js";
 import { renderHistoryList } from "./list.js";
 import { historyState } from "./state.js";
@@ -36,7 +38,7 @@ export async function loadHistory() {
     animatePanelHeight(renderHistoryList);
     fadeIn(list);
   } catch (e) {
-    list.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
+    list.innerHTML = errorHtml(e);
     list.style.opacity = "1";
   }
 }
@@ -121,7 +123,7 @@ function handleClearClick(btn) {
 async function clearHistoryCategory(cat) {
   const list = document.getElementById("history-list");
   try {
-    await api(`/api/history/${cat}/clear`, {method: "POST"});
+    await apiPost(`/api/history/${cat}/clear`);
     historyState.items = historyState.items.filter((e) => e.category !== cat);
     resetClearButton();
     await fadeOut(list);

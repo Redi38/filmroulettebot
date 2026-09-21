@@ -1,4 +1,4 @@
-import { reducedMotion } from "../core/utils.js";
+import { reducedMotion } from "../core/transitions.js";
 
 // The history panel is as tall as its content (up to a max-height), so any
 // change to what is inside it — another tab with a shorter or longer list, a

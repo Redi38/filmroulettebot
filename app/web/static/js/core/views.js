@@ -1,9 +1,9 @@
-import { VIEW_TITLES, viewTitleFor } from "./constants.js";
+import { TAB_REVISIT_STALE_MS, VIEW_TITLES, viewTitleFor } from "./constants.js";
 import { renderMenu } from "./menu.js";
 import { closeModal, closePosterInfoModal, closeRenameModal } from "./modal.js";
 import { VIEWS_WITH_CAT, hashCatFor, pushViewToHistory } from "./router.js";
 import { saveState, uiState } from "./state.js";
-import { TAB_REVISIT_STALE_MS, reducedMotion, runViewTransition } from "./utils.js";
+import { reducedMotion, runViewTransition } from "./transitions.js";
 import { closeHistoryPanel } from "../history/panel.js";
 import { homeLoaded, loadHome, pauseHomeMarquee, resumeHomeMarquee, syncMarqueeSize } from "../home/home.js";
 import { loadList, renderListCatChips } from "../list/list-items.js";
@@ -107,10 +107,10 @@ export function updateHeaderTitle() {
 }
 
 export async function showSection() {
-  if (typeof closePosterInfoModal === "function") closePosterInfoModal();
-  if (typeof closeModal === "function") closeModal();
-  if (typeof closeRenameModal === "function") closeRenameModal();
-  if (uiState.currentView === "showcase" && typeof prepShowcaseSkeletonIfStale === "function") {
+  closePosterInfoModal();
+  closeModal();
+  closeRenameModal();
+  if (uiState.currentView === "showcase") {
     prepShowcaseSkeletonIfStale();
   }
 
@@ -128,7 +128,7 @@ export async function showSection() {
   const hasViewTransitions = !reduceMotion && typeof document.startViewTransition === "function";
   const useViewTransition = isSwap && hasViewTransitions;
 
-  if (uiState.currentView !== "home" && typeof pauseHomeMarquee === "function") pauseHomeMarquee();
+  if (uiState.currentView !== "home") pauseHomeMarquee();
 
   const resumeHomeMarqueeInline = uiState.currentView === "home" && homeLoaded && useViewTransition;
 

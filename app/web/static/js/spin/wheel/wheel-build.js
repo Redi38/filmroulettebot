@@ -7,7 +7,7 @@ import { getWheelHubImage } from "./hub-upload.js";
 import { WHEEL_MIN_SIZE, WHEEL_VERTICAL_RESERVE, computeDockClearance, computeWheelSize, getWheelBottomGap, nextSettledFrame, predictWheelSize } from "./layout.js";
 import { setCanvasRotation } from "./spin.js";
 import { syncSpinResultClearance, wheelLayoutQuietFor } from "./viewport.js";
-import { WHEEL_HUB_GIF_URL, WHEEL_WRAP_IDS, getWheelDPR, getWheelStyle } from "./wheel-constants.js";
+import { WHEEL_WRAP_IDS, getWheelDPR, getWheelStyle } from "./wheel-constants.js";
 import { drawWheel, getCanvasRotationDeg, updatePointerTitle } from "./wheel-draw.js";
 import { attachWheelHover, startWheelIdle } from "./wheel-idle.js";
 
@@ -125,12 +125,12 @@ export async function showIdleWheel(cat) {
   prepIdleWheelSkeleton(cat);
   const skeletonShownAt = wrap._wheelSkeletonShownAt || 0;
   try {
-    const weighted = typeof isWeightedMode === "function" ? isWeightedMode() : false;
+    const weighted = isWeightedMode();
     const data = await api(`/api/${cat}/wheel-preview?weighted=${weighted}`);
     const pool = data.wheel_pool;
     if (!pool || pool.length < 2) {
       resetWheelWraps();
-      if (typeof resetSpinResult === "function") resetSpinResult();
+      resetSpinResult();
       return;
     }
     if (document.getElementById("spin-wheel-wrap") !== wrap || !wrap.isConnected) return;
@@ -146,15 +146,15 @@ export async function showIdleWheel(cat) {
     wrap.classList.remove("wheel-wrap--settling");
     if (canReuseIdleWheel(wrap, cat, pool, data.wheel_weights)) {
       revealSettledWheel(wrap);
-      if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
+      syncSpinResultClearance();
       return;
     }
     buildSettledWheel("spin-wheel-wrap", pool, data.wheel_weights, data.wheel_posters);
     wrap._wheelCat = cat;
-    if (typeof syncSpinResultClearance === "function") syncSpinResultClearance();
+    syncSpinResultClearance();
   } catch (e) {
     resetWheelWraps();
-    if (typeof resetSpinResult === "function") resetSpinResult();
+    resetSpinResult();
   }
 }
 
@@ -244,7 +244,7 @@ export function buildWheel(wrapId, items, weights, posters, opts) {
   canvasMask.appendChild(canvas);
   holder.appendChild(canvasMask);
   holder.appendChild(pointer);
-  const hubUrl = typeof getWheelHubImage === "function" ? getWheelHubImage() : WHEEL_HUB_GIF_URL;
+  const hubUrl = getWheelHubImage();
   const hubMedia = document.createElement("div");
   hubMedia.className = "wheel-hub-media";
   hubMedia.tabIndex = 0;
@@ -277,10 +277,8 @@ export function buildWheel(wrapId, items, weights, posters, opts) {
   updatePointerTitle(canvas, carriedRotation);
   updateWheelScrollLock();
 
-  if (typeof startWheelIdle === "function") {
-    attachWheelHover(canvas, canvasMask);
-    startWheelIdle(canvas);
-  }
+  attachWheelHover(canvas, canvasMask);
+  startWheelIdle(canvas);
 
   if (!skipEnter && !wrap.classList.contains("wheel-wrap--settling")) {
     requestAnimationFrame(() => {

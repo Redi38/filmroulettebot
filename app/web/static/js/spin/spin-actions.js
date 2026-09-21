@@ -1,8 +1,10 @@
 import { renderCard } from "../card/card-render.js";
-import { api } from "../core/api.js";
+import { apiPost } from "../core/api.js";
 import { skeletonCardHtml } from "../core/skeleton.js";
 import { isRandomSpin, uiState } from "../core/state.js";
-import { escapeHtml, fadeIn, fadeOut, showToast } from "../core/utils.js";
+import { showToast } from "../core/toast.js";
+import { fadeIn, fadeOut } from "../core/transitions.js";
+import { errorHtml } from "../core/utils.js";
 import { isAutoWatchEnabled } from "./settings/auto-watch-toggle.js";
 import { isConfettiEnabled } from "./settings/confetti-toggle.js";
 import { SPIN_COOLDOWN_SECONDS, spinCooldown } from "./settings/dock-controls.js";
@@ -25,7 +27,7 @@ function cancelAutoWatchOpen() {
 
 function scheduleAutoWatchOpen(data, result) {
   if (!data || !data.watch_link || !result) return;
-  if (typeof isAutoWatchEnabled === "function" && !isAutoWatchEnabled()) return;
+  if (!isAutoWatchEnabled()) return;
   const hint = result.querySelector(".auto-watch-hint");
   const textEl = hint && hint.querySelector(".auto-watch-hint-text");
 
@@ -98,10 +100,7 @@ async function doWheelSpin(cat, isRandom) {
 
   try {
     const endpoint = isRandom ? "/api/random-spin" : `/api/${cat}/spin`;
-    const data = await api(endpoint, {
-      method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({weighted: isWeightedMode()}),
-    });
+    const data = await apiPost(endpoint, {weighted: isWeightedMode()});
     uiState.currentCardData = data;
     // prepIdleWheelSkeleton() above added wheel-wrap--settling, which hides
     // every child but the skeleton overlay (see
@@ -167,12 +166,12 @@ async function swapWheelForCard(wheel, wrap, result, data) {
   // browsers hold them until the tab is visible again — exactly the kind of
   // block this function exists to avoid when the spin finished in the
   // background. The plain fadeOut/fadeIn fallback below already tolerates a
-  // hidden tab (see nextFrame() in utils.js), so just skip straight to it.
+  // hidden tab (see nextFrame() in transitions.js), so just skip straight to it.
   if (!reduced && !document.hidden && typeof document.startViewTransition === "function") {
     document.documentElement.classList.add("vt-spin-landing");
     try {
       const vt = document.startViewTransition(applyDom);
-      vt.ready.catch(() => {}); // see runViewTransition in core/utils.js
+      vt.ready.catch(() => {}); // see runViewTransition in core/transitions.js
       await vt.finished;
     } catch (e) {
       // startViewTransition rejects if a transition was interrupted; the DOM
@@ -198,7 +197,7 @@ export function handleSpinError(e, result, prevHtml) {
     applySpinCooldown(m ? parseFloat(m[0]) : SPIN_COOLDOWN_SECONDS);
     showToast(e.message);
   } else {
-    result.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
+    result.innerHTML = errorHtml(e);
   }
 }
 
@@ -237,10 +236,7 @@ async function doClassicSpin(cat, isRandom) {
   setDockLocked(true);
   try {
     const endpoint = isRandom ? "/api/random-spin" : `/api/${cat}/spin`;
-    const data = await api(endpoint, {
-      method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({weighted: isWeightedMode()}),
-    });
+    const data = await apiPost(endpoint, {weighted: isWeightedMode()});
     uiState.currentCardData = data;
     await fadeOut(result);
     result.innerHTML = renderCard(data);

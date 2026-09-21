@@ -1,18 +1,16 @@
 import { openAddSearchModal } from "../core/add-search.js";
-import { api } from "../core/api.js";
+import { api, apiPost } from "../core/api.js";
 import { skeletonShowcaseHtml } from "../core/skeleton.js";
 import { uiState } from "../core/state.js";
-import { TAB_REVISIT_STALE_MS, escapeHtml, fadeIn, fadeOut, placeholderHtml, showToast } from "../core/utils.js";
+import { TAB_REVISIT_STALE_MS } from "../core/constants.js";
+import { showToast } from "../core/toast.js";
+import { fadeIn, fadeOut } from "../core/transitions.js";
+import { placeholderHtml } from "../core/utils.js";
+import { beginLoad, showLoadError, showSkeleton } from "../core/view-load.js";
 import { VIEW_LOADERS, showSection } from "../core/views.js";
 import { createFilterStore } from "../core/filter-store.js";
 import { groupByDay } from "./date-filters.js";
-import {
-  ADDED_OPTIONS,
-  TYPE_OPTIONS,
-  segmentedGroup,
-  setFilterPanelCount,
-  togglesGroup,
-} from "./filters.js";
+import { ADDED_OPTIONS, TYPE_OPTIONS, segmentedGroup, setFilterPanelCount, togglesGroup } from "./filters.js";
 import { showcaseDayGroup, showcaseGroup } from "./row.js";
 
 // Studio showcase (Marvel/DC catalog browsing) and the user's own
@@ -47,8 +45,7 @@ export function prepShowcaseSkeletonIfStale() {
   const prevEl = document.querySelector(".section.active");
   const enteringFromElsewhere = !prevEl || prevEl.id !== "showcase-section";
   if (!enteringFromElsewhere && showcaseContainerPainted) return;
-  container.style.opacity = "1";
-  container.innerHTML = skeletonShowcaseHtml();
+  showSkeleton(container, skeletonShowcaseHtml());
   skeletonJustInserted = true;
 }
 
@@ -65,12 +62,8 @@ export async function loadShowcase(fromNav) {
   currentShowcaseStudio = cat;
   const skipFadeOut = skeletonJustInserted || (isFreshView && !showcaseContainerPainted);
   skeletonJustInserted = false;
-  if (skipFadeOut) {
-    container.style.opacity = "1";
-    container.innerHTML = skeletonShowcaseHtml();
-  }
+  const fadeOutPromise = beginLoad(container, {fresh: skipFadeOut, skeleton: skeletonShowcaseHtml()});
   const dataPromise = api(`/api/showcase/${cat}`);
-  const fadeOutPromise = skipFadeOut ? Promise.resolve() : fadeOut(container);
   try {
     const [data] = await Promise.all([dataPromise, fadeOutPromise]);
     lastShowcaseData = data;
@@ -81,8 +74,7 @@ export async function loadShowcase(fromNav) {
   } catch (e) {
     lastShowcaseData = null;
     showcaseContainerPainted = true;
-    container.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
-    fadeIn(container);
+    showLoadError(container, e);
   }
 }
 
@@ -198,13 +190,8 @@ export async function loadTrackedSeries(fromNav) {
   if (fromNav && trackedSeriesLoaded && Date.now() - trackedSeriesLoadedAt < TAB_REVISIT_STALE_MS) {
     return;
   }
-  const isFreshView = !trackedSeriesLoaded;
-  if (isFreshView) {
-    container.style.opacity = "1";
-    container.innerHTML = skeletonShowcaseHtml();
-  }
+  const fadeOutPromise = beginLoad(container, {fresh: !trackedSeriesLoaded, skeleton: skeletonShowcaseHtml()});
   const dataPromise = api(`/api/tracked-series`);
-  const fadeOutPromise = isFreshView ? Promise.resolve() : fadeOut(container);
   try {
     const [data] = await Promise.all([dataPromise, fadeOutPromise]);
     trackedSeriesLoaded = true;
@@ -221,8 +208,7 @@ export async function loadTrackedSeries(fromNav) {
     container.appendChild(showcaseGroup("🔔 Отслеживаемые сериалы", items, "series", false, "tracked-series"));
     fadeIn(container);
   } catch (e) {
-    container.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
-    fadeIn(container);
+    showLoadError(container, e);
   }
 }
 
@@ -232,10 +218,7 @@ document.getElementById("tracked-series-add-btn").onclick = async () => {
   if (!title) return;
   const doAdd = async (finalTitle) => {
     try {
-      await api("/api/tracked-series/add", {
-        method: "POST", headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({title: finalTitle}),
-      });
+      await apiPost("/api/tracked-series/add", {title: finalTitle});
       input.value = "";
       loadTrackedSeries();
     } catch (e) { showToast(e.message); }

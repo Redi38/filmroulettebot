@@ -67,7 +67,7 @@ export const WHEEL_HUB_GIF_URL = "";
 export const WHEEL_WRAP_IDS = ["spin-wheel-wrap"];
 
 export function getWheelStyle() {
-  return typeof getWheelAppearance === "function" ? getWheelAppearance() : "classic";
+  return getWheelAppearance();
 }
 
 export function getWheelDPR() {

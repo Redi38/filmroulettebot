@@ -1,8 +1,11 @@
 import { openAddSearchModal } from "../core/add-search.js";
-import { api } from "../core/api.js";
+import { api, apiPost } from "../core/api.js";
 import { openCategoryModal } from "../core/modal.js";
 import { skeletonListHtml } from "../core/skeleton.js";
-import { escapeHtml, fadeIn, fadeOut, placeholderHtml, showToast } from "../core/utils.js";
+import { showToast } from "../core/toast.js";
+import { fadeIn, fadeOut } from "../core/transitions.js";
+import { escapeHtml, placeholderHtml } from "../core/utils.js";
+import { showLoadError, showSkeleton } from "../core/view-load.js";
 import { createEditableRow } from "./list-row.js";
 import { humanizeShowcaseDate } from "../showcase/date.js";
 import { loadShowcase } from "../showcase/showcase.js";
@@ -23,8 +26,7 @@ export async function loadUpcoming() {
   const container = document.getElementById("up-list-container");
   const isFreshView = container.dataset.loaded !== "1";
   if (isFreshView) {
-    container.style.opacity = "1";
-    container.innerHTML = skeletonListHtml();
+    showSkeleton(container, skeletonListHtml());
   }
   try {
     const data = await api("/api/upcoming");
@@ -52,18 +54,9 @@ export async function loadUpcoming() {
     for (const [idx, {id, title}] of data.items.entries()) {
       const row = createEditableRow(title, {
         searchEndpoint: "/api/upcoming/search-suggest",
-        onRename: (newTitle) => api("/api/upcoming/rename", {
-          method: "POST", headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({id, new_title: newTitle}),
-        }),
-        onDelete: () => api("/api/upcoming/delete", {
-          method: "POST", headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({id}),
-        }),
-        onRestore: () => api("/api/upcoming/add", {
-          method: "POST", headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({title}),
-        }),
+        onRename: (newTitle) => apiPost("/api/upcoming/rename", {id, new_title: newTitle}),
+        onDelete: () => apiPost("/api/upcoming/delete", {id}),
+        onRestore: () => apiPost("/api/upcoming/add", {title}),
         onReload: () => loadUpcoming(),
         onUndoSettled: () => checkUpcomingEmpty(container),
       });
@@ -72,8 +65,7 @@ export async function loadUpcoming() {
     }
     fadeIn(container);
   } catch (e) {
-    container.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
-    fadeIn(container);
+    showLoadError(container, e);
   }
 }
 
@@ -83,10 +75,7 @@ document.getElementById("up-add-btn").onclick = async () => {
   if (!title) return;
   const doAdd = async (finalTitle) => {
     try {
-      await api("/api/upcoming/add", {
-        method: "POST", headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({title: finalTitle}),
-      });
+      await apiPost("/api/upcoming/add", {title: finalTitle});
       input.value = "";
       loadUpcoming();
     } catch (e) { showToast(e.message, "error"); }
@@ -103,7 +92,7 @@ document.getElementById("up-check-btn").onclick = async () => {
   result.innerHTML = '<div class="spinner fade-in">Проверяем по базе TMDb…</div>';
   fadeIn(result);
   try {
-    const data = await api("/api/upcoming/check", {method: "POST"});
+    const data = await apiPost("/api/upcoming/check");
     let html = "";
     html += '<div class="check-group"><h3>✅ Доступны в цифре</h3>';
     if (!data.released.length) {
@@ -135,8 +124,7 @@ document.getElementById("up-check-btn").onclick = async () => {
     fadeIn(result);
   } catch (e) {
     await fadeOut(result);
-    result.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
-    fadeIn(result);
+    showLoadError(result, e);
   }
 };
 
@@ -148,10 +136,7 @@ document.getElementById("up-check-result").addEventListener("click", (ev) => {
 
 async function moveUpcoming(title) {
   openCategoryModal(`Куда перенести «${title}»?`, async (category) => {
-    await api("/api/upcoming/move", {
-      method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({title, category}),
-    });
+    await apiPost("/api/upcoming/move", {title, category});
     const item = document.querySelector(`#up-check-result .check-item[data-title="${CSS.escape(title)}"]`);
     if (item) {
       item.style.transition = "opacity .15s ease, transform .15s ease";

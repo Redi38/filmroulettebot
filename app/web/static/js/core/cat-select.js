@@ -133,7 +133,7 @@ function buildCatSelect(options) {
     ev.stopPropagation();
     const wasOpen = dropdown.classList.contains("open");
     closeCatSelectMenus();
-    if (typeof closeSoundThemeMenus === "function") closeSoundThemeMenus();
+    closeSoundThemeMenus();
     if (wasOpen) return;
     dropdown.classList.add("open");
     btn.setAttribute("aria-expanded", "true");

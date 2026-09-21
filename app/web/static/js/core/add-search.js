@@ -1,7 +1,7 @@
 import { api } from "./api.js";
 import { overlay } from "./menu.js";
 import { skeletonSearchHtml } from "./skeleton.js";
-import { escapeHtml } from "./utils.js";
+import { errorHtml, escapeHtml } from "./utils.js";
 
 // Shared "pick from TMDb" modal for add-a-title flows: list-items.js,
 // upcoming-list.js, and the tracked-series add button in showcase.js all
@@ -55,6 +55,6 @@ export async function openAddSearchModal(searchEndpoint, query, {onPick, onFallb
       resultsEl.appendChild(row);
     }
   } catch (e) {
-    resultsEl.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
+    resultsEl.innerHTML = errorHtml(e);
   }
 }

@@ -1,6 +1,8 @@
-import { api, performDelete, performSequel } from "../core/api.js";
+import { apiPost, performDelete, performSequel } from "../core/api.js";
 import { CATS } from "../core/constants.js";
-import { escapeHtml, fadeIn, fadeOut, placeholderHtml, showToast } from "../core/utils.js";
+import { showToast } from "../core/toast.js";
+import { fadeIn, fadeOut } from "../core/transitions.js";
+import { escapeHtml, placeholderHtml } from "../core/utils.js";
 import { animatePanelHeight } from "./height-anim.js";
 import { updateClearButtonState } from "./shell.js";
 import { histKey, historyState, loadResolvedMap, markResolved, resolveOnServer } from "./state.js";
@@ -94,11 +96,8 @@ async function histClearEntry(row) {
   const entry = historyState.items[idx];
   if (!entry) return;
   try {
-    await api("/api/history/delete", {
-      method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({
-        category: entry.category, title: entry.title, timestamp: Number(entry.timestamp),
-      }),
+    await apiPost("/api/history/delete", {
+      category: entry.category, title: entry.title, timestamp: Number(entry.timestamp),
     });
     historyState.items = historyState.items.filter((_, i) => i !== idx);
     const list = document.getElementById("history-list");

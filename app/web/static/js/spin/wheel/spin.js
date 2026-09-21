@@ -72,12 +72,12 @@ function settleWheelRebound(canvas, fromDeg, toDeg, onFrame) {
 
 export function spinWheelTo(canvas, n, winnerIndex, durationMs) {
   wheelSpinState.active = true;
-  if (typeof stopWheelIdle === "function") stopWheelIdle(canvas);
-  if (typeof hideWheelHoverLabel === "function") hideWheelHoverLabel(canvas);
+  stopWheelIdle(canvas);
+  hideWheelHoverLabel(canvas);
   canvas._idleHovering = false;
   canvas._hoverLocked = true;
   canvas._idleHoverIdx = -1;
-  if (typeof wheelIdleRedraw === "function") wheelIdleRedraw(canvas, -1);
+  wheelIdleRedraw(canvas, -1);
   return new Promise((resolve) => {
     const boundaries = canvas._wheelBoundaries || Array.from({length: n}, (_, i) => ({start: i * (360 / n), end: (i + 1) * (360 / n)}));
     const seg = boundaries[winnerIndex];

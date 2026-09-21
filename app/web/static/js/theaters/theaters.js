@@ -1,18 +1,14 @@
-import { api } from "../core/api.js";
+import { api, apiPost } from "../core/api.js";
 import { createFilterStore } from "../core/filter-store.js";
 import { skeletonShowcaseHtml } from "../core/skeleton.js";
-import { TAB_REVISIT_STALE_MS, ensureFilterPanel, escapeHtml, fadeIn, fadeOut, placeholderHtml } from "../core/utils.js";
+import { TAB_REVISIT_STALE_MS } from "../core/constants.js";
+import { fadeIn, fadeOut } from "../core/transitions.js";
+import { ensureFilterPanel, placeholderHtml } from "../core/utils.js";
+import { beginLoad, showLoadError, showSkeleton } from "../core/view-load.js";
 import { VIEW_LOADERS, showSection } from "../core/views.js";
 import { paginationRow } from "../list/list-items.js";
 import { groupByDay } from "../showcase/date-filters.js";
-import {
-  ADDED_OPTIONS,
-  DIGITAL_OPTIONS,
-  SERIES_STATUS_OPTIONS,
-  segmentedGroup,
-  setFilterPanelCount,
-  togglesGroup,
-} from "../showcase/filters.js";
+import { ADDED_OPTIONS, DIGITAL_OPTIONS, SERIES_STATUS_OPTIONS, segmentedGroup, setFilterPanelCount, togglesGroup } from "../showcase/filters.js";
 import { showcaseDayGroup, showcaseGroup, showcaseRow } from "../showcase/row.js";
 
 // Both tabs paginate server-side, so unlike the studio showcase their
@@ -49,11 +45,7 @@ async function setHideLocalOnly(next) {
   theatersHideLocalOnly = next;
   renderTheatersFilters();
   try {
-    await api("/api/settings/hide_local_only_afisha", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({ value: next }),
-    });
+    await apiPost("/api/settings/hide_local_only_afisha", { value: next });
   } catch (e) {
     theatersHideLocalOnly = !next;
     renderTheatersFilters();
@@ -151,10 +143,9 @@ export async function loadTheaters(trigger, fromNav) {
 
   const isFreshView = !theatersLoaded || isStaleRevisit;
   if (isFreshView) {
-    container.style.opacity = "1";
-    container.innerHTML = `
+    showSkeleton(container, `
       <div class="theaters-col theaters-col-now">${skeletonShowcaseHtml()}</div>
-      <div class="theaters-col theaters-col-upcoming">${skeletonShowcaseHtml()}</div>`;
+      <div class="theaters-col theaters-col-upcoming">${skeletonShowcaseHtml()}</div>`);
   }
 
   const dataPromise = api(`/api/theaters?${theatersQuery()}`);
@@ -226,8 +217,7 @@ export async function loadTheaters(trigger, fromNav) {
     }
     if (!singleColumn) fadeIn(container);
   } catch (e) {
-    container.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
-    fadeIn(container);
+    showLoadError(container, e);
   }
 }
 
@@ -292,13 +282,8 @@ export async function loadSeriesReleases(fromNav) {
   renderSeriesReleasesFilters();
 
   const isFreshView = !seriesReleasesLoaded || isStaleRevisit;
-  if (isFreshView) {
-    container.style.opacity = "1";
-    container.innerHTML = skeletonShowcaseHtml();
-  }
-
+  const fadeOutPromise = beginLoad(container, {fresh: isFreshView, skeleton: skeletonShowcaseHtml()});
   const dataPromise = api(`/api/series-releases?${seriesReleasesQuery()}`);
-  const fadeOutPromise = isFreshView ? Promise.resolve() : fadeOut(container);
 
   try {
     const [data] = await Promise.all([dataPromise, fadeOutPromise]);
@@ -334,7 +319,6 @@ export async function loadSeriesReleases(fromNav) {
     }
     fadeIn(container);
   } catch (e) {
-    container.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
-    fadeIn(container);
+    showLoadError(container, e);
   }
 }

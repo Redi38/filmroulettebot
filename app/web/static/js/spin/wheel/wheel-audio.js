@@ -25,7 +25,7 @@ document.addEventListener("visibilitychange", () => {
 });
 
 function _playWheelBlip(freq, durationMs, gainPeak, delayMs, type) {
-  if (typeof isWheelMuted === "function" && isWheelMuted()) return;
+  if (isWheelMuted()) return;
   const ctx = _wheelAudioCtx;
   if (!ctx) return;
   if (ctx.state === "suspended") {
@@ -75,7 +75,7 @@ const WHEEL_SOUND_THEMES = {
 };
 
 function _currentSoundTheme() {
-  const key = (typeof getWheelSoundTheme === "function" && getWheelSoundTheme()) || "classic";
+  const key = getWheelSoundTheme() || "classic";
   return WHEEL_SOUND_THEMES[key] || WHEEL_SOUND_THEMES.classic;
 }
 

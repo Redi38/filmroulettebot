@@ -158,9 +158,7 @@ export function syncMarqueeSize() {
   document.documentElement.style.setProperty("--marquee-poster-w", posterW + "px");
 }
 
-const debouncedSyncMarqueeSize = typeof debounce === "function"
-  ? debounce(syncMarqueeSize, 120)
-  : syncMarqueeSize;
+const debouncedSyncMarqueeSize = debounce(syncMarqueeSize, 120);
 
 let lastMarqueeViewportWidth = window.innerWidth;
 function handleMarqueeViewportResize() {

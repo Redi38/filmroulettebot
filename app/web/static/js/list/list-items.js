@@ -1,11 +1,14 @@
 import { renderCard } from "../card/card-render.js";
 import { openAddSearchModal } from "../core/add-search.js";
-import { api } from "../core/api.js";
+import { api, apiPost } from "../core/api.js";
 import { positionCatChipThumb, renderCatChips } from "../core/cat-select.js";
 import { LIST_CATS } from "../core/constants.js";
 import { skeletonCardHtml, skeletonListHtml } from "../core/skeleton.js";
 import { listCats, uiState } from "../core/state.js";
-import { debounce, escapeHtml, fadeIn, fadeOut, placeholderHtml, setNavDirection, showToast } from "../core/utils.js";
+import { showToast } from "../core/toast.js";
+import { fadeIn, fadeOut, setNavDirection } from "../core/transitions.js";
+import { debounce, escapeHtml, placeholderHtml } from "../core/utils.js";
+import { showLoadError, showSkeleton } from "../core/view-load.js";
 import { switchListCat } from "../core/views.js";
 import { createEditableRow } from "./list-row.js";
 import { loadShowcase } from "../showcase/showcase.js";
@@ -55,10 +58,8 @@ export async function loadList(page) {
   if (isFreshView) {
     currentListQuery = "";
     searchInput.value = "";
-    container.style.opacity = "1";
-    container.innerHTML = skeletonListHtml();
-    featured.style.opacity = "1";
-    featured.innerHTML = "";
+    showSkeleton(container, skeletonListHtml());
+    showSkeleton(featured, "");
     const countElReset = document.getElementById("list-count");
     if (countElReset) countElReset.textContent = "";
   }
@@ -109,7 +110,7 @@ export async function loadList(page) {
     // so its idea of the counts has to keep up with adds and deletes.
     if (!q && uiState.categoryCounts && uiState.categoryCounts[uiState.currentCat] !== data.total_count) {
       uiState.categoryCounts[uiState.currentCat] = data.total_count;
-      if (typeof renderSpinCatChips === "function") renderSpinCatChips();
+      renderSpinCatChips();
     }
     const countEl = document.getElementById("list-count");
     if (!data.total_count) {
@@ -131,21 +132,12 @@ export async function loadList(page) {
         posterUrl: poster_url,
         showPosterSlot: true,
         searchEndpoint: `/api/${cat}/search-suggest`,
-        onRename: (newTitle, suggestion) => api(`/api/${cat}/rename`, {
-          method: "POST", headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({
-            id, new_title: newTitle,
-            ...(suggestion ? {tmdb_id: suggestion.tmdb_id, is_series: suggestion.is_series} : {}),
-          }),
+        onRename: (newTitle, suggestion) => apiPost(`/api/${cat}/rename`, {
+          id, new_title: newTitle,
+          ...(suggestion ? {tmdb_id: suggestion.tmdb_id, is_series: suggestion.is_series} : {}),
         }),
-        onDelete: () => api(`/api/${cat}/delete`, {
-          method: "POST", headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({id}),
-        }),
-        onRestore: () => api(`/api/${cat}/add`, {
-          method: "POST", headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({title}),
-        }),
+        onDelete: () => apiPost(`/api/${cat}/delete`, {id}),
+        onRestore: () => apiPost(`/api/${cat}/add`, {title}),
         onReload: () => { if (uiState.currentCat === cat) loadList(currentListPage); },
         onUndoSettled: () => checkListEmpty(container),
         onCountChange: (delta) => {
@@ -164,8 +156,7 @@ export async function loadList(page) {
     if (data.total_pages > 1) container.appendChild(paginationRow(data.page, data.total_pages, (p) => loadList(p)));
     fadeIn(container);
   } catch (e) {
-    container.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message)}</div>`;
-    fadeIn(container);
+    showLoadError(container, e);
   }
 }
 
@@ -191,10 +182,7 @@ async function moveListItem(cat, id, direction, page, idx, totalPages, itemsOnPa
   if (direction === "up" && idx === 0 && page > 1) targetPage = page - 1;
   if (direction === "down" && idx === itemsOnPage - 1 && page < totalPages) targetPage = page + 1;
   try {
-    await api(`/api/${cat}/reorder`, {
-      method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({id, direction}),
-    });
+    await apiPost(`/api/${cat}/reorder`, {id, direction});
     if (uiState.currentCat === cat) loadList(targetPage);
   } catch (e) { showToast(e.message); }
 }
@@ -260,12 +248,9 @@ async function handleAddTitle() {
   if (!title) return;
   const doAdd = async (finalTitle, suggestion) => {
     try {
-      await api(`/api/${uiState.currentCat}/add`, {
-        method: "POST", headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-          title: finalTitle,
-          ...(suggestion ? {tmdb_id: suggestion.tmdb_id, is_series: suggestion.is_series} : {}),
-        }),
+      await apiPost(`/api/${uiState.currentCat}/add`, {
+        title: finalTitle,
+        ...(suggestion ? {tmdb_id: suggestion.tmdb_id, is_series: suggestion.is_series} : {}),
       });
       input.value = "";
       loadList(currentListPage);

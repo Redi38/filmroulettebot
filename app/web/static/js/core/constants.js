@@ -31,3 +31,7 @@ export function viewTitleFor(view, cat, spinCatCode) {
   if (view === "showcase") return `${ALL_CATS[cat] || ""} — скоро`;
   return VIEW_TITLES[view] || "";
 }
+
+// How long a tab's data counts as fresh when the user comes back to it: within
+// this window a plain tab switch skips the fetch-and-fade entirely.
+export const TAB_REVISIT_STALE_MS = 5 * 60 * 1000;

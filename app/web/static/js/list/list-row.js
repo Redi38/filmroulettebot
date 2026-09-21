@@ -1,6 +1,9 @@
 import { openAddSearchModal } from "../core/add-search.js";
 import { openRenameModal } from "../core/modal.js";
-import { ARROW_DOWN_ICON_SVG, ARROW_UP_ICON_SVG, PENCIL_ICON_SVG, TRASH_ICON_SVG, copyToClipboard, removeRowOptimistically, showInlineUndo, showToast } from "../core/utils.js";
+import { ARROW_DOWN_ICON_SVG, ARROW_UP_ICON_SVG, PENCIL_ICON_SVG, TRASH_ICON_SVG } from "../core/icons.js";
+import { removeRowOptimistically, showInlineUndo } from "../core/rows.js";
+import { showToast } from "../core/toast.js";
+import { copyToClipboard } from "../core/utils.js";
 
 // Shared row renderer for "title + edit + delete-with-undo" lists.
 // Used by list-items.js (per-category lists) and upcoming-list.js.

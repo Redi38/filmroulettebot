@@ -1,6 +1,8 @@
 import { performDelete, performSequel } from "../core/api.js";
 import { uiState } from "../core/state.js";
-import { copyToClipboard, escapeHtml, fadeIn, fadeOut, showToast } from "../core/utils.js";
+import { showToast } from "../core/toast.js";
+import { fadeIn, fadeOut } from "../core/transitions.js";
+import { copyToClipboard, escapeHtml } from "../core/utils.js";
 import { markResolved, resolveOnServer } from "../history/state.js";
 import { doSpin, resultEl } from "../spin/spin-actions.js";
 

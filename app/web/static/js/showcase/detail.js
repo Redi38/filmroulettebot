@@ -1,7 +1,7 @@
 import { metaLine } from "../card/card-render.js";
 import { api } from "../core/api.js";
 import { skeletonDetailHtml } from "../core/skeleton.js";
-import { escapeHtml } from "../core/utils.js";
+import { errorHtml, escapeHtml } from "../core/utils.js";
 
 // The expandable detail panel under a showcase row: fetches (and caches)
 // the full media info on first expand, then renders rating/genres/actors
@@ -26,7 +26,7 @@ export function attachShowcaseDetailToggle(wrap, infoBtn, detail, item) {
       _mediaDetailsCache.set(cacheKey, data);
       if (expanded) detail.innerHTML = renderShowcaseDetail(data, item);
     } catch (e) {
-      if (expanded) detail.innerHTML = `<div class="muted">❌ ${escapeHtml(e.message || "Не удалось загрузить")}</div>`;
+      if (expanded) detail.innerHTML = errorHtml(e, "Не удалось загрузить");
     }
   };
 }

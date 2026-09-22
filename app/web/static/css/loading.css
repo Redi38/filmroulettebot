@@ -86,10 +86,14 @@
 /* Expanded showcase detail panel. */
 .skel-detail { display: flex; flex-direction: column; gap: 10px; padding: 6px 4px 20px; }
 
-/* History entries: title, timestamp, and the action button row. */
+/* History entries: title, timestamp, and the action button row.
+   Horizontal padding matches the .history-panel .hist-item override in
+   history-panel.css (13px vertical, 10px horizontal) — this skeleton only
+   ever appears inside that panel, so it needs to line up with it exactly,
+   or the real rows shift width when they replace it. */
 .skel-hist-item {
   background: var(--card); border: 1px solid var(--border); border-radius: 12px;
-  padding: 13px; margin-bottom: 10px;
+  padding: 13px 10px; margin-bottom: 10px;
   display: flex; flex-direction: column; gap: 9px;
 }
 .skel-hist-actions { display: flex; gap: 8px; margin-top: 2px; }

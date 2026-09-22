@@ -41,7 +41,7 @@
   position: fixed; z-index: 9;
   right: var(--history-corner);
   bottom: calc(var(--history-corner) + var(--history-fab-h) + 10px + env(safe-area-inset-bottom, 0px));
-  width: min(400px, calc(100vw - 2 * var(--history-corner)));
+  width: min(460px, calc(100vw - 2 * var(--history-corner)));
   max-height: 70vh;
   max-height: min(70vh, calc(100dvh - var(--header-h) - var(--history-fab-h) - 48px));
   display: flex; flex-direction: column; box-sizing: border-box;
@@ -78,11 +78,13 @@
 /* The list scrolls inside the panel, not the page behind it. */
 #history-container {
   flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
-  padding: 4px 14px 14px;
+  padding: 4px 10px 10px;
 }
 /* Rows sit on the panel's own card colour, so give them a slightly lifted
-   surface to stay distinguishable. */
-.history-panel .hist-item { background: rgba(255,255,255,0.035); }
+   surface to stay distinguishable. Horizontal padding is trimmed a bit from
+   the shared .hist-item rule so the (up to four) action buttons have more
+   width to lay out in, instead of being squeezed by padding on both sides. */
+.history-panel .hist-item { background: rgba(255,255,255,0.035); padding-left: 10px; padding-right: 10px; }
 .history-panel .hist-tabs { margin-bottom: 12px; }
 .history-panel .hist-clear-row { margin-bottom: 12px; }
 

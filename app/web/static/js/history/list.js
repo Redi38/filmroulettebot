@@ -66,7 +66,7 @@ const HIST_CLEAR_BTN = `<button class="btn btn-danger hist-clear-entry-btn" data
 // the handlers no longer have to be globals.
 const HIST_ACTIONS = {
   confirm: histConfirm, clear: histClearEntry,
-  sequel: histSequel, delete: histDelete, watched: histWatched,
+  sequel: histSequel, delete: histDelete,
 };
 // Listens on the static panel: #history-list itself is created lazily by
 // history/shell.js the first time the panel opens.
@@ -84,9 +84,6 @@ function resolvedOutcomeLabel(title, outcome) {
   }
   if (outcome.type === "delete") {
     return `❌ Удалено`;
-  }
-  if (outcome.type === "watched") {
-    return `✅ Просмотрено`;
   }
   return `Обработано ✅`;
 }
@@ -113,20 +110,6 @@ function histConfirm(row) {
     row.querySelector(".hist-actions").innerHTML = `
     <button class="btn btn-success" data-hist-action="sequel">Сиквел</button>
     <button class="btn btn-danger" data-hist-action="delete">Удалить</button>
-    <button class="btn btn-primary" data-hist-action="watched" title="Просмотрено — без сиквела и без удаления из списка">Просмотрено</button>
-    ${HIST_CLEAR_BTN}`;
-  });
-}
-
-async function histWatched(div) {
-  const actionsEl = div.querySelector(".hist-actions");
-  const {category, title, timestamp, key} = div.dataset;
-  markResolved(key, { type: "watched" });
-  resolveOnServer(category, title, timestamp, "watched", null);
-  animatePanelHeight(() => {
-    div.classList.add("resolved");
-    actionsEl.innerHTML = `
-    <span class="muted">${resolvedOutcomeLabel(title, { type: "watched" })}</span>
     ${HIST_CLEAR_BTN}`;
   });
 }

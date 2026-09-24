@@ -3,12 +3,13 @@ import { getLS, setLS } from "../../core/storage.js";
 import { loadWheel } from "../wheel/loader.js";
 import { DOCK_PREFIXES } from "./dock-controls.js";
 import { spinMode } from "./spin-mode.js";
+import { setFilterPanelCount } from "../../showcase/filters.js";
 
 // ---- "Рандом" wheel preferences -------------------------------------------
 // Two independent per-browser filters for the combined wheel only (see
 // app/web/server/shared/random_filters.py for the server side):
 //   "Только фильмы" drops the series list; cartoons and the Marvel/DC lots stay.
-//   "До 2 ч" drops films longer than two hours; series are never affected by it.
+//   "До 2 часов" drops films longer than two hours; series are never affected by it.
 const FILMS_ONLY_KEY = "filmroulette_random_films_only";
 const MAX_2H_KEY = "filmroulette_random_max_2h";
 const MAX_RUNTIME_MINUTES = 120;
@@ -38,11 +39,11 @@ export function hasActiveRandomFilters() {
   return filmsOnly || max2h;
 }
 
-function renderPill(containerId, { key, active, label, title, onToggle }) {
+function renderPill(containerId, { key, active, label, title, onToggle, wrapClass = "" }) {
   const el = document.getElementById(containerId);
   if (!el) return;
   el.innerHTML = "";
-  el.className = "random-filter-toggle-wrap";
+  el.className = "random-filter-toggle-wrap" + (wrapClass ? " " + wrapClass : "");
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "showcase-filter-btn" + (active ? " active" : "");
@@ -57,9 +58,13 @@ function renderPill(containerId, { key, active, label, title, onToggle }) {
 export function renderRandomFilters(prefix) {
   const section = document.getElementById(`${prefix}-random-filter-section`);
   if (section) section.classList.toggle("visible", isRandomSpin());
+  // Collapsed on mobile, the settings header is the only sign that filters are on.
+  const dock = section && section.closest(".spin-controls-dock");
+  if (dock) setFilterPanelCount(dock, isRandomSpin() ? Number(filmsOnly) + Number(max2h) : 0);
 
   renderPill(`${prefix}-films-only-toggle`, {
     key: "films-only",
+    wrapClass: "random-filter-toggle-wrap--inverted",
     active: filmsOnly,
     label: "🎬 Фильмы",
     title: "Убрать сериалы из рулетки. Мультфильмы, Marvel и DC остаются",
@@ -72,7 +77,7 @@ export function renderRandomFilters(prefix) {
   renderPill(`${prefix}-max-runtime-toggle`, {
     key: "max-runtime",
     active: max2h,
-    label: "⏱️ До 2 ч",
+    label: "⏱️ До 2 часов",
     title: "Только фильмы не длиннее двух часов. Сериалы этот фильтр не убирает",
     onToggle: () => {
       max2h = !max2h;

@@ -44,8 +44,30 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
 
 #spin-result { container-type: inline-size; }
 
+/* ---- collapsible settings (phones) ------------------------------------
+   Reuses the .filter-panel-* head/body/height animation from showcase.css.
+   Everything except the spin button lives inside the body. */
+.spin-controls-dock > .filter-panel-body > .filter-panel-inner {
+  display: flex; flex-direction: column; align-items: center; flex-wrap: nowrap; gap: 10px;
+}
+.spin-controls-dock .filter-panel-count[hidden] { display: none; }
+.spin-controls-dock.open .filter-panel-chevron { transform: rotate(180deg); }
+
+@media (max-width: 899px) {
+  .spin-controls-dock {
+    gap: 0;
+    min-width: min(calc(var(--pill-w) * 2 + 38px), calc(100vw - 32px));
+  }
+  .spin-controls-dock > .filter-panel-body { width: 100%; }
+  .spin-controls-dock > .btn { margin-top: 10px; }
+}
+
 @media (min-width: 900px) {
   .spin-dock-row {
+    display: contents;
+  }
+  .spin-controls-dock > .filter-panel-body,
+  .spin-controls-dock > .filter-panel-body > .filter-panel-inner {
     display: contents;
   }
   .spin-controls-dock {
@@ -181,6 +203,10 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
 }
 .random-filter-toggle-wrap .showcase-filter-btn.active {
   background: linear-gradient(90deg, var(--grp-filter-a), var(--grp-filter-b));
+}
+/* "Фильмы" pill: same palette, gradient direction inverted */
+.random-filter-toggle-wrap.random-filter-toggle-wrap--inverted .showcase-filter-btn.active {
+  background: linear-gradient(90deg, var(--grp-filter-b), var(--grp-filter-a));
 }
 .confetti-toggle-wrap .showcase-filter-btn.active {
   background: linear-gradient(90deg, var(--grp-fx-b), var(--grp-fx-a));

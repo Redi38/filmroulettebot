@@ -65,7 +65,7 @@ function setDockLocked(locked) {
   const dock = document.querySelector("#spin-section .spin-controls-dock");
   if (dock) {
     dock.querySelectorAll("button, input").forEach((el) => {
-      if (el.classList.contains("wheel-mute-btn")) return;
+      if (el.classList.contains("wheel-mute-btn") || el.classList.contains("spin-settings-toggle")) return;
       el.disabled = locked;
     });
   }

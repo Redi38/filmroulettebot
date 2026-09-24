@@ -7,7 +7,7 @@ function matches(query) {
   return typeof window.matchMedia === "function" && window.matchMedia(query).matches;
 }
 
-function setPanelOpen(panel, head, open) {
+export function setPanelOpen(panel, head, open) {
   const body = panel.querySelector(":scope > .filter-panel-body");
   const inner = body && body.querySelector(":scope > .filter-panel-inner");
   head.setAttribute("aria-expanded", open ? "true" : "false");

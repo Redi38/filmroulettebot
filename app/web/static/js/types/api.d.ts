@@ -534,8 +534,9 @@ export interface paths {
         /**
          * Api Random Wheel Preview
          * @description Idle pool of the random wheel: every title from every roulette list,
-         *     plus the Marvel/DC lots. Like the per-category preview, no winner is picked
-         *     and nothing is saved.
+         *     plus the Marvel/DC lots, narrowed by the viewer's preferences (see
+         *     shared/random_filters.py). Like the per-category preview, no winner is
+         *     picked and nothing is saved.
          */
         get: operations["api_random_wheel_preview_api_random_wheel_preview_get"];
         put?: never;
@@ -558,7 +559,8 @@ export interface paths {
         /**
          * Api Random Wheel Weights
          * @description Random-wheel counterpart of `/api/{cat}/wheel-weights`: resize the
-         *     segments already on screen when weighted/normal mode is toggled.
+         *     segments already on screen when weighted/normal mode is toggled. Needs no
+         *     filter params: filtering keeps each surviving title's weight as-is.
          */
         post: operations["api_random_wheel_weights_api_random_wheel_weights_post"];
         delete?: never;
@@ -948,6 +950,13 @@ export interface components {
              * @default false
              */
             weighted: boolean;
+            /**
+             * Films Only
+             * @default false
+             */
+            films_only: boolean;
+            /** Max Runtime */
+            max_runtime?: number | null;
         };
         /** TitleBody */
         TitleBody: {
@@ -1896,6 +1905,8 @@ export interface operations {
         parameters: {
             query?: {
                 weighted?: boolean;
+                films_only?: boolean;
+                max_runtime?: number | null;
             };
             header?: never;
             path?: never;

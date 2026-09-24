@@ -10,6 +10,7 @@ import { isConfettiEnabled } from "./settings/confetti-toggle.js";
 import { SPIN_COOLDOWN_SECONDS, spinCooldown } from "./settings/dock-controls.js";
 import { spinMode } from "./settings/spin-mode.js";
 import { spinSpeedSeconds } from "./settings/spin-speed.js";
+import { randomFilterParams } from "./settings/random-filters.js";
 import { isWeightedMode } from "./settings/weighted-mode.js";
 import { loadWheel } from "./wheel/loader.js";
 
@@ -50,6 +51,11 @@ function scheduleAutoWatchOpen(data, result) {
     if (textEl) textEl.textContent = "";
     if (!win) showToast("Не удалось открыть вкладку — разрешите всплывающие окна");
   }, 1000);
+}
+
+// The "Рандом" wheel's filters ride along only on random spins.
+function spinBody(isRandom) {
+  return isRandom ? {weighted: isWeightedMode(), ...randomFilterParams()} : {weighted: isWeightedMode()};
 }
 
 let dockLocked = false;
@@ -100,7 +106,7 @@ async function doWheelSpin(cat, isRandom) {
 
   try {
     const endpoint = isRandom ? "/api/random-spin" : `/api/${cat}/spin`;
-    const data = await apiPost(endpoint, {weighted: isWeightedMode()});
+    const data = await apiPost(endpoint, spinBody(isRandom));
     uiState.currentCardData = data;
     // prepIdleWheelSkeleton() above added wheel-wrap--settling, which hides
     // every child but the skeleton overlay (see
@@ -236,7 +242,7 @@ async function doClassicSpin(cat, isRandom) {
   setDockLocked(true);
   try {
     const endpoint = isRandom ? "/api/random-spin" : `/api/${cat}/spin`;
-    const data = await apiPost(endpoint, {weighted: isWeightedMode()});
+    const data = await apiPost(endpoint, spinBody(isRandom));
     uiState.currentCardData = data;
     await fadeOut(result);
     result.innerHTML = renderCard(data);

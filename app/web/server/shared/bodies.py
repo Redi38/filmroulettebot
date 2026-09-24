@@ -1,7 +1,11 @@
 """Pydantic request bodies shared across route modules."""
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+# Upper bound on the "Рандом" wheel's max film length (minutes) — anything
+# past this is a typo, not a preference.
+MAX_RUNTIME_LIMIT = 600
 
 
 class TitleBody(BaseModel):
@@ -50,6 +54,10 @@ class SequelResponse(BaseModel):
 
 class SpinBody(BaseModel):
     weighted: bool = False
+    # "Рандом" wheel preferences (see shared/random_filters.py); ignored by
+    # the per-category spin.
+    films_only: bool = False
+    max_runtime: int | None = Field(default=None, ge=1, le=MAX_RUNTIME_LIMIT)
 
 
 class WheelWeightsBody(BaseModel):

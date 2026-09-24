@@ -19,11 +19,11 @@ from __future__ import annotations
 
 import random
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from app.db.database import get_items, get_items_with_ids, get_tmdb_cache, save_history, set_tmdb_cache
 
-from ..shared.bodies import SpinBody, WheelWeightsBody
+from ..shared.bodies import MAX_RUNTIME_LIMIT, SpinBody, WheelWeightsBody
 from ..shared.card import card_data
 from ..shared.constants import (
     FEATURED_CACHE_TTL,
@@ -34,7 +34,9 @@ from ..shared.constants import (
     WEB_USER_ID,
 )
 from ..shared.posters import resolve_wheel_posters
+from ..shared.random_filters import RandomFilters, apply_random_filters
 from ..shared.spin_state import (
+    WheelEntry,
     build_random_wheel_pool,
     build_wheel_pool,
     check_spin_cooldown,
@@ -100,11 +102,28 @@ async def _pool_posters(pool_entries, lot_is_series: dict[str, bool | None]) -> 
     return await resolve_wheel_posters([(e.cat, e.title, _entry_is_series(e, lot_is_series)) for e in pool_entries])
 
 
-async def _lot_wheel_preview(wheel: str, weighted: bool, empty_msg: str) -> dict:
+async def _filtered_entries(
+    wheel: str, weighted: bool, empty_msg: str, filters: RandomFilters | None = None
+) -> tuple[list[WheelEntry], list[int], dict[str, bool | None]]:
+    """Entries and weights of a lot-carrying wheel, after the viewer's
+    "Рандом" preferences (only ever passed for the random wheel). An empty
+    library and a library the filters empty out are different 404s, so the
+    client can tell "add titles" from "loosen the filters"."""
     items_by_cat, lots, lot_is_series = await _lot_wheel_sources(wheel)
     entries, weights = random_entries(items_by_cat, weighted, lots)
     if not entries:
         raise HTTPException(404, empty_msg)
+    if filters is not None and filters.active:
+        entries, weights = await apply_random_filters(entries, weights, filters, lot_is_series)
+        if not entries:
+            raise HTTPException(404, _FILTERED_EMPTY_MSG)
+    return entries, weights, lot_is_series
+
+
+async def _lot_wheel_preview(
+    wheel: str, weighted: bool, empty_msg: str, filters: RandomFilters | None = None
+) -> dict:
+    entries, weights, lot_is_series = await _filtered_entries(wheel, weighted, empty_msg, filters)
     pool, pool_weights, _, pool_entries = build_random_wheel_pool(entries, weights)
     posters = await _pool_posters(pool_entries, lot_is_series)
     return {"wheel_pool": pool, "wheel_weights": pool_weights, "wheel_posters": posters}
@@ -117,11 +136,10 @@ async def _lot_wheel_weights(wheel: str, body: WheelWeightsBody, empty_msg: str)
     return {"wheel_weights": random_pool_weights(items_by_cat, body.pool, body.weighted, lots)}
 
 
-async def _lot_wheel_spin(request: Request, wheel: str, weighted: bool, empty_msg: str) -> dict:
-    items_by_cat, lots, lot_is_series = await _lot_wheel_sources(wheel)
-    entries, weights = random_entries(items_by_cat, weighted, lots)
-    if not entries:
-        raise HTTPException(404, empty_msg)
+async def _lot_wheel_spin(
+    request: Request, wheel: str, weighted: bool, empty_msg: str, filters: RandomFilters | None = None
+) -> dict:
+    entries, weights, lot_is_series = await _filtered_entries(wheel, weighted, empty_msg, filters)
     winner = pick_random_entry(client_ip(request), wheel, entries, weights)
     ts = await save_history(WEB_USER_ID, winner.cat, winner.title)
     data = await card_data(winner.cat, winner.title, ts)
@@ -134,20 +152,28 @@ async def _lot_wheel_spin(request: Request, wheel: str, weighted: bool, empty_ms
 
 _ALL_EMPTY_MSG = "Все три списка пусты — сначала добавь тайтлы"
 _EMPTY_LIST_MSG = "Список пуст — добавь тайтлы, чтобы крутить"
+_FILTERED_EMPTY_MSG = "Под выбранные фильтры ничего не подходит — ослабь их, чтобы крутить"
 
 
 @router.get("/api/random/wheel-preview")
-async def api_random_wheel_preview(weighted: bool = False) -> dict:
+async def api_random_wheel_preview(
+    weighted: bool = False,
+    films_only: bool = False,
+    max_runtime: int | None = Query(default=None, ge=1, le=MAX_RUNTIME_LIMIT),
+) -> dict:
     """Idle pool of the random wheel: every title from every roulette list,
-    plus the Marvel/DC lots. Like the per-category preview, no winner is picked
-    and nothing is saved."""
-    return await _lot_wheel_preview(RANDOM_WHEEL, weighted, _ALL_EMPTY_MSG)
+    plus the Marvel/DC lots, narrowed by the viewer's preferences (see
+    shared/random_filters.py). Like the per-category preview, no winner is
+    picked and nothing is saved."""
+    filters = RandomFilters(films_only=films_only, max_runtime=max_runtime)
+    return await _lot_wheel_preview(RANDOM_WHEEL, weighted, _ALL_EMPTY_MSG, filters)
 
 
 @router.post("/api/random/wheel-weights")
 async def api_random_wheel_weights(body: WheelWeightsBody) -> dict:
     """Random-wheel counterpart of `/api/{cat}/wheel-weights`: resize the
-    segments already on screen when weighted/normal mode is toggled."""
+    segments already on screen when weighted/normal mode is toggled. Needs no
+    filter params: filtering keeps each surviving title's weight as-is."""
     return await _lot_wheel_weights(RANDOM_WHEEL, body, _ALL_EMPTY_MSG)
 
 
@@ -185,7 +211,8 @@ async def api_wheel_weights(body: WheelWeightsBody, cat: str = Depends(roulette_
 @router.post("/api/random-spin")
 async def api_random_spin(request: Request, body: SpinBody = SpinBody()) -> dict:
     check_spin_cooldown(client_ip(request))
-    return await _lot_wheel_spin(request, RANDOM_WHEEL, body.weighted, _ALL_EMPTY_MSG)
+    filters = RandomFilters(films_only=body.films_only, max_runtime=body.max_runtime)
+    return await _lot_wheel_spin(request, RANDOM_WHEEL, body.weighted, _ALL_EMPTY_MSG, filters)
 
 
 @router.post("/api/{cat}/spin")

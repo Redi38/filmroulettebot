@@ -120,6 +120,7 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
   --grp-weight-a: #5ec8ff; --grp-weight-b: #8b7cf6;                   /* Вероятность: sky blue -> violet */
   --grp-fn-a: #34d399; --grp-fn-b: #22b8cf;                           /* Функции: green -> teal */
   --grp-fx-a: #ffd166; --grp-fx-b: #ff6b57;                           /* Эффекты: gold -> coral */
+  --grp-filter-a: #f472b6; --grp-filter-b: #a78bfa;                   /* Фильтры: rose -> lavender */
 }
 
 .spin-mode-thumb {
@@ -178,6 +179,9 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
 .wheel-poster-toggle-wrap .showcase-filter-btn.active {
   background: linear-gradient(90deg, var(--grp-fn-a), var(--grp-fn-b));
 }
+.random-filter-toggle-wrap .showcase-filter-btn.active {
+  background: linear-gradient(90deg, var(--grp-filter-a), var(--grp-filter-b));
+}
 .confetti-toggle-wrap .showcase-filter-btn.active {
   background: linear-gradient(90deg, var(--grp-fx-b), var(--grp-fx-a));
 }
@@ -188,19 +192,22 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
 .auto-watch-toggle-wrap .showcase-filter-btn,
 .wheel-poster-toggle-wrap .showcase-filter-btn,
 .confetti-toggle-wrap .showcase-filter-btn,
-.spin-appearance-wrap .showcase-filter-btn {
+.spin-appearance-wrap .showcase-filter-btn,
+.random-filter-toggle-wrap .showcase-filter-btn {
   transition: background 0.35s ease, box-shadow 0.15s ease, transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .auto-watch-toggle-wrap .showcase-filter-btn:active,
 .wheel-poster-toggle-wrap .showcase-filter-btn:active,
 .confetti-toggle-wrap .showcase-filter-btn:active,
-.spin-appearance-wrap .showcase-filter-btn:active {
+.spin-appearance-wrap .showcase-filter-btn:active,
+.random-filter-toggle-wrap .showcase-filter-btn:active {
   transform: scale(0.96);
 }
 .auto-watch-toggle-wrap .showcase-filter-btn.fx-toggle-pop,
 .wheel-poster-toggle-wrap .showcase-filter-btn.fx-toggle-pop,
 .confetti-toggle-wrap .showcase-filter-btn.fx-toggle-pop,
-.spin-appearance-wrap .showcase-filter-btn.fx-toggle-pop {
+.spin-appearance-wrap .showcase-filter-btn.fx-toggle-pop,
+.random-filter-toggle-wrap .showcase-filter-btn.fx-toggle-pop {
   animation: fxTogglePop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 @keyframes fxTogglePop {

@@ -8,7 +8,8 @@ import { closeHistoryPanel } from "../history/panel.js";
 import { homeLoaded, loadHome, pauseHomeMarquee, resumeHomeMarquee, syncMarqueeSize } from "../home/home.js";
 import { loadList, renderListCatChips } from "../list/list-items.js";
 import { loadShowcase, loadTrackedSeries, prepShowcaseSkeletonIfStale } from "../showcase/showcase.js";
-import { renderAllDockControls } from "../spin/settings/dock-controls.js";
+import { DOCK_PREFIXES, renderAllDockControls } from "../spin/settings/dock-controls.js";
+import { renderRandomFilters } from "../spin/settings/random-filters.js";
 import { renderSpinCatChips, resetSpinResult } from "../spin/settings/spin-category.js";
 import { spinMode } from "../spin/settings/spin-mode.js";
 import { loadWheel } from "../spin/wheel/loader.js";
@@ -28,6 +29,7 @@ export async function switchSpinCat(code) {
   uiState.spinCat = code;
   saveState();
   renderSpinCatChips();
+  for (const prefix of DOCK_PREFIXES) renderRandomFilters(prefix);
   updateHeaderTitle();
   pushViewToHistory("spin", code);
   uiState.currentCardData = null;

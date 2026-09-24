@@ -18,6 +18,13 @@ function renderSpinDockRow(prefix, { spinBtnId, spinBtnClass }) {
           <p class="spin-caption">Режим</p>
           <div id="${prefix}-mode-toggle"></div>
         </div>
+        <div class="spin-section spin-section-toggle" id="${prefix}-random-filter-section">
+          <p class="spin-caption">Фильтры</p>
+          <div class="spin-toggle-row">
+            <div id="${prefix}-films-only-toggle"></div>
+            <div id="${prefix}-max-runtime-toggle"></div>
+          </div>
+        </div>
         <div class="spin-section spin-section-toggle" id="${prefix}-weight-section">
           <p class="spin-caption">Вероятность</p>
           <div id="${prefix}-weight-toggle"></div>

@@ -1,6 +1,7 @@
 import { renderAutoWatchToggle } from "./auto-watch-toggle.js";
 import { renderConfettiToggle } from "./confetti-toggle.js";
 import { renderPosterToggle } from "./poster-toggle.js";
+import { renderRandomFilters } from "./random-filters.js";
 import { renderSoundThemeToggle } from "./sound-theme.js";
 import { renderSpinCatChips } from "./spin-category.js";
 import { renderSpinModeToggle } from "./spin-mode.js";
@@ -28,6 +29,7 @@ export const DOCK_PREFIXES = ["spin"];
 export function renderAllDockControls(prefix) {
   renderSpinCatChips();
   renderSpinModeToggle(`${prefix}-mode-toggle`);
+  renderRandomFilters(prefix);
   renderWeightToggle(`${prefix}-weight-toggle`);
   renderAutoWatchToggle(`${prefix}-watch-toggle`);
   renderPosterToggle(`${prefix}-poster-toggle`);

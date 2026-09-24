@@ -1,6 +1,9 @@
 import { api } from "../../core/api.js";
+import { RANDOM_CAT } from "../../core/constants.js";
 import { overlay } from "../../core/menu.js";
 import { skeletonWheelHtml } from "../../core/skeleton.js";
+import { placeholderHtml } from "../../core/utils.js";
+import { hasActiveRandomFilters, randomFilterQuery } from "../settings/random-filters.js";
 import { resetSpinResult } from "../settings/spin-category.js";
 import { isWeightedMode } from "../settings/weighted-mode.js";
 import { getWheelHubImage } from "./hub-upload.js";
@@ -126,7 +129,8 @@ export async function showIdleWheel(cat) {
   const skeletonShownAt = wrap._wheelSkeletonShownAt || 0;
   try {
     const weighted = isWeightedMode();
-    const data = await api(`/api/${cat}/wheel-preview?weighted=${weighted}`);
+    const filters = cat === RANDOM_CAT ? randomFilterQuery() : "";
+    const data = await api(`/api/${cat}/wheel-preview?weighted=${weighted}${filters}`);
     const pool = data.wheel_pool;
     if (!pool || pool.length < 2) {
       resetWheelWraps();
@@ -155,6 +159,12 @@ export async function showIdleWheel(cat) {
   } catch (e) {
     resetWheelWraps();
     resetSpinResult();
+    // A 404 with the "Рандом" filters on means they filtered everything out,
+    // which needs a different hint than the generic "press spin" one.
+    if (e && e.status === 404 && cat === RANDOM_CAT && hasActiveRandomFilters()) {
+      const result = document.getElementById("spin-result");
+      if (result) result.innerHTML = placeholderHtml("Под выбранные фильтры ничего не подходит — отключи один из них", "🔍");
+    }
   }
 }
 

@@ -44,13 +44,12 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
 
 #spin-result { container-type: inline-size; }
 
-/* ---- collapsible settings (phones) ------------------------------------
+/* ---- collapsible settings (all widths) --------------------------------
    Reuses the .filter-panel-* head/body/height animation from showcase.css.
    Everything except the spin button lives inside the body. */
 .spin-controls-dock > .filter-panel-body > .filter-panel-inner {
   display: flex; flex-direction: column; align-items: center; flex-wrap: nowrap; gap: 10px;
 }
-.spin-controls-dock .filter-panel-count[hidden] { display: none; }
 .spin-controls-dock.open .filter-panel-chevron { transform: rotate(180deg); }
 
 @media (max-width: 899px) {
@@ -66,17 +65,19 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
   .spin-dock-row {
     display: contents;
   }
-  .spin-controls-dock > .filter-panel-body,
-  .spin-controls-dock > .filter-panel-body > .filter-panel-inner {
-    display: contents;
-  }
+  /* The gap lives inside the body so a collapsed dock doesn't keep an empty
+     16px strip under its header. */
+  .spin-controls-dock > .filter-panel-body { width: 100%; }
+  .spin-controls-dock > .filter-panel-body > .filter-panel-inner { gap: 16px; padding-top: 16px; }
+  .spin-controls-dock > .btn { margin-top: 16px; }
+  .spin-controls-dock > .spin-settings-toggle { font-size: 1rem; }
   .spin-controls-dock {
     position: fixed;
     top: calc(var(--header-h) + 14px); right: 16px; left: auto;
     margin: 0;
     will-change: transform;
     backface-visibility: hidden;
-    padding: 20px 26px; gap: 16px; border-radius: var(--radius-lg);
+    padding: 20px 26px; gap: 0; border-radius: var(--radius-lg);
     transition: top 0.2s ease, right 0.2s ease, padding 0.2s ease, gap 0.2s ease, opacity 0.25s ease;
   }
 

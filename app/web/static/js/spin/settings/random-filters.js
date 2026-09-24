@@ -3,7 +3,6 @@ import { getLS, setLS } from "../../core/storage.js";
 import { loadWheel } from "../wheel/loader.js";
 import { DOCK_PREFIXES } from "./dock-controls.js";
 import { spinMode } from "./spin-mode.js";
-import { setFilterPanelCount } from "../../showcase/filters.js";
 
 // ---- "Рандом" wheel preferences -------------------------------------------
 // Two independent per-browser filters for the combined wheel only (see
@@ -58,10 +57,6 @@ function renderPill(containerId, { key, active, label, title, onToggle, wrapClas
 export function renderRandomFilters(prefix) {
   const section = document.getElementById(`${prefix}-random-filter-section`);
   if (section) section.classList.toggle("visible", isRandomSpin());
-  // Collapsed on mobile, the settings header is the only sign that filters are on.
-  const dock = section && section.closest(".spin-controls-dock");
-  if (dock) setFilterPanelCount(dock, isRandomSpin() ? Number(filmsOnly) + Number(max2h) : 0);
-
   renderPill(`${prefix}-films-only-toggle`, {
     key: "films-only",
     wrapClass: "random-filter-toggle-wrap--inverted",

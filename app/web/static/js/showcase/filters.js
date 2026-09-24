@@ -2,9 +2,16 @@
 // the series-premieres tab.
 const COLLAPSE_MQ = "(max-width: 899px)";
 const COLLAPSE_MS = 280;
+// Panels with this class collapse on desktop too (the roulette dock and the
+// "Кино и сериалы" tabs); the rest only collapse on phones.
+const ALWAYS_COLLAPSIBLE = "filter-panel-collapsible--always";
 
 function matches(query) {
   return typeof window.matchMedia === "function" && window.matchMedia(query).matches;
+}
+
+function isCollapsedLayout(panel) {
+  return panel.classList.contains(ALWAYS_COLLAPSIBLE) || matches(COLLAPSE_MQ);
 }
 
 export function setPanelOpen(panel, head, open) {
@@ -12,7 +19,7 @@ export function setPanelOpen(panel, head, open) {
   const inner = body && body.querySelector(":scope > .filter-panel-inner");
   head.setAttribute("aria-expanded", open ? "true" : "false");
 
-  if (!body || !inner || !matches(COLLAPSE_MQ) || matches("(prefers-reduced-motion: reduce)")) {
+  if (!body || !inner || !isCollapsedLayout(panel) || matches("(prefers-reduced-motion: reduce)")) {
     clearTimeout(body && body._collapseTimer);
     if (body) body.style.height = "";
     panel.classList.toggle("open", open);
@@ -66,9 +73,9 @@ export function filterPanelBody(panel) {
   return inner;
 }
 
-// The count badge is the only thing telling someone on a phone that the
-// list they're looking at is filtered at all, since the collapsed panel
-// hides the active pills.
+// The count badge is the only thing telling someone that the list they're
+// looking at is filtered at all, since the collapsed panel hides the active
+// pills.
 export function setFilterPanelCount(panel, count) {
   const badge = panel.querySelector(".filter-panel-count");
   if (!badge) return;

@@ -3,13 +3,15 @@ import { showToast } from "./toast.js";
 // Small DOM / string helpers. Toasts live in toast.js, fades and transitions
 // in transitions.js, row animations in rows.js, row-button icons in icons.js.
 
-export function ensureFilterPanel(panelId, sectionId, beforeId) {
+// `collapseOnDesktop` keeps the panel collapsible at every width; by default
+// it only collapses on phones (see .filter-panel-collapsible in showcase.css).
+export function ensureFilterPanel(panelId, sectionId, beforeId, { collapseOnDesktop = false } = {}) {
   const section = document.getElementById(sectionId);
   let panel = document.getElementById(panelId);
   if (!panel) {
     panel = document.createElement("div");
     panel.id = panelId;
-    panel.className = "filter-panel";
+    panel.className = "filter-panel" + (collapseOnDesktop ? " filter-panel-collapsible--always" : "");
     section.insertBefore(panel, document.getElementById(beforeId));
   }
   return panel;

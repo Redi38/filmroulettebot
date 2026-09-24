@@ -11,10 +11,9 @@ function renderSpinDockRow(prefix, { spinBtnId, spinBtnClass }) {
         <div id="${prefix}-mute-toggle"></div>
         <div id="${prefix}-sound-theme-toggle"></div>
       </div>
-      <div class="spin-controls-dock filter-panel-collapsible">
+      <div class="spin-controls-dock filter-panel-collapsible filter-panel-collapsible--always">
         <button type="button" class="filter-panel-toggle spin-settings-toggle" aria-expanded="false">
           <span class="filter-panel-toggle-label">Настройки рулетки</span>
-          <span class="filter-panel-count" hidden></span>
           <svg class="filter-panel-chevron" viewBox="0 0 24 24" width="16" height="16" fill="none"
                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="6 9 12 15 18 9"></polyline>
@@ -70,9 +69,8 @@ function mountSpinDocks() {
   wireSettingsToggles();
 }
 
-// On phones the settings collapse behind one header (same panel as the
-// filters on the theaters tab); the spin button stays outside it. On desktop
-// the header is hidden and the panel wrappers are `display: contents`.
+// The settings collapse behind one header on every screen size (same panel
+// as the filters on the theaters tab); the spin button stays outside it.
 function wireSettingsToggles() {
   for (const dock of document.querySelectorAll(".spin-controls-dock")) {
     const head = dock.querySelector(":scope > .spin-settings-toggle");

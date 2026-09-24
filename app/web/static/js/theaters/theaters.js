@@ -68,7 +68,8 @@ async function ensureTheatersSettingsLoaded() {
 }
 
 function renderTheatersFilters() {
-  const panel = ensureFilterPanel("theaters-filters", "theaters-section", "theaters-container");
+  const panel = ensureFilterPanel("theaters-filters", "theaters-section", "theaters-container",
+    { collapseOnDesktop: true });
 
   const reload = () => {
     theatersNowPlayingPage = 1;
@@ -237,7 +238,8 @@ const seriesReleasesFilters = createFilterStore("filmroulette_series_releases_fi
 });
 
 function renderSeriesReleasesFilters() {
-  const panel = ensureFilterPanel("series-releases-filters", "series-releases-section", "series-releases-container");
+  const panel = ensureFilterPanel("series-releases-filters", "series-releases-section", "series-releases-container",
+    { collapseOnDesktop: true });
   const reload = () => {
     seriesReleasesPage = 1;
     renderSeriesReleasesFilters();

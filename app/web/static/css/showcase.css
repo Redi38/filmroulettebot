@@ -100,6 +100,7 @@ img.showcase-poster.img-pending { opacity: 0; }
   background: linear-gradient(90deg, var(--primary), var(--primary-2));
   color: white; font-size: 0.72rem; font-weight: 800;
 }
+.filter-panel-count[hidden] { display: none; }
 .filter-panel-chevron { margin-left: auto; transition: transform 0.25s var(--ease-standard); color: var(--muted); }
 .filter-panel.open > .filter-panel-chevron, .filter-panel.open .filter-panel-chevron { transform: rotate(180deg); }
 
@@ -161,7 +162,22 @@ img.showcase-poster.img-pending { opacity: 0; }
   .showcase-filter-group { flex: 1 1 100%; }
 }
 
+/* Same collapse at every width, for panels that opt in (the roulette dock
+   and the "Кино и сериалы" tabs). Kept in sync with the block above. */
+.filter-panel-collapsible--always > .filter-panel-toggle { display: flex; }
+.filter-panel-collapsible--always > .filter-panel-body {
+  overflow: hidden; height: 0;
+  transition: height 0.28s var(--ease-standard);
+}
+.filter-panel-collapsible--always.open > .filter-panel-body { height: auto; }
+.filter-panel-collapsible--always > .filter-panel-body > .filter-panel-inner { padding-top: 12px; }
+.filter-panel-collapsible--always.has-active-filters { border-color: var(--primary); }
+
 @media (max-width: 899px) and (prefers-reduced-motion: reduce) {
   .filter-panel-collapsible > .filter-panel-body,
   .filter-panel-chevron { transition: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .filter-panel-collapsible--always > .filter-panel-body,
+  .filter-panel-collapsible--always .filter-panel-chevron { transition: none; }
 }

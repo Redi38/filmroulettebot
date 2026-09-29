@@ -1,0 +1,47 @@
+/* Accessibility fallbacks for people who ask their OS for more contrast
+   (prefers-contrast) or use a forced palette (Windows High Contrast). The
+   default design is dark-only, so both blocks only strengthen what is
+   already there. Kept in its own file so it is easy to review and extend. */
+
+/* ---- prefers-contrast: more -------------------------------------------- */
+@media (prefers-contrast: more) {
+  /* Body text is already ~15:1; the dim tokens are what need lifting.
+     Marvel/DC set --border on <body>, so it has to be overridden there too. */
+  :root, body[data-studio] {
+    --muted: #c9c1b4;
+    --border: #7a7064;
+    --scrollbar-thumb: #7a7064; --scrollbar-thumb-hover: #9a9082;
+  }
+  /* Pills sit on a translucent fill with a hairline ring; make the ring
+     read as a real boundary and drop the glow on the active menu row. */
+  .showcase-filter-btn { box-shadow: inset 0 0 0 2px var(--muted); }
+  .showcase-filter-btn.active { box-shadow: none; }
+  #side-menu .menu-item.active { text-shadow: none; }
+}
+
+/* ---- forced-colors: active ---------------------------------------------
+   The browser replaces our colours with the user's palette and drops
+   gradients/shadows, so anything that shows state only through a fill
+   disappears. Use system colours, which are honoured as written.
+   !important is deliberate: the pill "active" rules live in five places
+   with different specificity, and this block must win over all of them. */
+@media (forced-colors: active) {
+  /* Sliding "thumb" behind segmented pills is a gradient-only element. */
+  .showcase-filter-thumb, .spin-mode-thumb { display: none !important; }
+
+  .showcase-filter-btn.active {
+    background: Highlight !important;
+    color: HighlightText !important;
+    box-shadow: none !important;
+  }
+  /* Inactive pills lose their inset ring (box-shadow is removed); give them
+     an outline, but leave the keyboard focus ring alone. */
+  .showcase-filter-btn:not(.active):not(:focus-visible) {
+    outline: 1px solid ButtonText;
+    outline-offset: -1px;
+  }
+
+  /* Side menu: the glowing indicator bar and row tint are fills. */
+  #menu-active-indicator { background: Highlight; }
+  #side-menu .menu-item.active { border-left-color: Highlight; text-shadow: none; }
+}

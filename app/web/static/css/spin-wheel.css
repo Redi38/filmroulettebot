@@ -372,7 +372,7 @@ body.dock-ready .wheel-audio-controls { opacity: 1; pointer-events: auto; }
   font-family: inherit; font-size: 0.85rem; font-weight: 600; white-space: nowrap;
 }
 .sound-theme-item:hover { background: var(--bg-c); }
-.sound-theme-item.active { color: var(--primary); }
+.sound-theme-item.active { color: var(--primary-text); }
 
 @media (min-width: 900px) {
   .wheel-audio-controls {
@@ -683,7 +683,7 @@ body.dock-ready .wheel-audio-controls { opacity: 1; pointer-events: auto; }
   font-family: inherit; font-size: 0.85rem; font-weight: 600; white-space: nowrap;
 }
 .cat-select-item:hover { background: var(--bg-c); }
-.cat-select-item.active { color: var(--primary); }
+.cat-select-item.active { color: var(--primary-text); }
 
 @media (min-width: 900px) {
   .cat-select-btn { padding: 11px 18px; font-size: 1.05rem; border-radius: 999px; }

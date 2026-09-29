@@ -164,7 +164,7 @@ html.vt-section::view-transition-new(main-content) {
 ::view-transition-new(spin-hero) { border-radius: 12px; overflow: hidden; }
 .cat-badge {
   display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; font-weight: 700; padding: 3px 10px;
-  border-radius: 20px; margin-top: 8px; margin-bottom: 4px; background: rgba(var(--primary-rgb), 0.16); color: var(--primary);
+  border-radius: 20px; margin-top: 8px; margin-bottom: 4px; background: rgba(var(--primary-rgb), 0.16); color: color-mix(in srgb, var(--primary-text) 75%, white);
 }
 .cat-badge svg { display: block; flex-shrink: 0; }
 .title { font-size: 1.25rem; font-weight: 800; margin-bottom: 8px; }
@@ -181,9 +181,9 @@ html.vt-section::view-transition-new(main-content) {
 .fade-in { animation: fadeIn 0.35s var(--ease-out); animation-fill-mode: backwards; }
 .spin-result { transition: opacity var(--dur-fast) ease; }
 .meta { color: color-mix(in srgb, var(--text) 55%, var(--muted) 45%); font-size: 0.94rem; font-weight: 500; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
-.meta-icon { display: inline-flex; flex-shrink: 0; opacity: 1; color: var(--primary); }
+.meta-icon { display: inline-flex; flex-shrink: 0; opacity: 1; color: var(--primary-text); }
 .meta-icon svg { display: block; }
-.rating-value { font-weight: 800; color: var(--primary); font-size: 1.05em; }
+.rating-value { font-weight: 800; color: var(--primary-text); font-size: 1.05em; }
 .overview { margin-top: 10px; line-height: 1.55; }
 .auto-watch-hint {
   margin-top: 6px; font-size: 0.78rem; color: var(--muted); min-height: 1.2em;
@@ -331,7 +331,7 @@ html.vt-section::view-transition-new(main-content) {
   background: rgba(var(--primary-rgb), 0.05); border: 1.5px solid rgba(var(--primary-rgb), 0.3); border-radius: 10px; padding: 9px 13px;
   color: var(--muted); transition: border-color 0.15s, background 0.15s;
 }
-.search-row svg { color: var(--primary); flex-shrink: 0; }
+.search-row svg { color: var(--primary-text); flex-shrink: 0; }
 .search-row:focus-within { border-color: var(--primary); background: rgba(var(--primary-rgb), 0.09); }
 .search-row input {
   flex: 1; background: none; border: none; color: var(--text);

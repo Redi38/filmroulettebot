@@ -10,6 +10,7 @@
     "spin-wheel.css",
     "feedback-history.css",
     "history-panel.css",
+    "contrast.css",
     "modal-responsive.css"
   ]
 }

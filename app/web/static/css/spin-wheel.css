@@ -174,7 +174,7 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
   transition: color 0.35s ease, background 0.35s ease, box-shadow 0.15s;
 }
 .spin-mode-toggle .showcase-filter-btn.active {
-  background: transparent; box-shadow: none; color: white;
+  background: transparent; box-shadow: none; color: var(--on-primary);
 }
 
 .spin-section { display: flex; flex-direction: column; align-items: center; gap: 6px; align-self: stretch; }

@@ -62,7 +62,7 @@ export function renderRandomFilters(prefix) {
     wrapClass: "random-filter-toggle-wrap--inverted",
     active: filmsOnly,
     label: "🎬 Фильмы",
-    title: "Убрать сериалы из рулетки. Мультфильмы, Marvel и DC остаются",
+    title: "Убрать сериалы из рулетки",
     onToggle: () => {
       filmsOnly = !filmsOnly;
       setLS(FILMS_ONLY_KEY, filmsOnly ? "1" : "0");
@@ -73,7 +73,7 @@ export function renderRandomFilters(prefix) {
     key: "max-runtime",
     active: max2h,
     label: "⏱️ До 2 часов",
-    title: "Только фильмы не длиннее двух часов. Сериалы этот фильтр не убирает",
+    title: "Только фильмы не длиннее двух часов",
     onToggle: () => {
       max2h = !max2h;
       setLS(MAX_2H_KEY, max2h ? "1" : "0");

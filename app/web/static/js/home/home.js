@@ -191,25 +191,46 @@ document.addEventListener("visibilitychange", () => {
 
 function fillMarqueeTrack(track, posters) {
   const frag = document.createDocumentFragment();
-  for (const item of [...posters, ...posters]) {
-    const wrap = document.createElement("div");
-    wrap.className = "marquee-poster-item";
+  // The track holds the list twice so the loop is seamless. Only the first
+  // copy is exposed to assistive tech and the tab order; the second is
+  // aria-hidden + tabindex="-1" (NOT inert: it must stay clickable, because
+  // it is half of what a mouse or touch user actually sees scrolling by).
+  [...posters, ...posters].forEach((item, i) => {
+    const isCopy = i >= posters.length;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "marquee-poster-item";
+    btn.onclick = () => openPosterInfoModal(item.category, item.original_title || item.title);
+    if (isCopy) {
+      btn.setAttribute("aria-hidden", "true");
+      btn.tabIndex = -1;
+    }
 
     const img = document.createElement("img");
     img.className = "marquee-poster";
     img.src = item.poster_url;
+    // The image is the button's only content, so its alt IS the button's name.
     img.alt = item.title || "";
     img.draggable = false;
-    img.onclick = () => openPosterInfoModal(item.category, item.original_title || item.title);
-    wrap.appendChild(img);
+    btn.appendChild(img);
 
-    frag.appendChild(wrap);
-  }
+    frag.appendChild(btn);
+  });
   track.innerHTML = "";
   track.appendChild(frag);
 
   const seconds = Math.max(18, posters.length * 4.5);
   track.style.setProperty("--marquee-duration", `${seconds}s`);
+}
+
+// Tabbing to a poster that is currently scrolled out of view makes the browser
+// scroll the clipped .marquee sideways to reveal it (the row is paused while
+// it has focus, see css/home.css). When focus leaves the row, snap that back
+// so the looping animation resumes from its own origin instead of offset.
+for (const marquee of document.querySelectorAll(".marquee")) {
+  marquee.addEventListener("focusout", (ev) => {
+    if (!marquee.contains(ev.relatedTarget)) marquee.scrollLeft = 0;
+  });
 }
 
 document.getElementById("home-roulette-btn").onclick = () => switchView("spin");

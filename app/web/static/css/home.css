@@ -85,16 +85,28 @@
 }
 .marquee-reverse .marquee-track { animation-direction: reverse; }
 .marquee:hover .marquee-track,
-.marquee:active .marquee-track {
+.marquee:active .marquee-track,
+.marquee:focus-within .marquee-track {
   animation-play-state: paused;
 }
 
 .marquee-poster-item {
   position: relative; display: inline-block; flex-shrink: 0;
+  /* It is a <button> now (keyboard access): strip the native chrome. */
+  padding: 0; border: 0; background: none; font: inherit; color: inherit; cursor: pointer;
   width: var(--marquee-poster-w, 140px); height: var(--marquee-poster-h, 210px);
   margin-right: 14px;
 }
-.marquee-poster-item:hover { z-index: 1; }
+.marquee-poster-item:hover, .marquee-poster-item:focus-visible { z-index: 1; }
+/* .marquee clips its children (overflow: hidden), so the usual outside focus
+   ring would be cut off on three sides — draw it inside the poster instead,
+   and give keyboard focus the same lift as hover. */
+.marquee-poster-item:focus-visible { outline: none; }
+.marquee-poster-item:focus-visible .marquee-poster {
+  outline: var(--focus-ring); outline-offset: -4px;
+  transform: translateY(-6px);
+  box-shadow: 0 16px 34px rgba(0,0,0,0.6);
+}
 .marquee-poster {
   width: 100%; height: 100%; margin-right: 0;
   object-fit: cover; border-radius: 14px;

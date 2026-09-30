@@ -11,6 +11,7 @@
     "feedback-history.css",
     "history-panel.css",
     "contrast.css",
+    "touch-targets.css",
     "modal-responsive.css"
   ]
 }

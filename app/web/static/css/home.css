@@ -69,6 +69,30 @@
   font-size: 1.15rem; font-weight: 800; color: var(--text);
   margin: 0 0 14px; padding: 0 16px;
 }
+.home-collection-label { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+/* Stop/start control for the running posters. Icon shows the ACTION on click. */
+.marquee-toggle {
+  flex-shrink: 0; width: 32px; height: 32px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%; border: 1px solid var(--border);
+  background: var(--card); color: var(--text); cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.15s var(--ease-spring);
+}
+.marquee-toggle:active { transform: scale(0.92); }
+.marquee-toggle .icon-play { display: none; }
+.home-collection-block.marquee-stopped .marquee-toggle .icon-pause { display: none; }
+.home-collection-block.marquee-stopped .marquee-toggle .icon-play { display: block; }
+.home-collection-block.marquee-stopped .marquee-track,
+/* set by home.js while the tab / view is hidden, see pauseHomeMarquee() */
+.home-collection-block.marquee-suspended .marquee-track { animation-play-state: paused; }
+@media (hover: hover) and (pointer: fine) {
+  .marquee-toggle:hover { background: var(--border); }
+}
+/* Reduced motion already freezes the rows (base.css), so the control would do nothing. */
+@media (prefers-reduced-motion: reduce) {
+  .marquee-toggle { display: none; }
+}
 
 .marquee {
   position: relative; overflow: hidden; width: 100%;

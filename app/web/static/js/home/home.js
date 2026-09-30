@@ -50,6 +50,25 @@ export function pauseHomeMarquee() {
       ? anim.currentTime
       : (track._marqueeTime || 0) + elapsed;
   }
+  suspendMarqueeAnimation(true);
+}
+
+// Freeze the rows with a CSS class (css/home.css: .marquee-suspended) instead
+// of only remembering where they were. A background tab's animation clock is
+// not updated while hidden, so a still-running animation gets the whole hidden
+// time added on the first frame after coming back — the poster row visibly
+// snapped forward. Doing it in CSS (not Animation.pause()/play()) keeps it
+// composable with the hover / keyboard-focus / stop-button pauses: whichever
+// still applies keeps the row stopped, and nothing gets stuck.
+function suspendMarqueeAnimation(on) {
+  const block = document.getElementById("home-collection-block");
+  if (!block) return;
+  block.classList.toggle("marquee-suspended", on);
+  if (on) {
+    // Read the computed state so the pause is applied right now, before the
+    // (possibly throttled) next frame, rather than sometime later.
+    for (const track of document.querySelectorAll(".marquee-track")) void getComputedStyle(track).animationPlayState;
+  }
 }
 
 function seekMarqueeTrack(track) {
@@ -58,6 +77,12 @@ function seekMarqueeTrack(track) {
   const anim = marqueeAnimationOf(track);
   if (anim) {
     try {
+      // Still held where suspendMarqueeAnimation() froze it (it can drift a
+      // frame or two past the saved time before the pause lands): rewinding
+      // it now would only make the row step backwards a few pixels. A real
+      // drift or a fresh animation that restarted at 0 is far outside this.
+      const held = anim.currentTime;
+      if (typeof held === "number" && held >= saved && held - saved < 250) return true;
       anim.currentTime = saved;
       return true;
     } catch (e) {
@@ -81,6 +106,9 @@ export function resumeHomeMarquee() {
     // than leaving the row stuck at the start.
     if (!seekMarqueeTrack(track)) requestAnimationFrame(() => seekMarqueeTrack(track));
   }
+  // The time was restored above while the rows were still frozen; let them
+  // run again from the next rendered frame, which has a fresh clock.
+  requestAnimationFrame(() => { if (marqueeShownAt) suspendMarqueeAnimation(false); });
 }
 
 // Picks one poster from the collection at random as a blurred hero backdrop
@@ -232,5 +260,30 @@ for (const marquee of document.querySelectorAll(".marquee")) {
     if (!marquee.contains(ev.relatedTarget)) marquee.scrollLeft = 0;
   });
 }
+
+// Visible stop/start control for the running posters (WCAG 2.2.2). Hover and
+// keyboard focus already pause the rows, but touch users had no way to stop
+// them. Purely a CSS class flip (.marquee-stopped), so it does not interfere
+// with the currentTime bookkeeping used by pauseHomeMarquee/resumeHomeMarquee.
+const MARQUEE_STOPPED_KEY = "filmroulette_marquee_stopped";
+(function initMarqueeToggle() {
+  const btn = document.getElementById("home-marquee-toggle");
+  const block = document.getElementById("home-collection-block");
+  if (!btn || !block) return;
+
+  function apply(stopped) {
+    block.classList.toggle("marquee-stopped", stopped);
+    btn.setAttribute("aria-label", stopped ? "Запустить прокрутку афиши" : "Остановить прокрутку афиши");
+  }
+  let stopped = false;
+  try { stopped = localStorage.getItem(MARQUEE_STOPPED_KEY) === "1"; } catch (e) { /* storage blocked */ }
+  apply(stopped);
+
+  btn.addEventListener("click", () => {
+    stopped = !stopped;
+    apply(stopped);
+    try { localStorage.setItem(MARQUEE_STOPPED_KEY, stopped ? "1" : "0"); } catch (e) { /* ignore */ }
+  });
+})();
 
 document.getElementById("home-roulette-btn").onclick = () => switchView("spin");

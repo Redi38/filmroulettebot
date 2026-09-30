@@ -9,16 +9,17 @@
 .move-btn { min-width: 28px; min-height: 28px; }
 
 @media (pointer: coarse) {
-  #burger-btn, .modal-close, .showcase-filter-btn,
+  #burger-btn, .modal-close, .showcase-filter-btn, .marquee-toggle,
   button.del-btn, button.edit-btn, .move-btn { position: relative; }
 
-  #burger-btn::after, .modal-close::after, .showcase-filter-btn::after,
+  #burger-btn::after, .modal-close::after, .showcase-filter-btn::after, .marquee-toggle::after,
   button.del-btn::after, button.edit-btn::after, .move-btn::after {
     content: ""; position: absolute; inset: var(--hit, 0);
   }
 
   #burger-btn        { --hit: -6px; }            /* 34 + 1px border -> 44 (inset is measured from the padding box) */
-  .modal-close       { --hit: -6px; }            /* 32 -> 44 */
+  .modal-close       { --hit: -6px; }
+  .marquee-toggle    { --hit: -6px; }            /* 32 -> 44 */            /* 32 -> 44 */
   .showcase-filter-btn { --hit: -9px -2px; }     /* 27 tall -> 45 */
   button.del-btn, button.edit-btn { --hit: -10px -6px; } /* 25 tall -> 45 */
   /* The arrows are stacked 3px apart, so only grow them sideways; taller

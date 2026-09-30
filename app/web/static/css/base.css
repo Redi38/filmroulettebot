@@ -137,6 +137,12 @@ body::before {
 @media (prefers-reduced-motion: reduce) {
   .dust-mote { display: none; }
 }
+
+/* Visually hidden but still read by screen readers. */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
 header {
   display: flex; align-items: center; justify-content: space-between;
   height: var(--header-h); padding: 14px 16px; border-bottom: 1px solid var(--border);

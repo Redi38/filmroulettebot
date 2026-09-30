@@ -17,6 +17,8 @@
   transition: transform 0.25s cubic-bezier(0.34, 1.35, 0.64, 1);
 }
 .modal-overlay-base.open .modal-box-base { transform: scale(1) translateY(0); }
+/* The box only takes focus itself when a dialog has nothing focusable inside (dialog-a11y.js). */
+.modal-box-base:focus { outline: none; }
 
 #modal-box h3 { margin: 0 0 16px; font-size: 1.05rem; }
 #modal-box .modal-options { display: flex; flex-direction: column; gap: 10px; }

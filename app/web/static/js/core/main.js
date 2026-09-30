@@ -5,6 +5,7 @@
 // else in the app imports a value from them, so without an explicit import
 // here esbuild's bundler would drop them from the graph entirely.
 import "./bg-dust.js";
+import "./dialog-a11y.js";
 import "./bootstrap.js";
 import { initRouting } from "./router.js";
 import "../spin/spin-dock.js";

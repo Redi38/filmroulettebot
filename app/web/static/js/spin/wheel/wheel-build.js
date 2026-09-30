@@ -234,6 +234,8 @@ export function buildWheel(wrapId, items, weights, posters, opts) {
 
   const titleEl = document.createElement("div");
   titleEl.className = "wheel-current-title";
+  // Updates every animation frame while spinning; the outcome is announced once via #spin-announcer.
+  titleEl.setAttribute("aria-hidden", "true");
   wrap.appendChild(titleEl);
 
   const holder = document.createElement("div");
@@ -244,6 +246,8 @@ export function buildWheel(wrapId, items, weights, posters, opts) {
   canvasMask.className = "wheel-canvas-mask";
   const canvas = document.createElement("canvas");
   canvas.className = "wheel-canvas";
+  canvas.setAttribute("role", "img");
+  canvas.setAttribute("aria-label", `Колесо рулетки, вариантов: ${items.length}. Нажми «Крутить», чтобы выбрать случайный.`);
   const dpr = getWheelDPR();
   holder.style.width = cssSize + "px";
   holder.style.height = cssSize + "px";

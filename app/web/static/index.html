@@ -73,6 +73,8 @@
     <div id="spin-dock-mount"></div>
     <div id="spin-wheel-wrap" class="wheel-wrap"></div>
     <div id="spin-result" class="spin-result"></div>
+    <!-- Screen-reader only: announces the spin outcome ("Выпало: …"). The card itself is not a live region, so resets and placeholders stay silent. -->
+    <div id="spin-announcer" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
 
     <!-- History lives here, in the roulette's lower-right corner, instead of
          being a screen of its own. Inline SVG (not the sprite) on purpose:
@@ -143,7 +145,7 @@
 <div class="toast-stack toast-stack--error" id="toast-stack-error" aria-live="assertive" aria-atomic="false"></div>
 
 <div id="modal-overlay" class="modal-overlay-base">
-  <div id="modal-box" class="modal-box-base">
+  <div id="modal-box" class="modal-box-base" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1">
     <h3 id="modal-title">Куда перенести?</h3>
     <div class="modal-options" id="modal-options"></div>
     <button class="modal-cancel" id="modal-cancel">Отмена</button>
@@ -151,9 +153,9 @@
 </div>
 
 <div id="rename-modal-overlay" class="modal-overlay-base">
-  <div id="rename-modal-box" class="modal-box-base">
-    <h3>Изменить название</h3>
-    <input type="text" id="rename-modal-input" class="rename-modal-input" maxlength="200">
+  <div id="rename-modal-box" class="modal-box-base" role="dialog" aria-modal="true" aria-labelledby="rename-modal-title" tabindex="-1">
+    <h3 id="rename-modal-title">Изменить название</h3>
+    <input type="text" id="rename-modal-input" class="rename-modal-input" maxlength="200" aria-labelledby="rename-modal-title">
     <div class="rename-modal-actions">
       <button class="btn btn-primary" id="rename-modal-save">Сохранить</button>
       <button class="modal-cancel" id="rename-modal-cancel">Отмена</button>
@@ -162,15 +164,15 @@
 </div>
 
 <div id="poster-info-overlay" class="modal-overlay-base">
-  <div id="poster-info-box" class="modal-box-base">
+  <div id="poster-info-box" class="modal-box-base" role="dialog" aria-modal="true" aria-label="Информация о тайтле" tabindex="-1">
     <button class="modal-close" id="poster-info-close" aria-label="Закрыть">✕</button>
     <div id="poster-info-content"></div>
   </div>
 </div>
 
 <div id="add-search-overlay" class="modal-overlay-base">
-  <div id="add-search-box" class="modal-box-base">
-    <h3>Выберите тайтл</h3>
+  <div id="add-search-box" class="modal-box-base" role="dialog" aria-modal="true" aria-labelledby="add-search-title" tabindex="-1">
+    <h3 id="add-search-title">Выберите тайтл</h3>
     <div id="add-search-results"></div>
     <button class="btn btn-primary" id="add-search-fallback">
       <span id="add-search-fallback-label"></span>

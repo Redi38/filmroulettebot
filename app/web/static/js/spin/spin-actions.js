@@ -165,6 +165,7 @@ async function swapWheelForCard(wheel, wrap, result, data) {
     wrap.classList.remove("wheel-done");
     wheel.updateWheelScrollLock();
     result.innerHTML = renderCard(data);
+    announceSpinResult(data);
     result.style.opacity = "1";
   };
   const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -193,6 +194,7 @@ async function swapWheelForCard(wheel, wrap, result, data) {
   wheel.updateWheelScrollLock();
   await fadeOut(result);
   result.innerHTML = renderCard(data);
+  announceSpinResult(data);
   fadeIn(result);
 }
 
@@ -228,6 +230,15 @@ function startSpinCooldownAnim(seconds) {
     applySpinButtonLockState();
   }, seconds * 1000);
 }
+// Tells screen readers what the spin landed on. Cleared first, then set on a
+// later tick, so landing on the same title twice in a row is announced again.
+export function announceSpinResult(data) {
+  const el = document.getElementById("spin-announcer");
+  if (!el || !data || !data.title) return;
+  el.textContent = "";
+  setTimeout(() => { el.textContent = `Выпало: ${data.title}`; }, 60);
+}
+
 export function resultEl() {
   return document.getElementById("spin-result");
 }
@@ -246,6 +257,7 @@ async function doClassicSpin(cat, isRandom) {
     uiState.currentCardData = data;
     await fadeOut(result);
     result.innerHTML = renderCard(data);
+    announceSpinResult(data);
     fadeIn(result);
     scheduleAutoWatchOpen(data, result);
   } catch (e) {

@@ -374,7 +374,8 @@ html.vt-section::view-transition-new(main-content) {
 
 .muted { color: var(--muted); text-align: center; padding: 20px 0; }
 .check-group { margin-bottom: 18px; }
-.check-group h3 { font-size: 1rem; margin-bottom: 8px; }
+.check-group h3 { display: flex; align-items: center; gap: 8px; font-size: 1rem; margin-bottom: 8px; }
+.check-group h3 svg { flex-shrink: 0; }
 .check-item {
   padding: 8px 0; border-bottom: 1px solid var(--border);
   display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;

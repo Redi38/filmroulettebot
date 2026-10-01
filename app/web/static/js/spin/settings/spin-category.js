@@ -13,7 +13,7 @@ import { showSection, switchSpinCat } from "../../core/views.js";
 // one list (the movies wheel carries the same two lots).
 function spinCatOptions() {
   return [
-    [RANDOM_CAT, "Рандом"],
+    [RANDOM_CAT, "Все списки"],
     ...spinnableCats().map((code) => [code, CATS[code] || code]),
   ];
 }

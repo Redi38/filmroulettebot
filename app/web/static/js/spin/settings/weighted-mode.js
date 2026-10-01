@@ -22,7 +22,7 @@ export function renderWeightToggle(containerId) {
   const section = document.getElementById(containerId.replace(/-weight-toggle$/, "-weight-section"));
   if (section) section.classList.toggle("visible", spinMode === "wheel");
   renderChoiceToggle(containerId, {
-    options: [[false, "🎲 Обычный"], [true, "⚖️ Весовой"]],
+    options: [[false, "🎲 Поровну"], [true, "⚖️ По весу"]],
     value: weightedMode,
     containerClass: "spin-weight-wrap",
     visible: spinMode === "wheel",

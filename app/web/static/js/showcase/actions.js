@@ -115,7 +115,7 @@ function buildAddActionSlot(item, cat, addMode, skipScope, wrap, onSkipSettled) 
     actionSlot.classList.add("showcase-action-stack");
     const skipBtn = document.createElement("button");
     skipBtn.className = "btn btn-ghost";
-    skipBtn.textContent = "Скип";
+    skipBtn.textContent = "Пропустить";
     let confirmTimer = null;
     const doSkip = async () => {
       skipBtn.disabled = true;
@@ -128,7 +128,7 @@ function buildAddActionSlot(item, cat, addMode, skipScope, wrap, onSkipSettled) 
             await apiPost("/api/unskip", {scope: skipScope, title: item.title});
             skipBtn.disabled = false;
             skipBtn.classList.remove("confirming");
-            skipBtn.textContent = "Скип";
+            skipBtn.textContent = "Пропустить";
             if (rowParent && rowParent.isConnected) {
               // The node carries the inline styles its collapse left behind;
               // clear them before it re-enters the flow, then grow it back.
@@ -139,7 +139,7 @@ function buildAddActionSlot(item, cat, addMode, skipScope, wrap, onSkipSettled) 
               onSkipSettled();
             }
           } catch (e) {
-            showToast("Не удалось отменить скип");
+            showToast("Не удалось отменить пропуск");
           }
         });
         collapseAndRemoveRow(wrap, null, {onCollapseStart: showUndo});
@@ -155,7 +155,7 @@ function buildAddActionSlot(item, cat, addMode, skipScope, wrap, onSkipSettled) 
         skipBtn.textContent = "Точно? Ещё раз";
         confirmTimer = setTimeout(() => {
           skipBtn.classList.remove("confirming");
-          skipBtn.textContent = "Скип";
+          skipBtn.textContent = "Пропустить";
         }, 3000);
         return;
       }

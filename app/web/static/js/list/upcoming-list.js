@@ -1,5 +1,6 @@
 import { openAddSearchModal } from "../core/add-search.js";
 import { api, apiPost } from "../core/api.js";
+import { CHECK_CIRCLE_ICON_SVG, HELP_CIRCLE_ICON_SVG, HOURGLASS_ICON_SVG } from "../core/icons.js";
 import { openCategoryModal } from "../core/modal.js";
 import { skeletonListHtml } from "../core/skeleton.js";
 import { showToast } from "../core/toast.js";
@@ -94,28 +95,28 @@ document.getElementById("up-check-btn").onclick = async () => {
   try {
     const data = await apiPost("/api/upcoming/check");
     let html = "";
-    html += '<div class="check-group"><h3>✅ Доступны в цифре</h3>';
+    html += `<div class="check-group"><h3>${CHECK_CIRCLE_ICON_SVG}Доступны в цифре</h3>`;
     if (!data.released.length) {
       html += '<div class="muted">Пока нет</div>';
     } else {
       for (const e of data.released) {
         const est = e.estimated ? '<div class="estimated">(оценочно, точной даты нет)</div>' : "";
-        html += `<div class="check-item fade-in" data-title="${escapeHtml(e.title)}">🎬 ${escapeHtml(e.tmdb_title)} — ${escapeHtml(humanizeShowcaseDate(e.release_date))}
+        html += `<div class="check-item fade-in" data-title="${escapeHtml(e.title)}">${escapeHtml(e.tmdb_title)} — ${escapeHtml(humanizeShowcaseDate(e.release_date))}
           <div class="check-item-action"><button class="btn btn-primary btn-sm" data-up-action="move">Перенести</button>${est}</div></div>`;
       }
     }
     html += "</div>";
-    html += '<div class="check-group"><h3>⏳ Ещё не вышли в цифре</h3>';
+    html += `<div class="check-group"><h3>${HOURGLASS_ICON_SVG}Ещё не вышли в цифре</h3>`;
     if (!data.not_yet.length) {
       html += '<div class="muted">—</div>';
     } else {
       for (const e of data.not_yet) {
-        html += `<div class="check-item fade-in">🕐 ${escapeHtml(e.tmdb_title)} — ${escapeHtml(humanizeShowcaseDate(e.release_date))}</div>`;
+        html += `<div class="check-item fade-in">${escapeHtml(e.tmdb_title)} — ${escapeHtml(humanizeShowcaseDate(e.release_date))}</div>`;
       }
     }
     html += "</div>";
     if (data.no_info.length) {
-      html += '<div class="check-group"><h3>❓ Нет данных</h3>';
+      html += `<div class="check-group"><h3>${HELP_CIRCLE_ICON_SVG}Нет данных</h3>`;
       for (const t of data.no_info) html += `<div class="check-item fade-in">${escapeHtml(t)}</div>`;
       html += "</div>";
     }

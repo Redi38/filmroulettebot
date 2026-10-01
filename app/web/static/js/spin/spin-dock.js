@@ -13,7 +13,10 @@ function renderSpinDockRow(prefix, { spinBtnId, spinBtnClass }) {
       </div>
       <div class="spin-controls-dock filter-panel-collapsible filter-panel-collapsible--always">
         <button type="button" class="filter-panel-toggle spin-settings-toggle" aria-expanded="false">
-          <span class="filter-panel-toggle-label">Настройки рулетки</span>
+          <span class="spin-settings-heading">
+            <span class="filter-panel-toggle-label">Настройки рулетки</span>
+            <span class="spin-settings-summary"></span>
+          </span>
           <svg class="filter-panel-chevron" viewBox="0 0 24 24" width="16" height="16" fill="none"
                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="6 9 12 15 18 9"></polyline>

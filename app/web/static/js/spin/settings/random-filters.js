@@ -3,6 +3,7 @@ import { getLS, setLS } from "../../core/storage.js";
 import { loadWheel } from "../wheel/loader.js";
 import { DOCK_PREFIXES } from "./dock-controls.js";
 import { spinMode } from "./spin-mode.js";
+import { updateSpinSettingsSummary } from "./spin-summary.js";
 
 // ---- "Рандом" wheel preferences -------------------------------------------
 // Two independent per-browser filters for the combined wheel only (see
@@ -80,6 +81,7 @@ export function renderRandomFilters(prefix) {
       onFiltersChanged("max-runtime");
     },
   });
+  updateSpinSettingsSummary();
 }
 
 // The idle wheel on screen was built from the old filters, so rebuild it —

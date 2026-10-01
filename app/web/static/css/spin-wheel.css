@@ -51,6 +51,12 @@ body.dock-ready .spin-controls-dock { opacity: 1; pointer-events: auto; }
   display: flex; flex-direction: column; align-items: center; flex-wrap: nowrap; gap: 10px;
 }
 .spin-controls-dock.open .filter-panel-chevron { transform: rotate(180deg); }
+.spin-settings-heading { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; text-align: left; }
+.spin-settings-summary {
+  max-width: min(260px, 70vw); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 0.75rem; font-weight: 500; color: var(--muted);
+}
+.spin-settings-summary:empty { display: none; }
 
 @media (max-width: 899px) {
   .spin-controls-dock {

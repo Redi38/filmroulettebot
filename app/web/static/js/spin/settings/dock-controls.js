@@ -9,6 +9,7 @@ import { renderSpinSpeedControl } from "./spin-speed.js";
 import { renderWeightToggle } from "./weighted-mode.js";
 import { renderWheelAppearanceToggle } from "./wheel-appearance.js";
 import { renderWheelMuteToggle } from "./wheel-mute.js";
+import { updateSpinSettingsSummary } from "./spin-summary.js";
 
 // Shared render plumbing for every dock setting toggle: the two spin
 // dock that every setting renders itself onto, and the
@@ -38,10 +39,12 @@ export function renderAllDockControls(prefix) {
   renderSpinSpeedControl(`${prefix}-spin-speed`);
   renderWheelMuteToggle(`${prefix}-mute-toggle`);
   renderSoundThemeToggle(`${prefix}-sound-theme-toggle`);
+  updateSpinSettingsSummary();
 }
 
 export function renderControlOnAllDocks(renderFn, suffix) {
   for (const prefix of DOCK_PREFIXES) renderFn(`${prefix}-${suffix}`);
+  updateSpinSettingsSummary();
 }
 
 // ---- generic toggle renderers -------------------------------------------

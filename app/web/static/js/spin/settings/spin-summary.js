@@ -17,5 +17,9 @@ export function updateSpinSettingsSummary() {
     if (f.max_runtime) parts.push("До 2 ч");
   }
   const text = parts.join(" · ");
-  for (const el of document.querySelectorAll(".spin-settings-summary")) el.textContent = text;
+  const roomy = isRandomSpin();
+  for (const el of document.querySelectorAll(".spin-settings-summary")) {
+    el.textContent = text;
+    el.classList.toggle("is-roomy", roomy);
+  }
 }

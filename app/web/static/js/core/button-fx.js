@@ -1,5 +1,6 @@
-// Global button feel: smooth press ripple everywhere, plus a confetti + neon
-// burst on the "watch online" link before it redirects to the external site.
+// Global button feel: a short spring press on every button (no ripple, buttons are
+// pressed constantly), plus a confetti + neon burst on the "watch online" link
+// before it redirects to the external site.
 
 function fxReducedMotion() {
   return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -85,27 +86,9 @@ function fireButtonConfetti(el) {
   requestAnimationFrame(frame);
 }
 
-function spawnButtonRipple(btn, evt) {
-  if (fxReducedMotion()) return;
-  const rect = btn.getBoundingClientRect();
-  const size = Math.max(rect.width, rect.height) * 1.6;
-  const hasPoint = typeof evt.clientX === "number" && (evt.clientX !== 0 || evt.clientY !== 0);
-  const originX = hasPoint ? evt.clientX : rect.left + rect.width / 2;
-  const originY = hasPoint ? evt.clientY : rect.top + rect.height / 2;
-
-  const ripple = document.createElement("span");
-  ripple.className = "btn-ripple";
-  ripple.style.width = ripple.style.height = `${size}px`;
-  ripple.style.left = `${originX - rect.left - size / 2}px`;
-  ripple.style.top = `${originY - rect.top - size / 2}px`;
-  btn.appendChild(ripple);
-  ripple.addEventListener("animationend", () => ripple.remove(), { once: true });
-}
-
 document.addEventListener("click", (evt) => {
   const btn = evt.target.closest(".btn, .watch-link");
   if (!btn || btn.disabled) return;
-  spawnButtonRipple(btn, evt);
   btn.classList.add("btn-press-fx");
   setTimeout(() => btn.classList.remove("btn-press-fx"), 220);
 }, true);

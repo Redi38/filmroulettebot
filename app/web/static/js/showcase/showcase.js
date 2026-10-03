@@ -78,6 +78,20 @@ export async function loadShowcase(fromNav) {
   }
 }
 
+// Called after a title is added from a showcase row: marks every copy of it
+// in the loaded catalog (the same series is returned once per group) so a
+// later re-render — e.g. flipping the "Показывать" filter — agrees with the
+// rows that were flipped in place.
+export function markShowcaseTitleInList(title, studio) {
+  if (!lastShowcaseData || studio !== currentShowcaseStudio) return;
+  const key = (title || "").trim().toLowerCase();
+  for (const group of [lastShowcaseData.upcoming, lastShowcaseData.released, lastShowcaseData.new_seasons]) {
+    for (const m of group || []) {
+      if ((m.title || "").trim().toLowerCase() === key) m.in_list = true;
+    }
+  }
+}
+
 // The studio catalog arrives whole (no pagination), so every filter here
 // runs in the browser — unlike the theaters/series tabs, which have to
 // filter server-side or their page counter would describe the wrong list.

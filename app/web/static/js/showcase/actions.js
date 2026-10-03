@@ -4,12 +4,49 @@ import { openCategoryModal, openRenameModal } from "../core/modal.js";
 import { PENCIL_ICON_SVG, TRASH_ICON_SVG } from "../core/icons.js";
 import { collapseAndRemoveRow, expandRowIn, removeRowOptimistically, resetRowCollapse, showInlineUndo } from "../core/rows.js";
 import { showToast } from "../core/toast.js";
-import { loadTrackedSeries } from "./showcase.js";
+import { loadTrackedSeries, markShowcaseTitleInList } from "./showcase.js";
 
 // Builds the action area on the right of a showcase row: either the
 // tracked-series edit/delete button pair, an "already in list" label, or
 // an add button (optionally paired with a skip button). Split out of
 // row.js — this was the bulk of that file's line count.
+
+// The same title can sit in several groups of one screen at once (a series
+// that's both under "🔔 Новые сезоны" and "⏳ Скоро выйдет"). The server hands
+// back an independent copy of the item per group, so adding it from one row
+// used to flip only that row — the twin kept its "Добавить" button until a
+// reload. Every add slot registers its item here, keyed by add-scope + title,
+// so a successful add can flip all of the twins that are on screen.
+const _addSlots = new Map(); // "scope|title" -> Set<{slot, item}>
+
+function _slotKey(scope, title) {
+  return `${scope}|${(title || "").trim().toLowerCase()}`;
+}
+
+function _registerAddSlot(scope, item, slot) {
+  const key = _slotKey(scope, item.title);
+  let set = _addSlots.get(key);
+  if (!set) _addSlots.set(key, (set = new Set()));
+  // Rows get thrown away on every re-render/filter change; forget the ones
+  // that are no longer in the document so the registry doesn't grow forever.
+  for (const entry of set) if (!entry.slot.isConnected) set.delete(entry);
+  set.add({slot, item});
+}
+
+function _markAdded(scope, item, slot) {
+  item.in_list = true;
+  slot.innerHTML = `<span class="muted">✓ В списке</span>`;
+  const set = _addSlots.get(_slotKey(scope, item.title));
+  if (!set) return;
+  for (const entry of set) {
+    if (!entry.slot.isConnected) {
+      set.delete(entry);
+      continue;
+    }
+    entry.item.in_list = true;
+    entry.slot.innerHTML = `<span class="muted">✓ В списке</span>`;
+  }
+}
 
 function buildTrackedSeriesActions(item, wrap, onSkipSettled) {
   const actionSlot = document.createElement("div");
@@ -72,6 +109,11 @@ function buildAddActionSlot(item, cat, addMode, skipScope, wrap, onSkipSettled) 
     return actionSlot;
   }
 
+  // Rows of different screens/modes track "in list" against different
+  // lists, so only rows sharing this scope are treated as twins.
+  const scope = addMode || cat;
+  _registerAddSlot(scope, item, actionSlot);
+
   const btn = document.createElement("button");
   btn.className = "btn btn-primary";
   btn.textContent = "Добавить";
@@ -79,8 +121,10 @@ function buildAddActionSlot(item, cat, addMode, skipScope, wrap, onSkipSettled) 
     btn.disabled = true;
     try {
       await apiPost(`/api/${endpointCat}/add`, {title: item.title});
-      item.in_list = true;
-      actionSlot.innerHTML = `<span class="muted">✓ В списке</span>`;
+      _markAdded(scope, item, actionSlot);
+      // Filtered-out items have no row to flip, but still live in the
+      // loaded catalog the "Показывать" filter reads from.
+      if (!addMode) markShowcaseTitleInList(item.title, cat);
       showToast(`«${item.title}» добавлен`);
     } catch (e) {
       btn.disabled = false;
@@ -91,8 +135,7 @@ function buildAddActionSlot(item, cat, addMode, skipScope, wrap, onSkipSettled) 
     btn.disabled = true;
     try {
       await apiPost(`/api/upcoming/add`, {title: item.title});
-      item.in_list = true;
-      actionSlot.innerHTML = `<span class="muted">✓ В списке</span>`;
+      _markAdded(scope, item, actionSlot);
       showToast(`«${item.title}» добавлен в «Скоро в кино»`);
     } catch (e) {
       btn.disabled = false;

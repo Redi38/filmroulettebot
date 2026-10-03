@@ -16,16 +16,14 @@ from app.services.tmdb import (
 
 router = APIRouter()
 
-# Short client-side cache for this personalized-but-slow-changing catalog:
-# the TMDb data behind it only refreshes server-side every DISCOVER_CACHE_TTL
-# (6h, see cache_ttl.py), so a request that lands within this window is
-# guaranteed to get back exactly what a fresh request would — the only
-# thing that can go stale sooner is `in_list`, right after the user adds or
-# removes a title from this studio's list on this same tab. Kept short
-# enough that even that staleness window is barely noticeable, in exchange
-# for skipping a full request (TMDb aggregation + junk filtering +
-# next-episode/finale lookups) on quick back-and-forth tab switches.
-_SHOWCASE_CACHE_CONTROL = "private, max-age=45, stale-while-revalidate=180"
+# The response carries `in_list`, which is per-user state that changes the
+# moment the user adds a title. A max-age here made the browser's HTTP cache
+# serve the pre-add response after F5 (a script-issued fetch() happily reuses
+# a fresh cache entry), so the "Добавить" button came back for a title that
+# was already in the list. `no-cache` still allows storing, but forces a
+# revalidation on every use. The expensive TMDb work is cached server-side
+# (DISCOVER_CACHE_TTL, see cache_ttl.py), so a repeat request stays cheap.
+_SHOWCASE_CACHE_CONTROL = "private, no-cache"
 
 STUDIO_QUERIES = {
     "marvel": ("Marvel Studios",),

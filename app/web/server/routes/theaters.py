@@ -34,7 +34,11 @@ from ..shared.constants import NOW_PLAYING_MAX_AGE_DAYS, THEATERS_PAGE_SIZE
 
 router = APIRouter()
 
-_THEATERS_CACHE_CONTROL = "private, max-age=45, stale-while-revalidate=180"
+# Both responses embed per-user state (`in_list`, skipped titles), so they
+# must not be served from the browser's HTTP cache without revalidation —
+# otherwise F5 right after an add brings the "Добавить" button back. See
+# the same note in showcase.py; TMDb data is cached server-side anyway.
+_THEATERS_CACHE_CONTROL = "private, no-cache"
 
 ORDERS = ("default", "date")
 

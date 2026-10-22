@@ -88,6 +88,73 @@ document.getElementById("up-add-btn").onclick = async () => {
   });
 };
 
+const RU_MONTHS_NOM = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+
+// Chronological by release date; ties fall back to title so the order is stable.
+function byDate(a, b, dir = 1) {
+  return dir * (a.release_date || "").localeCompare(b.release_date || "")
+    || a.tmdb_title.localeCompare(b.tmdb_title, "ru");
+}
+
+function daysFromToday(dateStr) {
+  const d = new Date(`${dateStr}T00:00:00`);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((d - today) / 86400000);
+}
+
+function monthLabel(dateStr) {
+  const d = new Date(`${dateStr}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return "";
+  const label = RU_MONTHS_NOM[d.getMonth()];
+  return d.getFullYear() === new Date().getFullYear() ? label : `${label} ${d.getFullYear()}`;
+}
+
+function checkGroupHtml(icon, title, count, body, extraClass = "") {
+  const badge = count ? `<span class="check-count">${count}</span>` : "";
+  return `<div class="check-group ${extraClass}"><h3>${icon}<span>${title}</span>${badge}</h3>${body}</div>`;
+}
+
+function dateChipHtml(dateStr, estimated) {
+  const diff = daysFromToday(dateStr);
+  const tone = diff < 0 ? "is-past" : diff <= 14 ? "is-soon" : "";
+  const text = humanizeShowcaseDate(dateStr);
+  const mark = estimated ? '<span class="check-est" title="Точной даты цифры нет — оценка">≈</span>' : "";
+  return `<span class="check-date ${tone}">${mark}${escapeHtml(text)}</span>`;
+}
+
+function checkRowHtml(e, {action = false} = {}) {
+  const btn = action ? '<button class="btn btn-primary btn-sm" data-up-action="move">Перенести</button>' : "";
+  const own = e.tmdb_title !== e.title
+    ? `<span class="check-sub">в списке: ${escapeHtml(e.title)}</span>` : "";
+  return `<div class="check-item fade-in" data-title="${escapeHtml(e.title)}">
+    <div class="check-main"><span class="check-title">${escapeHtml(e.tmdb_title)}</span>${own}</div>
+    <div class="check-item-action">${dateChipHtml(e.release_date, e.estimated)}${btn}</div></div>`;
+}
+
+// not_yet is split in two: already in cinemas (theatrical date passed, digital
+// still pending) first, then future releases grouped under month headers.
+function notYetHtml(items) {
+  if (!items.length) return '<div class="muted">—</div>';
+  const inCinemas = items.filter((e) => daysFromToday(e.release_date) < 0).sort(byDate);
+  const upcoming = items.filter((e) => daysFromToday(e.release_date) >= 0).sort(byDate);
+  let html = "";
+  if (inCinemas.length) {
+    html += '<div class="check-sublabel">Уже в кино, ждём цифру</div>';
+    html += inCinemas.map((e) => checkRowHtml(e)).join("");
+  }
+  let lastMonth = "";
+  for (const e of upcoming) {
+    const m = monthLabel(e.release_date);
+    if (m !== lastMonth) {
+      html += `<div class="check-sublabel">${escapeHtml(m)}</div>`;
+      lastMonth = m;
+    }
+    html += checkRowHtml(e);
+  }
+  return html;
+}
+
 document.getElementById("up-check-btn").onclick = async () => {
   const result = document.getElementById("up-check-result");
   if (result.innerHTML) await fadeOut(result);
@@ -95,31 +162,18 @@ document.getElementById("up-check-btn").onclick = async () => {
   fadeIn(result);
   try {
     const data = await apiPost("/api/upcoming/check");
+    const released = [...data.released].sort((a, b) => byDate(a, b, -1));
+    const noInfo = [...data.no_info].sort((a, b) => a.localeCompare(b, "ru"));
     let html = "";
-    html += `<div class="check-group"><h3>${CHECK_CIRCLE_ICON_SVG}Доступны в цифре</h3>`;
-    if (!data.released.length) {
-      html += '<div class="muted">Пока нет</div>';
-    } else {
-      for (const e of data.released) {
-        const est = e.estimated ? '<div class="estimated">(оценочно, точной даты нет)</div>' : "";
-        html += `<div class="check-item fade-in" data-title="${escapeHtml(e.title)}">${escapeHtml(e.tmdb_title)} — ${escapeHtml(humanizeShowcaseDate(e.release_date))}
-          <div class="check-item-action"><button class="btn btn-primary btn-sm" data-up-action="move">Перенести</button>${est}</div></div>`;
-      }
+    if (released.length) {
+      html += checkGroupHtml(CHECK_CIRCLE_ICON_SVG, "Доступны в цифре", released.length,
+        released.map((e) => checkRowHtml(e, {action: true})).join(""), "check-group-ready");
     }
-    html += "</div>";
-    html += `<div class="check-group"><h3>${HOURGLASS_ICON_SVG}Ещё не вышли в цифре</h3>`;
-    if (!data.not_yet.length) {
-      html += '<div class="muted">—</div>';
-    } else {
-      for (const e of data.not_yet) {
-        html += `<div class="check-item fade-in">${escapeHtml(e.tmdb_title)} — ${escapeHtml(humanizeShowcaseDate(e.release_date))}</div>`;
-      }
-    }
-    html += "</div>";
-    if (data.no_info.length) {
-      html += `<div class="check-group"><h3>${HELP_CIRCLE_ICON_SVG}Нет данных</h3>`;
-      for (const t of data.no_info) html += `<div class="check-item fade-in">${escapeHtml(t)}</div>`;
-      html += "</div>";
+    html += checkGroupHtml(HOURGLASS_ICON_SVG, "Ещё не вышли в цифре", data.not_yet.length, notYetHtml(data.not_yet));
+    if (noInfo.length) {
+      html += checkGroupHtml(HELP_CIRCLE_ICON_SVG, "Нет данных", noInfo.length,
+        noInfo.map((t) => `<div class="check-item fade-in"><span class="check-title">${escapeHtml(t)}</span></div>`).join(""),
+        "check-group-muted");
     }
     await fadeOut(result);
     result.innerHTML = html;

@@ -165,9 +165,9 @@ html.vt-section::view-transition-new(main-content) {
   display: inline-block; background: rgba(var(--primary-rgb), 0.08); padding: 3px 10px; border-radius: 8px;
   transition: background 0.15s;
 }
-.title.copy-title.copied { background: rgba(var(--primary-2-rgb), 0.28); }
+.title.copy-title.copied { background: color-mix(in srgb, var(--success) 28%, transparent); }
 @media (hover: hover) and (pointer: fine) {
-  .title.copy-title:active { background: rgba(var(--primary-2-rgb), 0.28); }
+  .title.copy-title:active { background: color-mix(in srgb, var(--success) 28%, transparent); }
 }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 .fade-in { animation: fadeIn 0.35s var(--ease-out); animation-fill-mode: backwards; }
@@ -272,9 +272,9 @@ html.vt-section::view-transition-new(main-content) {
   background: rgba(var(--primary-rgb), 0.08); padding: 4px 10px; border-radius: 8px; transition: background 0.15s;
   font-size: 0.95rem;
 }
-.copy-title.copied { background: rgba(var(--primary-2-rgb), 0.28); }
+.copy-title.copied { background: color-mix(in srgb, var(--success) 28%, transparent); }
 @media (hover: hover) and (pointer: fine) {
-  .copy-title:active { background: rgba(var(--primary-2-rgb), 0.28); }
+  .copy-title:active { background: color-mix(in srgb, var(--success) 28%, transparent); }
 }
 .list-row button.del-btn, button.del-btn {
   background: var(--danger); color: white; border: none; border-radius: 8px;
@@ -377,5 +377,28 @@ html.vt-section::view-transition-new(main-content) {
   padding: 8px 0; border-bottom: 1px solid var(--border);
   display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
 }
-.check-item-action { display: flex; align-items: center; gap: 10px; }
+.check-item-action { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .check-item .estimated { color: var(--muted); font-size: 0.85rem; }
+
+/* Upcoming "check released" result: title left, date chip right, month headers. */
+.check-group h3 .check-count {
+  margin-left: auto; min-width: 22px; padding: 1px 8px; border-radius: 999px; text-align: center;
+  font-size: 0.78rem; font-weight: 600; color: var(--muted);
+  background: rgba(255, 255, 255, 0.06);
+}
+.check-group-ready h3 .check-count { color: var(--success); background: rgba(52, 211, 153, 0.14); }
+.check-sublabel {
+  margin: 14px 0 2px; font-size: 0.74rem; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--muted);
+}
+.check-main { display: flex; flex-direction: column; min-width: 0; flex: 1 1 160px; }
+.check-title { overflow-wrap: anywhere; }
+.check-sub { color: var(--muted); font-size: 0.78rem; }
+.check-date {
+  white-space: nowrap; font-size: 0.82rem; color: var(--muted);
+  padding: 3px 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.05);
+}
+.check-date.is-soon { color: var(--primary-text); background: rgba(var(--primary-rgb), 0.14); }
+.check-date.is-past { color: var(--success); background: rgba(52, 211, 153, 0.12); }
+.check-est { margin-right: 4px; opacity: 0.8; }
+.check-group-muted .check-item { color: var(--muted); }

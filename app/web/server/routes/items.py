@@ -49,7 +49,15 @@ async def api_items(cat: str = Depends(valid_category), page: int = 1, q: str = 
         item["poster_url"] = info["poster_url"] if info else None
         if not item["poster_url"]:
             schedule_poster_backfill(cat, item["title"], is_series_by_title[item["title"]])
-    return {"items": page_items, "page": page, "total_pages": total_pages, "total_count": len(items)}
+    # page_size lets the client number rows continuously across pages
+    # ((page - 1) * page_size + i + 1) without hardcoding LIST_PAGE_SIZE.
+    return {
+        "items": page_items,
+        "page": page,
+        "page_size": LIST_PAGE_SIZE,
+        "total_pages": total_pages,
+        "total_count": len(items),
+    }
 
 
 @router.get("/api/{cat}/search-suggest")

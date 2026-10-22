@@ -10,9 +10,29 @@ import { copyToClipboard } from "../core/utils.js";
 // All API calls stay in the caller (endpoints differ), this only owns
 // the DOM + optimistic-delete/undo wiring so it's written once.
 
+// Row numbers: the caller passes `opts.number` for each row and sets
+// `container.dataset.numStart` to the number of the container's first row
+// (page offset + 1; numbering continues across pages and also applies to a
+// filtered/search view). After a delete the rows below shift up, so the
+// remaining rows are renumbered from that start.
+export function renumberRows(container) {
+  if (!container) return;
+  let n = Number(container.dataset.numStart) || 1;
+  for (const num of container.querySelectorAll(".list-row > .list-row-num")) {
+    num.textContent = String(n++);
+  }
+}
+
 export function createEditableRow(title, opts) {
   const row = document.createElement("div");
   row.className = "list-row fade-in";
+
+  if (opts.number != null) {
+    const num = document.createElement("span");
+    num.className = "list-row-num";
+    num.textContent = String(opts.number);
+    row.appendChild(num);
+  }
 
   if (opts.posterUrl) {
     const poster = document.createElement("img");
@@ -111,6 +131,7 @@ export function createEditableRow(title, opts) {
     };
     removeRowOptimistically(row, opts.onDelete, () => {
       if (opts.onCountChange) opts.onCountChange(-1);
+      renumberRows(rowParent);
     }, {onCollapseStart: showUndo});
   };
   row.appendChild(del);

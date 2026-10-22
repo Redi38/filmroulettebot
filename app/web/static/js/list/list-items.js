@@ -138,11 +138,16 @@ export async function loadList(page) {
     if (countEl) countEl.textContent = `Всего: ${data.total_count}`;
     let liveCount = data.total_count;
     container.innerHTML = "";
+    // Numbers continue across pages (page 2 starts at 31) and are shown in a
+    // filtered search view too, where they count the matches 1..N.
+    const numStart = (data.page - 1) * data.page_size + 1;
+    container.dataset.numStart = String(numStart);
     const canReorder = !q; // filtered view skips a title's real neighbours, so
                            // "up"/"down" here wouldn't mean what it looks like
     for (const [idx, {id, title, poster_url}] of data.items.entries()) {
       const cat = uiState.currentCat;
       const row = createEditableRow(title, {
+        number: numStart + idx,
         posterUrl: poster_url,
         showPosterSlot: true,
         searchEndpoint: `/api/${cat}/search-suggest`,

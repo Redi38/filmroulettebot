@@ -87,6 +87,10 @@
   width: 36px; height: 54px; object-fit: cover; border-radius: 6px; flex-shrink: 0; background: rgba(255,255,255,0.06);
 }
 .add-search-poster-empty { display: flex; }
+.add-search-row-num {
+  flex-shrink: 0; min-width: 1.4ch; text-align: right;
+  color: var(--muted); font-size: 0.85em; font-variant-numeric: tabular-nums;
+}
 .add-search-row-title { line-height: 1.3; }
 .add-search-year { color: var(--muted); font-size: 0.85em; }
 .add-search-row-badge {

@@ -43,14 +43,14 @@ export async function openAddSearchModal(searchEndpoint, query, {onPick, onFallb
       return;
     }
     resultsEl.innerHTML = "";
-    for (const r of data.results) {
+    for (const [i, r] of data.results.entries()) {
       const row = document.createElement("button");
       row.type = "button";
       row.className = "add-search-row";
       const poster = r.poster_url
         ? `<img class="add-search-poster" src="${r.poster_url}" alt="">`
         : `<div class="add-search-poster add-search-poster-empty"></div>`;
-      row.innerHTML = `${poster}<span class="add-search-row-title">${escapeHtml(r.title)}${r.year ? ` <span class="add-search-year">(${escapeHtml(r.year)})</span>` : ""}</span><span class="add-search-row-badge">${_addSearchTypeBadge(searchEndpoint, r.is_series)}</span>`;
+      row.innerHTML = `<span class="add-search-row-num">${i + 1}</span>${poster}<span class="add-search-row-title">${escapeHtml(r.title)}${r.year ? ` <span class="add-search-year">(${escapeHtml(r.year)})</span>` : ""}</span><span class="add-search-row-badge">${_addSearchTypeBadge(searchEndpoint, r.is_series)}</span>`;
       row.onclick = () => { close(); onPick(r.title, r); };
       resultsEl.appendChild(row);
     }

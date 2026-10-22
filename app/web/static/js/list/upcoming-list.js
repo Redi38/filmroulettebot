@@ -52,8 +52,10 @@ export async function loadUpcoming() {
       return;
     }
     container.innerHTML = "";
+    container.dataset.numStart = "1";
     for (const [idx, {id, title}] of data.items.entries()) {
       const row = createEditableRow(title, {
+        number: idx + 1,
         searchEndpoint: "/api/upcoming/search-suggest",
         onRename: (newTitle) => apiPost("/api/upcoming/rename", {id, new_title: newTitle}),
         onDelete: () => apiPost("/api/upcoming/delete", {id}),

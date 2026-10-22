@@ -34,6 +34,10 @@ router = APIRouter()
 @router.get("/api/{cat}/items")
 async def api_items(cat: str = Depends(valid_category), page: int = 1, q: str = "") -> dict:
     items = await get_items_with_ids(cat)
+    # "number" is the title's real position in the whole list, assigned before
+    # the search filter so a search result keeps the number it has in the list.
+    for pos, item in enumerate(items, start=1):
+        item["number"] = pos
     q = q.strip().lower()
     if q:
         items = [i for i in items if q in i["title"].lower()]
@@ -49,12 +53,9 @@ async def api_items(cat: str = Depends(valid_category), page: int = 1, q: str = 
         item["poster_url"] = info["poster_url"] if info else None
         if not item["poster_url"]:
             schedule_poster_backfill(cat, item["title"], is_series_by_title[item["title"]])
-    # page_size lets the client number rows continuously across pages
-    # ((page - 1) * page_size + i + 1) without hardcoding LIST_PAGE_SIZE.
     return {
         "items": page_items,
         "page": page,
-        "page_size": LIST_PAGE_SIZE,
         "total_pages": total_pages,
         "total_count": len(items),
     }

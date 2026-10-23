@@ -4,7 +4,7 @@
   --bg-a: #2a1a0e; --bg-b: #23102a; --bg-c: #18171f;
   --card: #1e1c23; --text: #f5f0e6; --muted: #a39a8c;
   --primary: #f2a93b; --primary-2: #ff3b81; --success: #34d399; --danger: #ff4d6a;
-  --primary-rgb: 242, 169, 59; --primary-2-rgb: 255, 59, 129; --on-primary: #1a1108;
+  --primary-rgb: 242, 169, 59; --primary-2-rgb: 255, 59, 129; --on-primary: #1a1108; --on-pill: #1a1108;
   /* Text/icon tint of the accent; themes override it where --primary alone is too dark on cards. */
   --primary-text: #f2a93b;
   --border: #2c2620; --glow: rgba(var(--primary-rgb), 0.32); --glow-2: rgba(var(--primary-2-rgb), 0.32);

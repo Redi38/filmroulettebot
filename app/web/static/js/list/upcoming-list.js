@@ -52,9 +52,11 @@ export async function loadUpcoming() {
       return;
     }
     container.innerHTML = "";
-    for (const [idx, {id, title}] of data.items.entries()) {
+    for (const [idx, {id, title, poster_url}] of data.items.entries()) {
       const row = createEditableRow(title, {
         number: idx + 1,
+        posterUrl: poster_url,
+        showPosterSlot: true,
         searchEndpoint: "/api/upcoming/search-suggest",
         onRename: (newTitle) => apiPost("/api/upcoming/rename", {id, new_title: newTitle}),
         onDelete: () => apiPost("/api/upcoming/delete", {id}),
@@ -127,8 +129,11 @@ function checkRowHtml(e, {action = false} = {}) {
   const btn = action ? '<button class="btn btn-primary btn-sm" data-up-action="move">Перенести</button>' : "";
   const own = e.tmdb_title !== e.title
     ? `<span class="check-sub">в списке: ${escapeHtml(e.title)}</span>` : "";
+  const poster = e.poster_url
+    ? `<img class="list-row-poster" src="${escapeHtml(e.poster_url)}" alt="" width="36" height="54" loading="lazy" decoding="async">`
+    : '<div class="list-row-poster list-row-poster-empty"></div>';
   return `<div class="check-item fade-in" data-title="${escapeHtml(e.title)}">
-    <div class="check-main"><span class="check-title">${escapeHtml(e.tmdb_title)}</span>${own}</div>
+    ${poster}<div class="check-main"><span class="check-title">${escapeHtml(e.tmdb_title)}</span>${own}</div>
     <div class="check-item-action">${dateChipHtml(e.release_date, e.estimated)}${btn}</div></div>`;
 }
 

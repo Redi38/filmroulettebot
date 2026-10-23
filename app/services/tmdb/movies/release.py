@@ -10,6 +10,7 @@ from app.db.database import get_tmdb_cache, set_tmdb_cache
 
 from ..cache_ttl import SEARCH_CACHE_TTL
 from ..client import _get
+from ..helpers import POSTER_ROW, poster
 from .search import _search_movie_cached
 
 
@@ -90,6 +91,7 @@ async def check_upcoming_released(titles: list[str]) -> dict[str, list]:
             "release_date": date_to_use,
             "days_ago": days_ago,
             "estimated": estimated,
+            "poster_url": poster(matched, POSTER_ROW),
         }
         (released if is_out else not_yet).append(entry)
     return {"released": released, "not_yet": not_yet, "no_info": no_info}

@@ -18,6 +18,7 @@ from app.db.database import (
 from app.services.tmdb import check_upcoming_released, search_movie_suggestions
 
 from ..shared.bodies import DeleteByIdBody, MoveBody, RenameByIdBody, TitleBody
+from ..shared.posters import lookup_poster_info_many, schedule_poster_backfill
 from ..shared.validation import add_or_conflict, check_category, validate_rename_by_id
 
 router = APIRouter()
@@ -26,6 +27,14 @@ router = APIRouter()
 @router.get("/api/upcoming")
 async def api_upcoming() -> dict:
     items = await get_upcoming_movies_with_ids()
+    # Cache-only poster lookup (same as the category lists); a miss schedules a
+    # background TMDb resolve so the next load has it.
+    posters = await lookup_poster_info_many("movies", [(i["title"], None) for i in items])
+    for item in items:
+        info = posters.get(item["title"])
+        item["poster_url"] = info["poster_url"] if info else None
+        if not item["poster_url"]:
+            schedule_poster_backfill("movies", item["title"])
     return {"items": items}
 
 

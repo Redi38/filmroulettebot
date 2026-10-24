@@ -25,7 +25,12 @@ from app.utils import paginate
 
 from ..shared.bodies import DeleteByIdBody, RenameByIdBody, ReorderBody, TitleBody
 from ..shared.constants import CATEGORIES, LIST_PAGE_SIZE
-from ..shared.posters import cache_info_by_id, lookup_poster_info_many, schedule_poster_backfill
+from ..shared.posters import (
+    cache_info_by_id,
+    lookup_no_poster_many,
+    lookup_poster_info_many,
+    schedule_poster_backfill,
+)
 from ..shared.validation import add_or_conflict, valid_category, validate_rename_by_id
 
 router = APIRouter()
@@ -53,6 +58,13 @@ async def api_items(cat: str = Depends(valid_category), page: int = 1, q: str = 
         item["poster_url"] = info["poster_url"] if info else None
         if not item["poster_url"]:
             schedule_poster_backfill(cat, item["title"], is_series_by_title[item["title"]])
+    # A blank slot is either "not looked up yet" (backfill pending — the next
+    # load fills it) or "TMDb has no poster"; only the latter gets labelled.
+    no_poster = await lookup_no_poster_many(
+        cat, [(i["title"], is_series_by_title[i["title"]]) for i in page_items if not i["poster_url"]]
+    )
+    for item in page_items:
+        item["no_poster"] = item["title"] in no_poster
     return {
         "items": page_items,
         "page": page,

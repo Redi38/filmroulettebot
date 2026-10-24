@@ -256,6 +256,22 @@ html.vt-section::view-transition-new(main-content) {
   background: rgba(255,255,255,0.06);
 }
 .list-row-poster-empty { display: flex; }
+/* "no poster" stripe: a diagonal band (top-left to bottom-right corner) across
+   a dashed, hatched thumbnail box, same 36x54 footprint as a real poster so
+   titles stay aligned. The band is wider than the box and clipped by it;
+   56deg is atan(54/36), i.e. the box's own diagonal. */
+.list-row-poster-none {
+  display: flex; align-items: center; justify-content: center; overflow: hidden; box-sizing: border-box;
+  border: 1px dashed var(--border);
+  background: repeating-linear-gradient(135deg, rgba(255,255,255,0.02) 0 5px, rgba(255,255,255,0.06) 5px 10px);
+}
+.list-row-poster-none > span {
+  display: block; flex: none; width: 90px; padding: 2px 0; box-sizing: border-box; text-align: center;
+  transform: rotate(56deg);
+  background: rgba(var(--primary-rgb), 0.24); color: var(--text);
+  font-size: 8px; font-weight: 700; line-height: 1.1; letter-spacing: 0;
+  user-select: none;
+}
 .list-row:has(> .list-row-num) { padding-left: 6px; }
 .list-row-num {
   flex-shrink: 0; min-width: 2ch; text-align: right; margin-right: -4px;

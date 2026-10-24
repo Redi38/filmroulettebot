@@ -142,11 +142,12 @@ export async function loadList(page) {
     // result shows the same number the title has in the unfiltered list.
     const canReorder = !q; // filtered view skips a title's real neighbours, so
                            // "up"/"down" here wouldn't mean what it looks like
-    for (const [idx, {id, title, poster_url, number}] of data.items.entries()) {
+    for (const [idx, {id, title, poster_url, no_poster, number}] of data.items.entries()) {
       const cat = uiState.currentCat;
       const row = createEditableRow(title, {
         number,
         posterUrl: poster_url,
+        noPoster: no_poster,
         showPosterSlot: true,
         searchEndpoint: `/api/${cat}/search-suggest`,
         onRename: (newTitle, suggestion) => apiPost(`/api/${cat}/rename`, {

@@ -10,6 +10,13 @@ import { copyToClipboard } from "../core/utils.js";
 // All API calls stay in the caller (endpoints differ), this only owns
 // the DOM + optimistic-delete/undo wiring so it's written once.
 
+// Thumbnail stand-in for a title TMDb has no poster for. Only used when that is
+// known (the server's `no_poster` flag, or a fresh TMDb result without one) —
+// a title whose poster lookup is still pending keeps the blank slot instead.
+// Exported as HTML so the string-built check rows (upcoming-list.js) share it.
+export const NO_POSTER_HTML =
+  '<div class="list-row-poster list-row-poster-none" title="На TMDb нет постера"><span>no poster</span></div>';
+
 // Row numbers: the caller passes `opts.number` (the title's position in the
 // whole list). After a delete, every row numbered below the deleted one
 // moves up by one, which also holds in a filtered/search view.
@@ -39,6 +46,8 @@ export function createEditableRow(title, opts) {
     poster.alt = "";
     poster.loading = "lazy";
     row.appendChild(poster);
+  } else if (opts.noPoster) {
+    row.insertAdjacentHTML("beforeend", NO_POSTER_HTML);
   } else if (opts.showPosterSlot) {
     const posterEmpty = document.createElement("div");
     posterEmpty.className = "list-row-poster list-row-poster-empty";

@@ -7,7 +7,7 @@ import { showToast } from "../core/toast.js";
 import { fadeIn, fadeOut } from "../core/transitions.js";
 import { escapeHtml, placeholderHtml } from "../core/utils.js";
 import { showLoadError, showSkeleton } from "../core/view-load.js";
-import { createEditableRow } from "./list-row.js";
+import { createEditableRow, NO_POSTER_HTML } from "./list-row.js";
 import { humanizeShowcaseDate } from "../showcase/date.js";
 import { loadShowcase } from "../showcase/showcase.js";
 
@@ -52,10 +52,11 @@ export async function loadUpcoming() {
       return;
     }
     container.innerHTML = "";
-    for (const [idx, {id, title, poster_url}] of data.items.entries()) {
+    for (const [idx, {id, title, poster_url, no_poster}] of data.items.entries()) {
       const row = createEditableRow(title, {
         number: idx + 1,
         posterUrl: poster_url,
+        noPoster: no_poster,
         showPosterSlot: true,
         searchEndpoint: "/api/upcoming/search-suggest",
         onRename: (newTitle) => apiPost("/api/upcoming/rename", {id, new_title: newTitle}),
@@ -131,7 +132,7 @@ function checkRowHtml(e, {action = false} = {}) {
     ? `<span class="check-sub">в списке: ${escapeHtml(e.title)}</span>` : "";
   const poster = e.poster_url
     ? `<img class="list-row-poster" src="${escapeHtml(e.poster_url)}" alt="" width="36" height="54" loading="lazy" decoding="async">`
-    : '<div class="list-row-poster list-row-poster-empty"></div>';
+    : NO_POSTER_HTML; // straight from TMDb's own result, so no poster here means TMDb has none
   return `<div class="check-item fade-in" data-title="${escapeHtml(e.title)}">
     ${poster}<div class="check-main"><span class="check-title">${escapeHtml(e.tmdb_title)}</span>${own}</div>
     <div class="check-item-action">${dateChipHtml(e.release_date, e.estimated)}${btn}</div></div>`;

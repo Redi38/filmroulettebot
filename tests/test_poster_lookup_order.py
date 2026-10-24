@@ -89,6 +89,9 @@ async def test_backfill_follows_the_same_order(monkeypatch, cat, is_series, hits
 
     calls: list[str] = []
 
+    async def fake_set_cache(key, value):  # miss marker: no DB in this test
+        pass
+
     async def fake_movie(title):
         calls.append("movie")
         return {"poster_url": "x"} if "movie" in hits else None
@@ -97,8 +100,13 @@ async def test_backfill_follows_the_same_order(monkeypatch, cat, is_series, hits
         calls.append("series")
         return {"poster_url": "x"} if "series" in hits else None
 
+    async def fake_completed(media_type, title):
+        return True
+
     monkeypatch.setattr(posters, "get_movie_info", fake_movie)
     monkeypatch.setattr(posters, "get_series_info", fake_series)
+    monkeypatch.setattr(posters, "search_completed", fake_completed)
+    monkeypatch.setattr(posters, "set_tmdb_cache", fake_set_cache)
     posters._backfill_inflight.clear()
 
     # conftest replaces schedule_poster_backfill with a recorder; use the real one.
@@ -107,3 +115,60 @@ async def test_backfill_follows_the_same_order(monkeypatch, cat, is_series, hits
     await asyncio.gather(*list(posters._backfill_tasks))
 
     assert calls == expected_calls
+
+
+# --- "no poster" label: only for titles TMDb is *known* to lack a poster for ---
+
+@pytest.mark.usefixtures("initialized_db")
+@pytest.mark.parametrize(
+    ("movie", "miss", "expected"),
+    [
+        (None, False, set()),  # never looked up yet: stay blank, no label
+        (MOVIE, False, set()),  # has a poster
+        (NO_POSTER, False, {"T"}),  # TMDb match exists, no poster
+        (None, True, {"T"}),  # TMDb has no match at all (recorded by backfill)
+        (MOVIE, True, set()),  # a poster always wins over a stale miss marker
+    ],
+)
+async def test_lookup_no_poster_many(movie, miss, expected):
+    from app.web.server.shared.posters import _miss_key, lookup_no_poster_many
+
+    if movie is not None:
+        await set_tmdb_cache("movie_info:t", movie)
+    if miss:
+        await set_tmdb_cache(_miss_key("movies", "T"), {"no_poster": True})
+    assert await lookup_no_poster_many("movies", [("T", None)]) == expected
+
+
+async def test_lookup_no_poster_many_empty():
+    from app.web.server.shared.posters import lookup_no_poster_many
+
+    assert await lookup_no_poster_many("movies", []) == set()
+
+
+@pytest.mark.usefixtures("initialized_db")
+@pytest.mark.parametrize(
+    ("search_answered", "expect_marker"),
+    [(True, True), (False, False)],  # a failed TMDb request must not be recorded as "no poster"
+)
+async def test_backfill_records_miss_only_when_tmdb_answered(monkeypatch, search_answered, expect_marker):
+    import asyncio
+
+    async def fake_movie(title):
+        return None
+
+    async def fake_completed(media_type, title):
+        return search_answered
+
+    monkeypatch.setattr(posters, "get_movie_info", fake_movie)
+    monkeypatch.setattr(posters, "search_completed", fake_completed)
+    posters._backfill_inflight.clear()
+
+    real = posters.schedule_poster_backfill.original  # type: ignore[attr-defined]
+    real("movies", "T", None)
+    await asyncio.gather(*list(posters._backfill_tasks))
+
+    from app.db.database import get_tmdb_cache
+
+    marker = await get_tmdb_cache(posters._miss_key("movies", "T"), posters._MISS_TTL)
+    assert (marker is not None) is expect_marker

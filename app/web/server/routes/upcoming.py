@@ -18,7 +18,7 @@ from app.db.database import (
 from app.services.tmdb import check_upcoming_released, search_movie_suggestions
 
 from ..shared.bodies import DeleteByIdBody, MoveBody, RenameByIdBody, TitleBody
-from ..shared.posters import lookup_poster_info_many, schedule_poster_backfill
+from ..shared.posters import lookup_no_poster_many, lookup_poster_info_many, schedule_poster_backfill
 from ..shared.validation import add_or_conflict, check_category, validate_rename_by_id
 
 router = APIRouter()
@@ -35,6 +35,13 @@ async def api_upcoming() -> dict:
         item["poster_url"] = info["poster_url"] if info else None
         if not item["poster_url"]:
             schedule_poster_backfill("movies", item["title"])
+    # Only label titles TMDb is known to have no poster for, not ones whose
+    # lookup is still pending (see api_items in items.py).
+    no_poster = await lookup_no_poster_many(
+        "movies", [(i["title"], None) for i in items if not i["poster_url"]]
+    )
+    for item in items:
+        item["no_poster"] = item["title"] in no_poster
     return {"items": items}
 
 

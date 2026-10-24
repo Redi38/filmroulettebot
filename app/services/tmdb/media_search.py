@@ -36,6 +36,16 @@ async def _search_cached(media_type: MediaType, title: str) -> dict[str, Any] | 
     return data
 
 
+async def search_completed(media_type: MediaType, title: str) -> bool:
+    """True if TMDb actually answered the search for `title` (even with zero
+    results), as opposed to the request having failed. _search_cached caches
+    only real answers and returns None for a failed request, so a fresh cache
+    entry is what tells "TMDb has nothing for this title" apart from "we
+    couldn't reach TMDb" when get_movie_info/get_series_info return None."""
+    cache_key = f"{_CACHE_PREFIX[media_type]}:{title.strip().lower()}"
+    return await get_tmdb_cache(cache_key, SEARCH_CACHE_TTL) is not None
+
+
 async def search_suggestions(media_type: MediaType, query: str) -> list[dict[str, Any]]:
     """Titles matching `query` for the add-a-title autocomplete picker —
     thin wrapper over the same cached search call get_movie_info/

@@ -24,6 +24,7 @@ import logging
 
 from app.db.database import get_tmdb_cache, get_tmdb_cache_many, set_tmdb_cache
 from app.services.tmdb import get_details_by_id, get_movie_info, get_series_info
+from app.services.tmdb.media_search import MediaType, search_completed
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,19 @@ _MOVIE = "movie_info"
 _SERIES = "series_info"
 
 _POSTER_CACHE_TTL = 365 * 24 * 3600
+
+# "TMDb has nothing for this title" marker, written by the background backfill
+# when TMDb answered but there is no match at all (get_movie_info/get_series_info
+# return None and cache nothing, so without this a title that simply isn't on
+# TMDb is indistinguishable from one that was never looked up). A title whose
+# TMDb match exists but carries no poster needs no marker: that info is cached
+# with poster_url None. Short TTL, since TMDb often gains a poster or an entry
+# later (especially for upcoming films).
+_MISS = "poster_miss"
+_MISS_TTL = 7 * 24 * 3600
+
+# search_completed() takes the media type the TMDb search endpoints use.
+_SEARCH_TYPE: dict[str, MediaType] = {_MOVIE: "movie", _SERIES: "tv"}
 
 _backfill_inflight: set[tuple[str, str]] = set()
 # The event loop only keeps a weak reference to a running task, so a
@@ -61,6 +75,10 @@ def _wheel_poster_size(url: str) -> str:
 
 def _cache_key(kind: str, title: str) -> str:
     return f"{kind}:{title.strip().lower()}"
+
+
+def _miss_key(cat: str, title: str) -> str:
+    return _cache_key(f"{_MISS}:{cat}", title)
 
 
 def _lookup_order(cat: str, is_series: bool | None) -> tuple[str, ...]:
@@ -129,6 +147,34 @@ async def lookup_poster_info_many(
     return out
 
 
+async def lookup_no_poster_many(cat: str, rows: list[tuple[str, bool | None]]) -> set[str]:
+    """Which of `rows` ((title, is_series) pairs) TMDb is *known* to have no
+    poster for — as opposed to a title that just hasn't been looked up yet
+    (its backfill is still pending), which a list row must not label.
+
+    Known means either TMDb has a match for it whose cached info carries no
+    poster, or the backfill recorded that TMDb has no match at all (see _MISS).
+    A title with a cached poster is never in the result. Cache-only, batched
+    like lookup_poster_info_many; callers pass just the rows that came back
+    without a poster."""
+    if not rows:
+        return set()
+
+    orders = {is_series: _lookup_order(cat, is_series) for _, is_series in rows}
+    info_keys = {_cache_key(kind, title) for title, is_series in rows for kind in orders[is_series]}
+    infos = await get_tmdb_cache_many(list(info_keys), _POSTER_CACHE_TTL)
+    misses = await get_tmdb_cache_many([_miss_key(cat, title) for title, _ in rows], _MISS_TTL)
+
+    out: set[str] = set()
+    for title, is_series in rows:
+        cached = [infos.get(_cache_key(kind, title)) for kind in orders[is_series]]
+        if any((info or {}).get("poster_url") for info in cached):
+            continue
+        if any(info is not None for info in cached) or _miss_key(cat, title) in misses:
+            out.add(title)
+    return out
+
+
 async def lookup_poster_url(cat: str, title: str, is_series: bool | None = None) -> str | None:
     """Cache-only poster URL for `title` in category `cat`, or None if it
     was never resolved elsewhere."""
@@ -151,9 +197,18 @@ def schedule_poster_backfill(cat: str, title: str, is_series: bool | None = None
 
     async def _run() -> None:
         try:
+            info = None
+            answered = True  # TMDb gave a real answer for every lookup that came back empty
             for kind in _lookup_order(cat, is_series):
-                if await _fetch_info(kind, title):
+                info = await _fetch_info(kind, title)
+                if info:
                     break
+                answered = answered and await search_completed(_SEARCH_TYPE[kind], title)
+            # Nothing usable and TMDb really answered (not a failed request):
+            # record that, so lists can label the title instead of leaving the
+            # slot blank forever. A failed request records nothing — retried next load.
+            if not (info or {}).get("poster_url") and answered:
+                await set_tmdb_cache(_miss_key(cat, title), {"no_poster": True})
         except Exception:
             logger.warning("poster backfill failed for %r (%s)", title, cat, exc_info=True)
         finally:

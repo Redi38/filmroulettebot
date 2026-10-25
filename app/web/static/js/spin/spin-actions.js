@@ -49,7 +49,7 @@ function scheduleAutoWatchOpen(data, result) {
     if (uiState.currentCardData !== data) return; // safety net
     const win = window.open(data.watch_link, "_blank", "noopener");
     if (textEl) textEl.textContent = "";
-    if (!win) showToast("Не удалось открыть вкладку — разрешите всплывающие окна");
+    if (!win) showToast("Не удалось открыть вкладку — разрешите всплывающие окна", "fail");
   }, 1000);
 }
 
@@ -203,7 +203,7 @@ export function handleSpinError(e, result, prevHtml) {
     result.innerHTML = prevHtml;
     const m = e.message.match(/[\d.]+/);
     applySpinCooldown(m ? parseFloat(m[0]) : SPIN_COOLDOWN_SECONDS);
-    showToast(e.message);
+    showToast(e.message, "fail");
   } else {
     result.innerHTML = errorHtml(e);
   }

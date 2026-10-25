@@ -132,6 +132,6 @@ async function clearHistoryCategory(cat) {
     showToast(`История «${CATS[cat]}» очищена`);
   } catch (e) {
     resetClearButton();
-    showToast(e.message);
+    showToast(e.message, "fail");
   }
 }

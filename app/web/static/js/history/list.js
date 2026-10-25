@@ -102,7 +102,7 @@ async function histClearEntry(row) {
     animatePanelHeight(renderHistoryList);
     fadeIn(list);
     showToast(`Запись «${entry.title}» удалена из истории`);
-  } catch (e) { showToast(e.message); }
+  } catch (e) { showToast(e.message, "fail"); }
 }
 
 function histConfirm(row) {
@@ -128,7 +128,7 @@ async function histSequel(div) {
       <span class="muted">${resolvedOutcomeLabel(title, { type: "sequel", newTitle })}</span>
       ${HIST_CLEAR_BTN}`;
     });
-  } catch (e) { showToast(e.message); }
+  } catch (e) { showToast(e.message, "fail"); }
 }
 
 async function histDelete(div) {
@@ -145,5 +145,5 @@ async function histDelete(div) {
       <span class="muted">${resolvedOutcomeLabel(title, { type: "delete" })}</span>
       ${HIST_CLEAR_BTN}`;
     });
-  } catch (e) { showToast(e.message); }
+  } catch (e) { showToast(e.message, "fail"); }
 }

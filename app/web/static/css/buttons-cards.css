@@ -272,6 +272,16 @@ html.vt-section::view-transition-new(main-content) {
   font-size: 8px; font-weight: 700; line-height: 1.1; letter-spacing: 0;
   user-select: none;
 }
+/* Retry affordance (list rows only): the stripe is a button that re-checks TMDb. */
+.list-row-poster-none.is-retry { cursor: pointer; transition: border-color 0.15s, background-color 0.15s; }
+.list-row-poster-none.is-retry:hover,
+.list-row-poster-none.is-retry:focus-visible { border-color: rgba(var(--primary-rgb), 0.8); outline: none; }
+.list-row-poster-none.is-retry:hover > span,
+.list-row-poster-none.is-retry:focus-visible > span { background: rgba(var(--primary-rgb), 0.42); }
+.list-row-poster-none.is-loading { cursor: progress; }
+.list-row-poster-none.is-loading > span { animation: posterRetryPulse 0.9s ease-in-out infinite alternate; }
+@keyframes posterRetryPulse { from { opacity: 1; } to { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { .list-row-poster-none.is-loading > span { animation: none; opacity: 0.5; } }
 .list-row:has(> .list-row-num) { padding-left: 6px; }
 .list-row-num {
   flex-shrink: 0; min-width: 2ch; text-align: right; margin-right: -4px;

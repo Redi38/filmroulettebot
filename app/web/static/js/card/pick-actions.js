@@ -46,7 +46,7 @@ async function sequelYes() {
       `<div class="card card-simple"><div class="title">🔄 ${escapeHtml(uiState.currentCardData.original_title)} → ${escapeHtml(newTitle)}</div></div>`;
     fadeIn(container);
     uiState.currentCardData = null;
-  } catch (e) { showToast(e.message); }
+  } catch (e) { showToast(e.message, "fail"); }
 }
 
 async function sequelNo() {
@@ -60,7 +60,7 @@ async function sequelNo() {
       `<div class="card card-simple"><div class="title">❌ ${escapeHtml(uiState.currentCardData.original_title)} удалён</div></div>`;
     fadeIn(container);
     uiState.currentCardData = null;
-  } catch (e) { showToast(e.message); }
+  } catch (e) { showToast(e.message, "fail"); }
 }
 
 function rerollPick() { doSpin(); }

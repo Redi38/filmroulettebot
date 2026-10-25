@@ -24,11 +24,13 @@
 .toast.show { opacity: 1; transform: translateY(0) scale(1); }
 /* Older toasts recede so the newest one reads as the current message. */
 .toast.toast--stale { opacity: 0.62; transform: translateY(0) scale(0.94); }
-.toast.toast--error {
+/* Red, larger toast. --error enters from above (top stack); --fail lives in the
+   normal bottom stack, so it keeps the base toast's enter/stale transforms. */
+.toast.toast--error, .toast.toast--fail {
   background: linear-gradient(135deg, var(--danger), #b9203f); color: white;
   font-size: 1.05rem; padding: 13px 26px; border-radius: 24px;
-  transform: translateY(-8px) scale(0.96);
 }
+.toast.toast--error { transform: translateY(-8px) scale(0.96); }
 .toast.toast--error.show { transform: translateY(0) scale(1); }
 .toast.toast--error.toast--stale { transform: translateY(0) scale(0.94); }
 .inline-undo-row {

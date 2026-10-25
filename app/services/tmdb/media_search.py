@@ -21,12 +21,16 @@ _ENDPOINT = {"movie": "/search/movie", "tv": "/search/tv"}
 _CACHE_PREFIX = {"movie": "movie_search", "tv": "tv_search"}
 
 
+def search_cache_key(media_type: MediaType, title: str) -> str:
+    return f"{_CACHE_PREFIX[media_type]}:{title.strip().lower()}"
+
+
 async def _search_cached(media_type: MediaType, title: str) -> dict[str, Any] | None:
     """Cached wrapper around /search/movie or /search/tv — shared between
     get_movie_info/get_series_info and check_upcoming_released so repeated
     lookups of the same title within SEARCH_CACHE_TTL don't hit the API
     twice."""
-    cache_key = f"{_CACHE_PREFIX[media_type]}:{title.strip().lower()}"
+    cache_key = search_cache_key(media_type, title)
     cached = await get_tmdb_cache(cache_key, SEARCH_CACHE_TTL)
     if cached is not None:
         return cached
@@ -42,8 +46,7 @@ async def search_completed(media_type: MediaType, title: str) -> bool:
     only real answers and returns None for a failed request, so a fresh cache
     entry is what tells "TMDb has nothing for this title" apart from "we
     couldn't reach TMDb" when get_movie_info/get_series_info return None."""
-    cache_key = f"{_CACHE_PREFIX[media_type]}:{title.strip().lower()}"
-    return await get_tmdb_cache(cache_key, SEARCH_CACHE_TTL) is not None
+    return await get_tmdb_cache(search_cache_key(media_type, title), SEARCH_CACHE_TTL) is not None
 
 
 async def search_suggestions(media_type: MediaType, query: str) -> list[dict[str, Any]]:

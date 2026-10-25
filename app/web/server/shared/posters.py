@@ -22,9 +22,9 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from app.db.database import get_tmdb_cache, get_tmdb_cache_many, set_tmdb_cache
+from app.db.database import delete_tmdb_cache, get_tmdb_cache, get_tmdb_cache_many, set_tmdb_cache
 from app.services.tmdb import get_details_by_id, get_movie_info, get_series_info
-from app.services.tmdb.media_search import MediaType, search_completed
+from app.services.tmdb.media_search import MediaType, search_cache_key, search_completed
 
 logger = logging.getLogger(__name__)
 
@@ -182,6 +182,45 @@ async def lookup_poster_url(cat: str, title: str, is_series: bool | None = None)
     return info["poster_url"] if info else None
 
 
+async def _resolve_poster(cat: str, title: str, is_series: bool | None) -> dict | None:
+    """A real (network) resolve of `title`, in _lookup_order, stopping at the
+    first hit. Returns the info dict it found (which may still carry no
+    poster), or None when TMDb has nothing.
+
+    Nothing usable and TMDb really answered (not a failed request): record
+    that, so lists can label the title instead of leaving the slot blank
+    forever. A failed request records nothing, so it is retried next load."""
+    info = None
+    answered = True  # TMDb gave a real answer for every lookup that came back empty
+    for kind in _lookup_order(cat, is_series):
+        info = await _fetch_info(kind, title)
+        if info:
+            break
+        answered = answered and await search_completed(_SEARCH_TYPE[kind], title)
+    if not (info or {}).get("poster_url") and answered:
+        await set_tmdb_cache(_miss_key(cat, title), {"no_poster": True})
+    return info
+
+
+async def retry_poster(cat: str, title: str, is_series: bool | None = None) -> str | None:
+    """Re-check TMDb for a title the list labels "no poster", right now.
+
+    Forgets everything cached for the title — its info entries, its TMDb
+    search results (SEARCH_CACHE_TTL would otherwise replay the same answer
+    for hours) and the "no match" marker — then resolves it again and waits
+    for the answer, since the user is watching the row. Returns the new
+    poster URL, or None if TMDb still has none (the marker is then written
+    again, so the row keeps its label)."""
+    kinds = _lookup_order(cat, is_series)
+    keys = [_miss_key(cat, title)]
+    for kind in kinds:
+        keys.append(_cache_key(kind, title))
+        keys.append(search_cache_key(_SEARCH_TYPE[kind], title))
+    await delete_tmdb_cache(keys)
+    info = await _resolve_poster(cat, title, is_series)
+    return (info or {}).get("poster_url")
+
+
 def schedule_poster_backfill(cat: str, title: str, is_series: bool | None = None) -> None:
     """Fire-and-forget a real TMDb resolve for a title with no cached
     poster, mirroring card_data._fetch_tmdb_info's movie-then-series
@@ -197,18 +236,7 @@ def schedule_poster_backfill(cat: str, title: str, is_series: bool | None = None
 
     async def _run() -> None:
         try:
-            info = None
-            answered = True  # TMDb gave a real answer for every lookup that came back empty
-            for kind in _lookup_order(cat, is_series):
-                info = await _fetch_info(kind, title)
-                if info:
-                    break
-                answered = answered and await search_completed(_SEARCH_TYPE[kind], title)
-            # Nothing usable and TMDb really answered (not a failed request):
-            # record that, so lists can label the title instead of leaving the
-            # slot blank forever. A failed request records nothing — retried next load.
-            if not (info or {}).get("poster_url") and answered:
-                await set_tmdb_cache(_miss_key(cat, title), {"no_poster": True})
+            await _resolve_poster(cat, title, is_series)
         except Exception:
             logger.warning("poster backfill failed for %r (%s)", title, cat, exc_info=True)
         finally:

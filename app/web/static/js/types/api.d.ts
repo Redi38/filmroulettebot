@@ -199,6 +199,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/upcoming/retry-poster": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Api Upcoming Retry Poster
+         * @description Upcoming-list counterpart of /api/{cat}/retry-poster (see items.py).
+         */
+        post: operations["api_upcoming_retry_poster_api_upcoming_retry_poster_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/upcoming/search-suggest": {
         parameters: {
             query?: never;
@@ -397,6 +417,27 @@ export interface paths {
         get: operations["api_items_api__cat__items_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/{cat}/retry-poster": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Api Retry Poster
+         * @description Re-check TMDb for one list title that shows the "no poster" label. Only
+         *     titles that are in the list — this triggers real TMDb requests.
+         */
+        post: operations["api_retry_poster_api__cat__retry_poster_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -874,6 +915,14 @@ export interface components {
             /** Category */
             category: string;
         };
+        /**
+         * PosterRetryResponse
+         * @description Body of POST /api/{cat}/retry-poster (and /api/upcoming/retry-poster).
+         */
+        PosterRetryResponse: {
+            /** Poster Url */
+            poster_url?: string | null;
+        };
         /** RenameBody */
         RenameBody: {
             /** Old Title */
@@ -1290,6 +1339,39 @@ export interface operations {
             };
         };
     };
+    api_upcoming_retry_poster_api_upcoming_retry_poster_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TitleBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PosterRetryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     api_upcoming_search_suggest_api_upcoming_search_suggest_get: {
         parameters: {
             query?: {
@@ -1668,6 +1750,41 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    api_retry_poster_api__cat__retry_poster_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cat: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TitleBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PosterRetryResponse"];
                 };
             };
             /** @description Validation Error */

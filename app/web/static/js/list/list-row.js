@@ -15,7 +15,7 @@ import { copyToClipboard } from "../core/utils.js";
 // a title whose poster lookup is still pending keeps the blank slot instead.
 // Exported as HTML so the string-built check rows (upcoming-list.js) share it.
 export const NO_POSTER_HTML =
-  '<div class="list-row-poster list-row-poster-none" title="На TMDb нет постера"><span>no poster</span></div>';
+  '<div class="list-row-poster list-row-poster-none" title="На TMDB отсутствует постер"><span>no poster</span></div>';
 
 // Row numbers: the caller passes `opts.number` (the title's position in the
 // whole list). After a delete, every row numbered below the deleted one
@@ -26,6 +26,43 @@ export function renumberRows(container, removedNumber) {
     const n = Number(num.textContent);
     if (n > removedNumber) num.textContent = String(n - 1);
   }
+}
+
+// Turns the "no poster" stripe into a re-check button: TMDb may have gained a
+// poster since the "no match" answer was cached. `retry()` re-asks the server
+// and resolves to the new poster URL, or a falsy value if TMDb still has none.
+function wirePosterRetry(stripe, retry) {
+  const hint = "На TMDB отсутствует постер — нажмите, чтобы перепроверить";
+  stripe.classList.add("is-retry");
+  stripe.title = hint;
+  stripe.tabIndex = 0;
+  stripe.setAttribute("role", "button");
+  stripe.setAttribute("aria-label", hint);
+  const run = async () => {
+    if (stripe.classList.contains("is-loading")) return;
+    stripe.classList.add("is-loading");
+    stripe.setAttribute("aria-busy", "true");
+    try {
+      const url = await retry();
+      if (url) {
+        const poster = document.createElement("img");
+        poster.className = "list-row-poster fade-in";
+        poster.src = url;
+        poster.alt = "";
+        stripe.replaceWith(poster);
+        return;
+      }
+      showToast("На TMDB отсутствует постер", "fail");
+    } catch (e) {
+      showToast(e.message || "Не удалось перепроверить постер", "fail");
+    }
+    stripe.classList.remove("is-loading");
+    stripe.removeAttribute("aria-busy");
+  };
+  stripe.onclick = (ev) => { ev.stopPropagation(); run(); };
+  stripe.onkeydown = (ev) => {
+    if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); run(); }
+  };
 }
 
 export function createEditableRow(title, opts) {
@@ -48,6 +85,7 @@ export function createEditableRow(title, opts) {
     row.appendChild(poster);
   } else if (opts.noPoster) {
     row.insertAdjacentHTML("beforeend", NO_POSTER_HTML);
+    if (opts.onRetryPoster) wirePosterRetry(row.lastElementChild, opts.onRetryPoster);
   } else if (opts.showPosterSlot) {
     const posterEmpty = document.createElement("div");
     posterEmpty.className = "list-row-poster list-row-poster-empty";
@@ -132,7 +170,7 @@ export function createEditableRow(title, opts) {
           if (opts.onCountChange) opts.onCountChange(1);
           opts.onReload();
         } catch (e) {
-          showToast("Не удалось восстановить");
+          showToast("Не удалось восстановить", "fail");
         }
       }, opts.onUndoSettled);
     };

@@ -32,9 +32,9 @@ export function copyToClipboard(text, el) {
     showToast("Скопировано: " + text);
   } else if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(text).then(() => showToast("Скопировано: " + text))
-      .catch(() => showToast("Не удалось скопировать"));
+      .catch(() => showToast("Не удалось скопировать", "fail"));
   } else {
-    showToast("Не удалось скопировать");
+    showToast("Не удалось скопировать", "fail");
   }
   if (el) {
     el.classList.add("copied");

@@ -10,6 +10,7 @@ from app.db.database import (
     add_item,
     delete_item,
     delete_item_by_id,
+    get_item_is_series,
     get_items_with_ids,
     item_exists,
     item_exists_other_id,
@@ -23,12 +24,13 @@ from app.services.tmdb import (
 )
 from app.utils import paginate
 
-from ..shared.bodies import DeleteByIdBody, RenameByIdBody, ReorderBody, TitleBody
+from ..shared.bodies import DeleteByIdBody, PosterRetryResponse, RenameByIdBody, ReorderBody, TitleBody
 from ..shared.constants import CATEGORIES, LIST_PAGE_SIZE
 from ..shared.posters import (
     cache_info_by_id,
     lookup_no_poster_many,
     lookup_poster_info_many,
+    retry_poster,
     schedule_poster_backfill,
 )
 from ..shared.validation import add_or_conflict, valid_category, validate_rename_by_id
@@ -71,6 +73,16 @@ async def api_items(cat: str = Depends(valid_category), page: int = 1, q: str = 
         "total_pages": total_pages,
         "total_count": len(items),
     }
+
+
+@router.post("/api/{cat}/retry-poster")
+async def api_retry_poster(body: TitleBody, cat: str = Depends(valid_category)) -> PosterRetryResponse:
+    """Re-check TMDb for one list title that shows the "no poster" label. Only
+    titles that are in the list — this triggers real TMDb requests."""
+    title = body.title.strip()
+    if not title or not await item_exists(cat, title):
+        raise HTTPException(404, "Тайтл не найден — возможно, уже удалён в другой вкладке")
+    return PosterRetryResponse(poster_url=await retry_poster(cat, title, await get_item_is_series(cat, title)))
 
 
 @router.get("/api/{cat}/search-suggest")

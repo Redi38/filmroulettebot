@@ -37,6 +37,7 @@ SHOWCASE_TITLE_BLOCKLIST = (
     "strange tails",
     "official podcast",
     "get jiro",
+    "hot wheels",
 )
 
 

@@ -7,7 +7,13 @@ old single-file app/db/database.py exposed, so `from app.db.database import
 """
 from __future__ import annotations
 
-from .cache import clear_mem_cache, get_tmdb_cache, get_tmdb_cache_many, set_tmdb_cache
+from .cache import (
+    clear_mem_cache,
+    delete_tmdb_cache,
+    get_tmdb_cache,
+    get_tmdb_cache_many,
+    set_tmdb_cache,
+)
 from .connection import close_db as _close_db_connections
 from .history import (
     clear_all_history,
@@ -74,6 +80,7 @@ __all__ = [
     "rename_item",
     "rename_item_by_id",
     "move_item",
+    "delete_tmdb_cache",
     "get_tmdb_cache",
     "get_tmdb_cache_many",
     "set_tmdb_cache",

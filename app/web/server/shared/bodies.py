@@ -52,6 +52,12 @@ class SequelResponse(BaseModel):
     new_title: str
 
 
+class PosterRetryResponse(BaseModel):
+    """Body of POST /api/{cat}/retry-poster (and /api/upcoming/retry-poster)."""
+
+    poster_url: str | None = None
+
+
 class SpinBody(BaseModel):
     weighted: bool = False
     # "Рандом" wheel preferences (see shared/random_filters.py); ignored by

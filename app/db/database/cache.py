@@ -147,6 +147,21 @@ async def get_tmdb_cache_many(keys: list[str], ttl_seconds: int) -> dict[str, An
 
 
 @retry_on_lock
+async def delete_tmdb_cache(keys: list[str]) -> None:
+    """Drop cache rows (and their in-process copies) so the next read is a
+    miss — used to force a fresh TMDb lookup for a title whose cached result
+    (e.g. "no poster") the user wants re-checked."""
+    if not keys:
+        return
+    async with conn() as db:
+        placeholders = ",".join("?" * len(keys))
+        await db.execute(f"DELETE FROM tmdb_cache WHERE cache_key IN ({placeholders})", keys)
+        await db.commit()
+    for key in keys:
+        _mem_cache.discard(key)
+
+
+@retry_on_lock
 async def set_tmdb_cache(key: str, value: Any) -> None:
     cached_at = time.time()
     payload = json.dumps(value, ensure_ascii=False)

@@ -148,6 +148,7 @@ export async function loadList(page) {
         number,
         posterUrl: poster_url,
         noPoster: no_poster,
+        onRetryPoster: async () => (await apiPost(`/api/${cat}/retry-poster`, {title})).poster_url,
         showPosterSlot: true,
         searchEndpoint: `/api/${cat}/search-suggest`,
         onRename: (newTitle, suggestion) => apiPost(`/api/${cat}/rename`, {
@@ -202,7 +203,7 @@ async function moveListItem(cat, id, direction, page, idx, totalPages, itemsOnPa
   try {
     await apiPost(`/api/${cat}/reorder`, {id, direction});
     if (uiState.currentCat === cat) loadList(targetPage);
-  } catch (e) { showToast(e.message); }
+  } catch (e) { showToast(e.message, "fail"); }
 }
 
 document.getElementById("search-input").addEventListener("input", debounce((ev) => {

@@ -235,7 +235,7 @@ document.getElementById("tracked-series-add-btn").onclick = async () => {
       await apiPost("/api/tracked-series/add", {title: finalTitle});
       input.value = "";
       loadTrackedSeries();
-    } catch (e) { showToast(e.message); }
+    } catch (e) { showToast(e.message, "fail"); }
   };
   openAddSearchModal("/api/tracked-series/search-suggest", title, {
     onPick: doAdd,

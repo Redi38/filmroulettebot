@@ -17,8 +17,13 @@ from app.db.database import (
 )
 from app.services.tmdb import check_upcoming_released, search_movie_suggestions
 
-from ..shared.bodies import DeleteByIdBody, MoveBody, RenameByIdBody, TitleBody
-from ..shared.posters import lookup_no_poster_many, lookup_poster_info_many, schedule_poster_backfill
+from ..shared.bodies import DeleteByIdBody, MoveBody, PosterRetryResponse, RenameByIdBody, TitleBody
+from ..shared.posters import (
+    lookup_no_poster_many,
+    lookup_poster_info_many,
+    retry_poster,
+    schedule_poster_backfill,
+)
 from ..shared.validation import add_or_conflict, check_category, validate_rename_by_id
 
 router = APIRouter()
@@ -43,6 +48,15 @@ async def api_upcoming() -> dict:
     for item in items:
         item["no_poster"] = item["title"] in no_poster
     return {"items": items}
+
+
+@router.post("/api/upcoming/retry-poster")
+async def api_upcoming_retry_poster(body: TitleBody) -> PosterRetryResponse:
+    """Upcoming-list counterpart of /api/{cat}/retry-poster (see items.py)."""
+    title = body.title.strip()
+    if not title or not await item_exists("upcoming_movies", title):
+        raise HTTPException(404, "Тайтл не найден — возможно, уже удалён в другой вкладке")
+    return PosterRetryResponse(poster_url=await retry_poster("movies", title))
 
 
 @router.get("/api/upcoming/search-suggest")

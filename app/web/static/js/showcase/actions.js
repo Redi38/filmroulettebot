@@ -64,7 +64,7 @@ function buildTrackedSeriesActions(item, wrap, onSkipSettled) {
           await apiPost("/api/tracked-series/rename", {old_title: item.title, new_title: finalTitle});
           loadTrackedSeries();
         } catch (e) {
-          showToast(e.message || "Не удалось изменить название");
+          showToast(e.message || "Не удалось изменить название", "fail");
         }
       };
       openAddSearchModal("/api/tracked-series/search-suggest", newTitle, {
@@ -89,7 +89,7 @@ function buildTrackedSeriesActions(item, wrap, onSkipSettled) {
           await apiPost("/api/tracked-series/add", {title: item.title});
           if (onSkipSettled) onSkipSettled();
         } catch (e) {
-          showToast("Не удалось восстановить");
+          showToast("Не удалось восстановить", "fail");
         }
       });
     };
@@ -128,7 +128,7 @@ function buildAddActionSlot(item, cat, addMode, skipScope, wrap, onSkipSettled) 
       showToast(`«${item.title}» добавлен`);
     } catch (e) {
       btn.disabled = false;
-      showToast(e.message || "Не удалось добавить");
+      showToast(e.message || "Не удалось добавить", "fail");
     }
   };
   const addToUpcoming = async () => {
@@ -139,7 +139,7 @@ function buildAddActionSlot(item, cat, addMode, skipScope, wrap, onSkipSettled) 
       showToast(`«${item.title}» добавлен в «Скоро в кино»`);
     } catch (e) {
       btn.disabled = false;
-      showToast(e.message || "Не удалось добавить");
+      showToast(e.message || "Не удалось добавить", "fail");
     }
   };
   btn.onclick = (ev) => {
@@ -182,13 +182,13 @@ function buildAddActionSlot(item, cat, addMode, skipScope, wrap, onSkipSettled) 
               onSkipSettled();
             }
           } catch (e) {
-            showToast("Не удалось отменить пропуск");
+            showToast("Не удалось отменить пропуск", "fail");
           }
         });
         collapseAndRemoveRow(wrap, null, {onCollapseStart: showUndo});
       } catch (e) {
         skipBtn.disabled = false;
-        showToast(e.message || "Не удалось скрыть");
+        showToast(e.message || "Не удалось скрыть", "fail");
       }
     };
     skipBtn.onclick = (ev) => {

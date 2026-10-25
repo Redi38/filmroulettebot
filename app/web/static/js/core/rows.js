@@ -110,7 +110,7 @@ export function collapseAndRemoveRow(row, onRemoved, opts) {
 export function removeRowOptimistically(row, deleteRequest, onRemoved, opts) {
   collapseAndRemoveRow(row, onRemoved, opts);
   deleteRequest().catch((e) => {
-    showToast(e.message || "Не удалось удалить");
+    showToast(e.message || "Не удалось удалить", "fail");
   });
 }
 

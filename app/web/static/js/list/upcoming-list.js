@@ -57,6 +57,7 @@ export async function loadUpcoming() {
         number: idx + 1,
         posterUrl: poster_url,
         noPoster: no_poster,
+        onRetryPoster: async () => (await apiPost("/api/upcoming/retry-poster", {title})).poster_url,
         showPosterSlot: true,
         searchEndpoint: "/api/upcoming/search-suggest",
         onRename: (newTitle) => apiPost("/api/upcoming/rename", {id, new_title: newTitle}),

@@ -109,7 +109,7 @@ document.addEventListener("click", (evt) => {
   const delay = fxReducedMotion() ? 0 : 480;
   setTimeout(() => {
     const win = window.open(href, link.getAttribute("target") || "_blank", "noopener");
-    if (!win) showToast("Не удалось открыть вкладку — разрешите всплывающие окна");
+    if (!win) showToast("Не удалось открыть вкладку — разрешите всплывающие окна", "fail");
     link.classList.remove("btn-neon-pulse");
     delete link.dataset.fxPending;
   }, delay);

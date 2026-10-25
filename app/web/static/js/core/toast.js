@@ -15,8 +15,11 @@ function dismissToast(el) {
   setTimeout(() => el.remove(), TOAST_LEAVE_MS);
 }
 
+// Types: undefined = normal (bottom stack); "fail" = red failure message in the
+// same bottom stack; "error" = red message in the top stack, under the header.
 export function showToast(msg, type) {
   const isError = type === "error";
+  const isFail = type === "fail";
   const stack = document.getElementById(isError ? "toast-stack-error" : "toast-stack");
   if (!stack) return null;
 
@@ -25,8 +28,8 @@ export function showToast(msg, type) {
   for (const prev of stack.children) prev.classList.add("toast--stale");
 
   const el = document.createElement("div");
-  el.className = "toast" + (isError ? " toast--error" : "");
-  el.setAttribute("role", isError ? "alert" : "status");
+  el.className = "toast" + (isError ? " toast--error" : isFail ? " toast--fail" : "");
+  el.setAttribute("role", isError || isFail ? "alert" : "status");
   el.textContent = msg;
   stack.appendChild(el);
   requestAnimationFrame(() => el.classList.add("show"));

@@ -122,15 +122,24 @@ export function prepIdleWheelSkeleton(cat) {
   wrap._wheelSkeletonShownAt = performance.now();
 }
 
+// Latest-call-wins: rapid filter/mode toggles fire overlapping showIdleWheel()
+// calls, each with its own query string. Without this, whichever response
+// resolves last builds the wheel — which can be the one made with the older
+// filters, leaving a pill lit but not applied.
+let idleWheelSeq = 0;
+
 export async function showIdleWheel(cat) {
   const wrap = document.getElementById("spin-wheel-wrap");
   if (!wrap) return;
+  const seq = ++idleWheelSeq;
+  const isStale = () => seq !== idleWheelSeq;
   prepIdleWheelSkeleton(cat);
   const skeletonShownAt = wrap._wheelSkeletonShownAt || 0;
   try {
     const weighted = isWeightedMode();
     const filters = cat === RANDOM_CAT ? randomFilterQuery() : "";
     const data = await api(`/api/${cat}/wheel-preview?weighted=${weighted}${filters}`);
+    if (isStale()) return;
     const pool = data.wheel_pool;
     if (!pool || pool.length < 2) {
       resetWheelWraps();
@@ -141,11 +150,14 @@ export async function showIdleWheel(cat) {
     document.getElementById("spin-result").innerHTML = "";
     wrap.classList.remove("wheel-done");
     await nextSettledFrame();
+    if (isStale()) return;
     await awaitWheelLayoutReady();
+    if (isStale()) return;
     if (skeletonShownAt) {
       const remaining = WHEEL_SKELETON_MIN_MS - (performance.now() - skeletonShownAt);
       if (remaining > 0) await new Promise((r) => setTimeout(r, remaining));
     }
+    if (isStale()) return;
     if (!wrap.isConnected || document.getElementById("spin-wheel-wrap") !== wrap) return;
     wrap.classList.remove("wheel-wrap--settling");
     if (canReuseIdleWheel(wrap, cat, pool, data.wheel_weights)) {
@@ -157,6 +169,7 @@ export async function showIdleWheel(cat) {
     wrap._wheelCat = cat;
     syncSpinResultClearance();
   } catch (e) {
+    if (isStale()) return;
     resetWheelWraps();
     resetSpinResult();
     // A 404 with the "Рандом" filters on means they filtered everything out,

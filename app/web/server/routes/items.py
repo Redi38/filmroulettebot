@@ -30,6 +30,7 @@ from ..shared.posters import (
     cache_info_by_id,
     lookup_no_poster_many,
     lookup_poster_info_many,
+    refresh_poster_after_rename,
     retry_poster,
     schedule_poster_backfill,
 )
@@ -159,4 +160,6 @@ async def api_rename(body: RenameByIdBody, cat: str = Depends(valid_category)) -
         raise HTTPException(404, "Тайтл не найден — возможно, уже удалён в другой вкладке")
     if body.tmdb_id is not None:
         await cache_info_by_id(new_title, body.tmdb_id, bool(body.is_series))
+    else:
+        await refresh_poster_after_rename(cat, new_title, await get_item_is_series(cat, new_title))
     return {"ok": True}

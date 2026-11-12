@@ -18,6 +18,18 @@ from app.db.database import add_item, add_upcoming_movie, get_items_with_ids, ge
 pytestmark = pytest.mark.usefixtures("db_path")
 
 
+@pytest.fixture(autouse=True)
+def _no_tmdb_on_rename(monkeypatch):
+    """Renames refresh the new title's poster over the network (see
+    posters.refresh_poster_after_rename); these tests are about ids, not TMDb."""
+
+    async def noop(*a, **k):
+        return None
+
+    monkeypatch.setattr("app.web.server.routes.items.refresh_poster_after_rename", noop)
+    monkeypatch.setattr("app.web.server.routes.upcoming.refresh_poster_after_rename", noop)
+
+
 @pytest.fixture
 def client(initialized_db):
     from app.web.server import app

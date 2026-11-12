@@ -186,18 +186,64 @@ function shadeHex(hex, amount) {
   return `rgb(${r},${g},${b})`;
 }
 
+// Hovering a segment used to repaint the whole wheel (every wedge, poster clip,
+// gradient and label — hundreds of paths on a big wheel) on each segment
+// change. Instead, every plain full draw is snapshotted, and a hover is the
+// snapshot plus a dimming veil, with only the hovered wedge repainted.
+function wheelBaseUsable(canvas, items, dpr, boundaries) {
+  const base = canvas._wheelBase;
+  return !!base
+    && base.width === canvas.width && base.height === canvas.height
+    && base._items === items && base._boundaries === boundaries && base._dpr === dpr
+    && base._postersOn === isWheelPostersEnabled();
+}
+
+// Puts the un-highlighted wheel back without redrawing it. False when there is
+// no usable snapshot (the caller then does a normal draw).
+export function restoreWheelBase(canvas) {
+  const items = canvas._wheelItems, boundaries = canvas._wheelBoundaries;
+  const dpr = canvas._wheelDprLast;
+  if (!items || !boundaries || !dpr || !wheelBaseUsable(canvas, items, dpr, boundaries)) return false;
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(canvas._wheelBase, 0, 0);
+  return true;
+}
+
+function snapshotWheel(canvas, items, dpr, boundaries) {
+  let base = canvas._wheelBase;
+  if (!base) base = canvas._wheelBase = document.createElement("canvas");
+  if (base.width !== canvas.width || base.height !== canvas.height) {
+    base.width = canvas.width;
+    base.height = canvas.height;
+  }
+  const bctx = base.getContext("2d");
+  bctx.setTransform(1, 0, 0, 1, 0, 0);
+  bctx.clearRect(0, 0, base.width, base.height);
+  bctx.drawImage(canvas, 0, 0);
+  base._items = items;
+  base._boundaries = boundaries;
+  base._dpr = dpr;
+  base._postersOn = isWheelPostersEnabled();
+}
+
 export function drawWheelSegments(canvas, items, dpr, boundaries, {animating = false, highlightIndex = -1} = {}) {
   const ctx = canvas.getContext("2d");
   const size = canvas.width;
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.clearRect(0, 0, size, size);
-  ctx.imageSmoothingEnabled = true;
-  if ("imageSmoothingQuality" in ctx) ctx.imageSmoothingQuality = "high";
-  ctx.scale(dpr, dpr);
   const cssSize = size / dpr;
   const cx = cssSize / 2, cy = cssSize / 2, r = cssSize / 2 - 3;
   const n = items.length;
   const highlighting = highlightIndex >= 0;
+
+  // Fast hover path: snapshot + veil + the one hovered wedge (see above).
+  const fromBase = highlighting && !animating && wheelBaseUsable(canvas, items, dpr, boundaries);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, size, size);
+  if (fromBase) ctx.drawImage(canvas._wheelBase, 0, 0);
+  ctx.imageSmoothingEnabled = true;
+  if ("imageSmoothingQuality" in ctx) ctx.imageSmoothingQuality = "high";
+  ctx.scale(dpr, dpr);
 
   // Rendering is identical whether or not we're mid-animation: switching
   // fills/strokes on and off between frames reads as flicker. Gradients are
@@ -225,21 +271,23 @@ export function drawWheelSegments(canvas, items, dpr, boundaries, {animating = f
   const posters = postersOn ? canvas._wheelPosters : null;
   canvas._wheelDprLast = dpr;
 
-  for (let i = 0; i < n; i++) {
+  const wedgePath = (i) => {
     const start = -Math.PI / 2 + boundaries[i].start * Math.PI / 180;
     const end = -Math.PI / 2 + boundaries[i].end * Math.PI / 180;
-    const color = wheelColors[i % wheelColors.length];
-    const dimmed = highlighting && i !== highlightIndex;
-
-    const segDeg0 = boundaries[i].end - boundaries[i].start;
-    const arcLen0 = (segDeg0 * Math.PI / 180) * r;
-    const posterUrl = posters && arcLen0 >= WHEEL_POSTER_MIN_ARC_PX ? posters[i] : null;
-    const posterImg = posterUrl ? getLoadedPosterImage(canvas, posterUrl) : null;
-
-    ctx.beginPath();
     ctx.moveTo(cx, cy);
     ctx.arc(cx, cy, r, start, end);
     ctx.closePath();
+    return [start, end];
+  };
+
+  const paintSegment = (i, dimmed) => {
+    ctx.beginPath();
+    const [start, end] = wedgePath(i);
+    const segDeg = boundaries[i].end - boundaries[i].start;
+    const arcLen = (segDeg * Math.PI / 180) * r;
+    const posterUrl = posters && arcLen >= WHEEL_POSTER_MIN_ARC_PX ? posters[i] : null;
+    const posterImg = posterUrl ? getLoadedPosterImage(canvas, posterUrl) : null;
+
     if (posterImg) {
       ctx.save();
       ctx.clip();
@@ -248,7 +296,7 @@ export function drawWheelSegments(canvas, items, dpr, boundaries, {animating = f
       ctx.fill();
       ctx.restore();
     } else {
-      ctx.fillStyle = segmentFill(color);
+      ctx.fillStyle = segmentFill(wheelColors[i % wheelColors.length]);
       ctx.fill();
       if (dimmed) {
         ctx.fillStyle = "rgba(9,12,22,0.68)";
@@ -259,9 +307,8 @@ export function drawWheelSegments(canvas, items, dpr, boundaries, {animating = f
     ctx.lineWidth = n > 40 ? 1 : 2;
     ctx.stroke();
 
-    const segDeg = boundaries[i].end - boundaries[i].start;
-    const arcLen = (segDeg * Math.PI / 180) * r;
-    if (arcLen < WHEEL_LABEL_MIN_ARC_PX && !(highlighting && i === highlightIndex)) continue;
+    // The highlighted wedge always gets its label, however thin.
+    if (arcLen < WHEEL_LABEL_MIN_ARC_PX && !(highlighting && i === highlightIndex)) return;
 
     // Round while animating so glyph sizes don't shimmer between frames.
     let fontSize = Math.max(9, Math.min(22, arcLen * 0.55));
@@ -285,52 +332,76 @@ export function drawWheelSegments(canvas, items, dpr, boundaries, {animating = f
     ctx.fillStyle = dimmed ? "rgba(255,255,255,0.55)" : "#fff";
     ctx.fillText(label, r - 12, 0);
     ctx.restore();
-  }
+  };
 
-  if (highlighting) {
-    // Glow ring on the winner's outer edge.
-    const b = boundaries[highlightIndex];
-    const start = -Math.PI / 2 + b.start * Math.PI / 180;
-    const end = -Math.PI / 2 + b.end * Math.PI / 180;
+  const paintRim = () => {
+    // Outer bevel: a soft light rim on top, darker at the bottom.
+    const rim = ctx.createLinearGradient(cx, cy - r, cx, cy + r);
+    rim.addColorStop(0, "rgba(255,255,255,0.28)");
+    rim.addColorStop(0.5, "rgba(255,255,255,0.04)");
+    rim.addColorStop(1, "rgba(0,0,0,0.35)");
     ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.arc(cx, cy, r, start, end);
-    ctx.closePath();
+    ctx.arc(cx, cy, r - 1.5, 0, Math.PI * 2);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = rim;
+    ctx.stroke();
+  };
+
+  const paintHub = () => {
+    // Hub: a slightly larger dark disc with an inner ring, so the hub media
+    // (which sits above it in the DOM) reads as set into the wheel. Pulled
+    // from the live theme (--card / --primary-rgb) instead of the old fixed
+    // dark-navy-purple — those hex codes were this app's card/border colors
+    // back when the whole theme was purple, and never got updated when it
+    // moved to the current orange/pink palette.
+    const rootStyle = getComputedStyle(document.documentElement);
+    const hubFill = rootStyle.getPropertyValue("--card").trim() || "#1e1c23";
+    const hubRingRgb = rootStyle.getPropertyValue("--primary-rgb").trim() || "242, 169, 59";
+    const hubR = Math.max(16, cssSize * 0.045);
+    ctx.beginPath();
+    ctx.arc(cx, cy, hubR + 6, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(9,12,22,0.35)";
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(cx, cy, hubR, 0, Math.PI * 2);
+    ctx.fillStyle = hubFill;
+    ctx.fill();
+    ctx.strokeStyle = `rgba(${hubRingRgb}, 0.55)`;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  };
+
+  const paintGlow = () => {
+    // Glow ring on the highlighted wedge's outer edge.
+    ctx.beginPath();
+    wedgePath(highlightIndex);
     ctx.lineWidth = 3;
     ctx.strokeStyle = "rgba(255,255,255,0.9)";
     ctx.stroke();
+  };
+
+  if (fromBase) {
+    // Veil over everything except the hovered wedge (even-odd: disc minus wedge),
+    // then repaint that wedge, its glow, and the rim/hub the wedge overlapped.
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    wedgePath(highlightIndex);
+    ctx.fillStyle = "rgba(9,12,22,0.68)";
+    ctx.fill("evenodd");
+    paintSegment(highlightIndex, false);
+    paintGlow();
+    paintRim();
+    paintHub();
+    return;
   }
 
-  // Outer bevel: a soft light rim on top, darker at the bottom.
-  const rim = ctx.createLinearGradient(cx, cy - r, cx, cy + r);
-  rim.addColorStop(0, "rgba(255,255,255,0.28)");
-  rim.addColorStop(0.5, "rgba(255,255,255,0.04)");
-  rim.addColorStop(1, "rgba(0,0,0,0.35)");
-  ctx.beginPath();
-  ctx.arc(cx, cy, r - 1.5, 0, Math.PI * 2);
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = rim;
-  ctx.stroke();
+  for (let i = 0; i < n; i++) paintSegment(i, highlighting && i !== highlightIndex);
+  if (highlighting) paintGlow();
+  paintRim();
+  paintHub();
 
-  // Hub: a slightly larger dark disc with an inner ring, so the hub media
-  // (which sits above it in the DOM) reads as set into the wheel. Pulled
-  // from the live theme (--card / --primary-rgb) instead of the old fixed
-  // dark-navy-purple — those hex codes were this app's card/border colors
-  // back when the whole theme was purple, and never got updated when it
-  // moved to the current orange/pink palette.
-  const rootStyle = getComputedStyle(document.documentElement);
-  const hubFill = rootStyle.getPropertyValue("--card").trim() || "#1e1c23";
-  const hubRingRgb = rootStyle.getPropertyValue("--primary-rgb").trim() || "242, 169, 59";
-  const hubR = Math.max(16, cssSize * 0.045);
-  ctx.beginPath();
-  ctx.arc(cx, cy, hubR + 6, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(9,12,22,0.35)";
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(cx, cy, hubR, 0, Math.PI * 2);
-  ctx.fillStyle = hubFill;
-  ctx.fill();
-  ctx.strokeStyle = `rgba(${hubRingRgb}, 0.55)`;
-  ctx.lineWidth = 2;
-  ctx.stroke();
+  // Remember the plain wheel so hovering can reuse it. A weight animation draws
+  // at a different size every frame, so it just drops the snapshot.
+  if (animating) canvas._wheelBase = null;
+  else if (!highlighting) snapshotWheel(canvas, items, dpr, boundaries);
 }

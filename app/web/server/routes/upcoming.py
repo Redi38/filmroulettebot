@@ -21,6 +21,7 @@ from ..shared.bodies import DeleteByIdBody, MoveBody, PosterRetryResponse, Renam
 from ..shared.posters import (
     lookup_no_poster_many,
     lookup_poster_info_many,
+    refresh_poster_after_rename,
     retry_poster,
     schedule_poster_backfill,
 )
@@ -92,6 +93,7 @@ async def api_upcoming_rename(body: RenameByIdBody) -> dict:
         return {"ok": True}
     if not await rename_upcoming_movie_by_id(body.id, new_title):
         raise HTTPException(404, "Тайтл не найден — возможно, уже удалён в другой вкладке")
+    await refresh_poster_after_rename("movies", new_title)
     return {"ok": True}
 
 

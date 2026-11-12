@@ -28,11 +28,16 @@ export function renumberRows(container, removedNumber) {
   }
 }
 
-// Turns the "no poster" stripe into a re-check button: TMDb may have gained a
-// poster since the "no match" answer was cached. `retry()` re-asks the server
-// and resolves to the new poster URL, or a falsy value if TMDb still has none.
+// Turns a poster stand-in into a re-check button: either the "no poster" stripe
+// (TMDb may have gained a poster since the "no match" answer was cached) or the
+// blank slot of a title whose lookup is still pending / never landed — e.g. one
+// that was just renamed. `retry()` re-asks the server and resolves to the new
+// poster URL, or a falsy value if TMDb still has none.
 function wirePosterRetry(stripe, retry) {
-  const hint = "На TMDB отсутствует постер — нажмите, чтобы перепроверить";
+  const pending = stripe.classList.contains("list-row-poster-empty");
+  const hint = pending
+    ? "Постер ещё не загружен — нажмите, чтобы загрузить"
+    : "На TMDB отсутствует постер — нажмите, чтобы перепроверить";
   stripe.classList.add("is-retry");
   stripe.title = hint;
   stripe.tabIndex = 0;
@@ -52,7 +57,15 @@ function wirePosterRetry(stripe, retry) {
         stripe.replaceWith(poster);
         return;
       }
+      if (pending) {
+        // TMDb answered and has no poster: now it is a known "no poster" title.
+        stripe.insertAdjacentHTML("afterend", NO_POSTER_HTML);
+        const none = stripe.nextElementSibling;
+        stripe.remove();
+        wirePosterRetry(none, retry);
+      }
       showToast("На TMDB отсутствует постер", "fail");
+      return;
     } catch (e) {
       showToast(e.message || "Не удалось перепроверить постер", "fail");
     }
@@ -90,6 +103,7 @@ export function createEditableRow(title, opts) {
     const posterEmpty = document.createElement("div");
     posterEmpty.className = "list-row-poster list-row-poster-empty";
     row.appendChild(posterEmpty);
+    if (opts.onRetryPoster) wirePosterRetry(posterEmpty, opts.onRetryPoster);
   }
 
   const span = document.createElement("span");

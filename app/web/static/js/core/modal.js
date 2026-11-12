@@ -1,5 +1,6 @@
 import { renderCard } from "../card/card-render.js";
 import { api } from "./api.js";
+import { onBackdropClick } from "./backdrop.js";
 import { CATS } from "./constants.js";
 import { overlay } from "./menu.js";
 import { skeletonCardHtml } from "./skeleton.js";
@@ -25,7 +26,7 @@ export function openCategoryModal(titleText, onPick, allowedCats) {
 }
 export function closeModal() { document.getElementById("modal-overlay").classList.remove("open"); }
 document.getElementById("modal-cancel").onclick = closeModal;
-document.getElementById("modal-overlay").onclick = (ev) => { if (ev.target.id === "modal-overlay") closeModal(); };
+onBackdropClick(document.getElementById("modal-overlay"), closeModal);
 let _closeActiveRenameModal = null;
 
 export function openRenameModal(currentTitle, onSave) {
@@ -46,13 +47,10 @@ export function openRenameModal(currentTitle, onSave) {
     if (ev.key === "Enter") save();
     else if (ev.key === "Escape") close();
   };
-  const onOverlayClick = (ev) => { if (ev.target === overlay) close(); };
-
   function cleanup() {
     saveBtn.removeEventListener("click", save);
     cancelBtn.removeEventListener("click", close);
     input.removeEventListener("keydown", onKeydown);
-    overlay.removeEventListener("click", onOverlayClick);
     _closeActiveRenameModal = null;
   }
 
@@ -61,9 +59,11 @@ export function openRenameModal(currentTitle, onSave) {
   saveBtn.addEventListener("click", save);
   cancelBtn.addEventListener("click", close);
   input.addEventListener("keydown", onKeydown);
-  overlay.addEventListener("click", onOverlayClick);
   _closeActiveRenameModal = close;
 }
+onBackdropClick(document.getElementById("rename-modal-overlay"), () => {
+  if (_closeActiveRenameModal) _closeActiveRenameModal();
+});
 export function closeRenameModal() { if (_closeActiveRenameModal) _closeActiveRenameModal(); }
 
 export function openPosterInfoModal(category, title) {
@@ -78,9 +78,7 @@ export function openPosterInfoModal(category, title) {
 }
 export function closePosterInfoModal() { document.getElementById("poster-info-overlay").classList.remove("open"); }
 document.getElementById("poster-info-close").onclick = closePosterInfoModal;
-document.getElementById("poster-info-overlay").onclick = (ev) => {
-  if (ev.target.id === "poster-info-overlay") closePosterInfoModal();
-};
+onBackdropClick(document.getElementById("poster-info-overlay"), closePosterInfoModal);
 
 // Esc closes whichever of these overlays is currently open. The rename
 // modal handles its own Escape key (it needs to coexist with Enter-to-save

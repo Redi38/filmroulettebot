@@ -221,6 +221,25 @@ async def retry_poster(cat: str, title: str, is_series: bool | None = None) -> s
     return (info or {}).get("poster_url")
 
 
+_RENAME_POSTER_TIMEOUT = 8.0
+
+
+async def refresh_poster_after_rename(cat: str, new_title: str, is_series: bool | None = None) -> None:
+    """Resolve the poster of a just-renamed title before the response goes out,
+    so the list reload that follows already shows it.
+
+    A rename without a TMDb pick (typed title kept as-is) caches nothing for the
+    new title, and the cache-only list lookup would then leave a blank,
+    unlabelled slot until a background backfill happened to finish. Goes through
+    retry_poster() so a stale cached answer or "no match" marker for the new
+    title can't win. Best-effort: bounded, and a TMDb failure never fails the
+    rename itself — the row just keeps its clickable re-check slot."""
+    try:
+        await asyncio.wait_for(retry_poster(cat, new_title, is_series), _RENAME_POSTER_TIMEOUT)
+    except Exception:
+        logger.warning("poster refresh after rename failed for %r (%s)", new_title, cat, exc_info=True)
+
+
 def schedule_poster_backfill(cat: str, title: str, is_series: bool | None = None) -> None:
     """Fire-and-forget a real TMDb resolve for a title with no cached
     poster, mirroring card_data._fetch_tmdb_info's movie-then-series

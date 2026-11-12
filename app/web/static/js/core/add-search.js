@@ -1,4 +1,5 @@
 import { api } from "./api.js";
+import { onBackdropClick } from "./backdrop.js";
 import { overlay } from "./menu.js";
 import { skeletonSearchHtml } from "./skeleton.js";
 import { errorHtml, escapeHtml } from "./utils.js";
@@ -14,6 +15,11 @@ function _addSearchTypeBadge(searchEndpoint, isSeries) {
   return isSeries ? "Сериал" : "Фильм";
 }
 
+let _closeActiveAddSearch = null;
+onBackdropClick(document.getElementById("add-search-overlay"), () => {
+  if (_closeActiveAddSearch) _closeActiveAddSearch();
+});
+
 export async function openAddSearchModal(searchEndpoint, query, {onPick, onFallback}) {
   const overlay = document.getElementById("add-search-overlay");
   const resultsEl = document.getElementById("add-search-results");
@@ -27,12 +33,12 @@ export async function openAddSearchModal(searchEndpoint, query, {onPick, onFallb
   const close = () => {
     overlay.classList.remove("open");
     fallbackBtn.onclick = null;
-    overlay.onclick = null;
     document.removeEventListener("keydown", onKeydown);
+    _closeActiveAddSearch = null;
   };
+  _closeActiveAddSearch = close;
   const onKeydown = (ev) => { if (ev.key === "Escape") close(); };
   fallbackBtn.onclick = () => { close(); onFallback(); };
-  overlay.onclick = (ev) => { if (ev.target === overlay) close(); };
   document.getElementById("add-search-cancel").onclick = close;
   document.addEventListener("keydown", onKeydown);
 

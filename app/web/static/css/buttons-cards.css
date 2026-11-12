@@ -278,10 +278,18 @@ html.vt-section::view-transition-new(main-content) {
 .list-row-poster-none.is-retry:focus-visible { border-color: rgba(var(--primary-rgb), 0.8); outline: none; }
 .list-row-poster-none.is-retry:hover > span,
 .list-row-poster-none.is-retry:focus-visible > span { background: rgba(var(--primary-rgb), 0.42); }
+/* Same affordance on the blank slot of a title whose poster hasn't loaded yet. */
+.list-row-poster-empty.is-retry { cursor: pointer; border: 1px dashed transparent; box-sizing: border-box; transition: border-color 0.15s; }
+.list-row-poster-empty.is-retry:hover,
+.list-row-poster-empty.is-retry:focus-visible { border-color: rgba(var(--primary-rgb), 0.8); outline: none; }
+.list-row-poster-empty.is-loading { cursor: progress; animation: posterRetryPulse 0.9s ease-in-out infinite alternate; }
 .list-row-poster-none.is-loading { cursor: progress; }
 .list-row-poster-none.is-loading > span { animation: posterRetryPulse 0.9s ease-in-out infinite alternate; }
 @keyframes posterRetryPulse { from { opacity: 1; } to { opacity: 0.35; } }
-@media (prefers-reduced-motion: reduce) { .list-row-poster-none.is-loading > span { animation: none; opacity: 0.5; } }
+@media (prefers-reduced-motion: reduce) {
+  .list-row-poster-none.is-loading > span { animation: none; opacity: 0.5; }
+  .list-row-poster-empty.is-loading { animation: none; opacity: 0.5; }
+}
 .list-row:has(> .list-row-num) { padding-left: 6px; }
 .list-row-num {
   flex-shrink: 0; min-width: 2ch; text-align: right; margin-right: -4px;

@@ -118,3 +118,37 @@ async def test_upcoming_endpoint(client, monkeypatch):
     r = client.post("/api/upcoming/retry-poster", json={"title": "T"})
     assert r.status_code == 200 and r.json() == {"poster_url": "https://img.test/new.jpg"}
     assert client.post("/api/upcoming/retry-poster", json={"title": "Нет такого"}).status_code == 404
+
+
+async def test_rename_without_a_tmdb_pick_resolves_the_new_titles_poster(client, monkeypatch):
+    """Renaming keeps the typed title as-is: the new title must get its poster
+    resolved before the response, not left as a blank slot for a later backfill."""
+    await add_item("movies", "Old")
+    from app.db.database import get_items_with_ids
+
+    item_id = (await get_items_with_ids("movies"))[0]["id"]
+    seen: list[tuple] = []
+
+    async def fake_retry(cat, title, is_series=None):
+        seen.append((cat, title))
+        return "https://img.test/new.jpg"
+
+    monkeypatch.setattr(posters, "retry_poster", fake_retry)
+    r = client.post("/api/movies/rename", json={"id": item_id, "new_title": "New"})
+    assert r.status_code == 200
+    assert seen == [("movies", "New")]
+
+
+async def test_rename_survives_a_tmdb_failure(client, monkeypatch):
+    await add_item("movies", "Old")
+    from app.db.database import get_items_with_ids
+
+    item_id = (await get_items_with_ids("movies"))[0]["id"]
+
+    async def boom(cat, title, is_series=None):
+        raise RuntimeError("tmdb down")
+
+    monkeypatch.setattr(posters, "retry_poster", boom)
+    r = client.post("/api/movies/rename", json={"id": item_id, "new_title": "New"})
+    assert r.status_code == 200
+    assert (await get_items_with_ids("movies"))[0]["title"] == "New"

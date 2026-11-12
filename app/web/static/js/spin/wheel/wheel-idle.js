@@ -2,7 +2,7 @@ import { isWeightedMode } from "../settings/weighted-mode.js";
 import { setCanvasRotation, wheelPrefersReducedMotion } from "./spin.js";
 import { buildWheel } from "./wheel-build.js";
 import { getWheelDPR, wheelSpinState } from "./wheel-constants.js";
-import { drawWheelSegments, getCanvasRotationDeg, updatePointerTitle } from "./wheel-draw.js";
+import { drawWheelSegments, getCanvasRotationDeg, restoreWheelBase, updatePointerTitle } from "./wheel-draw.js";
 
 // Roulette wheel: the resting state. A wheel that nobody has spun yet used
 // to sit perfectly still, which read as a static image rather than something
@@ -42,6 +42,10 @@ function wheelIdleSegmentAt(canvas, clientX, clientY) {
 export function wheelIdleRedraw(canvas, highlightIndex) {
   const items = canvas._wheelItems;
   if (!items || !canvas._wheelBoundaries) return;
+  // Un-highlighting is a blit of the cached plain wheel, not a full repaint.
+  if (highlightIndex === undefined || highlightIndex < 0) {
+    if (restoreWheelBase(canvas)) return;
+  }
   drawWheelSegments(canvas, items, getWheelDPR(), canvas._wheelBoundaries, {
     highlightIndex: highlightIndex === undefined ? -1 : highlightIndex,
   });
@@ -156,6 +160,7 @@ export function attachWheelHover(canvas, mask) {
   const isLocked = () => wheelSpinState.active || canvas._hoverLocked;
 
   const clear = () => {
+    pending = null;
     canvas._idleHovering = false;
     if (canvas._idleHoverIdx !== -1) {
       canvas._idleHoverIdx = -1;
@@ -168,9 +173,17 @@ export function attachWheelHover(canvas, mask) {
 
   canvas._idleHoverIdx = -1;
 
-  mask.addEventListener("pointermove", (ev) => {
-    if (isLocked() || ev.pointerType === "touch") return;
-    const idx = wheelIdleSegmentAt(canvas, ev.clientX, ev.clientY);
+  // Pointer events can arrive faster than frames (and a wheel with many
+  // segments is costly to update), so only the latest position is handled, once
+  // per frame.
+  let pending = null;
+  let rafId = 0;
+  const flush = () => {
+    rafId = 0;
+    const ev = pending;
+    pending = null;
+    if (!ev || isLocked()) return;
+    const idx = wheelIdleSegmentAt(canvas, ev.x, ev.y);
     if (idx === -1) { clear(); return; }
     // Pausing the drift while a segment is being read keeps the label from
     // changing out from under the cursor.
@@ -180,7 +193,13 @@ export function attachWheelHover(canvas, mask) {
       wheelIdleRedraw(canvas, idx);
     }
     const items = canvas._wheelItems || [];
-    positionWheelHoverLabel(canvas, ev.clientX, ev.clientY, items[idx] || "", wheelSegmentOddsText(canvas, idx));
+    positionWheelHoverLabel(canvas, ev.x, ev.y, items[idx] || "", wheelSegmentOddsText(canvas, idx));
+  };
+
+  mask.addEventListener("pointermove", (ev) => {
+    if (isLocked() || ev.pointerType === "touch") return;
+    pending = {x: ev.clientX, y: ev.clientY};
+    if (!rafId) rafId = requestAnimationFrame(flush);
   });
 
   mask.addEventListener("pointerleave", clear);

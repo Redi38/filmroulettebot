@@ -138,6 +138,20 @@ async def _migrate_add_position(db: aiosqlite.Connection, table: str) -> None:
     await db.execute(f"UPDATE {table} SET position = id WHERE position IS NULL")
 
 
+async def _migrate_add_added_at(db: aiosqlite.Connection, table: str) -> None:
+    """Add an added_at column (unix seconds, REAL — same unit as history's
+    timestamp) to a category table if it's missing. Powers the small
+    "added on <date>" label under each title in the web list. Rows that
+    predate the column stay NULL on purpose: there is no way to know when
+    they were really added, and a made-up date would be worse than none."""
+    async with db.execute(f"PRAGMA table_info({table})") as cur:
+        cols = {row[1] async for row in cur}
+    if not cols or "added_at" in cols:
+        return
+    logger.info("Migration: adding added_at to %r…", table)
+    await db.execute(f"ALTER TABLE {table} ADD COLUMN added_at REAL")
+
+
 async def init_db() -> None:
     """Create tables and run migrations."""
     async with conn() as db:
@@ -169,6 +183,10 @@ async def init_db() -> None:
             await _migrate_add_position(db, table)
         await db.commit()
 
+        for table in NOCASE_TABLES:
+            await _migrate_add_added_at(db, table)
+        await db.commit()
+
         await db.executescript(
             """
             CREATE TABLE IF NOT EXISTS history (
@@ -183,13 +201,13 @@ async def init_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_history_user_category_ts
                 ON history (user_id, category, timestamp);
 
-            CREATE TABLE IF NOT EXISTS movies        (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE, is_series INTEGER, position INTEGER);
-            CREATE TABLE IF NOT EXISTS cartoons      (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE, is_series INTEGER, position INTEGER);
-            CREATE TABLE IF NOT EXISTS series        (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE, is_series INTEGER, position INTEGER);
-            CREATE TABLE IF NOT EXISTS dc            (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE, is_series INTEGER, position INTEGER);
-            CREATE TABLE IF NOT EXISTS marvel        (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE, is_series INTEGER, position INTEGER);
-            CREATE TABLE IF NOT EXISTS upcoming_movies (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE, is_series INTEGER, position INTEGER);
-            CREATE TABLE IF NOT EXISTS tracked_series  (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE, is_series INTEGER, position INTEGER);
+            CREATE TABLE IF NOT EXISTS movies        (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE, is_series INTEGER, position INTEGER, added_at REAL);
+            CREATE TABLE IF NOT EXISTS cartoons      (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE, is_series INTEGER, position INTEGER, added_at REAL);
+            CREATE TABLE IF NOT EXISTS series        (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE, is_series INTEGER, position INTEGER, added_at REAL);
+            CREATE TABLE IF NOT EXISTS dc            (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE, is_series INTEGER, position INTEGER, added_at REAL);
+            CREATE TABLE IF NOT EXISTS marvel        (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE, is_series INTEGER, position INTEGER, added_at REAL);
+            CREATE TABLE IF NOT EXISTS upcoming_movies (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE, is_series INTEGER, position INTEGER, added_at REAL);
+            CREATE TABLE IF NOT EXISTS tracked_series  (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT UNIQUE NOT NULL COLLATE UNICODE_NOCASE, is_series INTEGER, position INTEGER, added_at REAL);
 
             CREATE TABLE IF NOT EXISTS tmdb_cache (
                 cache_key TEXT PRIMARY KEY,

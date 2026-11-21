@@ -41,7 +41,7 @@ router = APIRouter()
 
 @router.get("/api/{cat}/items")
 async def api_items(cat: str = Depends(valid_category), page: int = 1, q: str = "") -> dict:
-    items = await get_items_with_ids(cat)
+    items = await get_items_with_ids(cat, with_added_at=True)
     # "number" is the title's real position in the whole list, assigned before
     # the search filter so a search result keeps the number it has in the list.
     for pos, item in enumerate(items, start=1):

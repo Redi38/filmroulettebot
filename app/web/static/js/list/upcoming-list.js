@@ -5,7 +5,7 @@ import { openCategoryModal } from "../core/modal.js";
 import { skeletonListHtml } from "../core/skeleton.js";
 import { showToast } from "../core/toast.js";
 import { fadeIn, fadeOut } from "../core/transitions.js";
-import { escapeHtml, placeholderHtml } from "../core/utils.js";
+import { debounce, escapeHtml, placeholderHtml } from "../core/utils.js";
 import { showLoadError, showSkeleton } from "../core/view-load.js";
 import { createEditableRow, NO_POSTER_HTML } from "./list-row.js";
 import { humanizeShowcaseDate } from "../showcase/date.js";
@@ -18,9 +18,63 @@ import { loadShowcase } from "../showcase/showcase.js";
 // changed in the DB) and skip the fade/rebuild so it doesn't flicker.
 let lastUpcomingRaw = null;
 
+const UPCOMING_EMPTY_HTML = () =>
+  placeholderHtml("Пока нет ожидаемых тайтлов — введи название выше и нажми «+» 👀", "🕐");
+
+// One bar searches AND adds (same as the category lists). The upcoming list is
+// small and already fully loaded, so the filter runs client-side on the last
+// fetched items instead of hitting the server per keystroke.
+let upcomingQuery = "";
+
+function upcomingNoResultsHtml(q) {
+  return placeholderHtml(`Ничего не найдено по «${escapeHtml(q)}»<br>Можно добавить это название кнопкой «+» выше`, "🔍");
+}
+
+function syncUpAddButton() {
+  const value = document.getElementById("up-search-input").value;
+  const btn = document.getElementById("up-add-btn");
+  if (btn) btn.disabled = !value.trim();
+  document.getElementById("up-search-clear").hidden = !value;
+}
+
 function checkUpcomingEmpty(container) {
   if (container.querySelector(".list-row") || container.querySelector(".inline-undo-row")) return;
-  container.innerHTML = placeholderHtml("Пока нет ожидаемых тайтлов — добавь то, чего ждёшь, выше 👀", "🕐");
+  const q = upcomingQuery.trim();
+  container.innerHTML = q && lastUpcomingRaw && lastUpcomingRaw.length ? upcomingNoResultsHtml(q) : UPCOMING_EMPTY_HTML();
+}
+
+// Builds the rows for `items` (the whole list, server order), keeping only
+// those matching the search. A row keeps its real position number even when
+// the list is filtered, like in the category lists.
+function renderUpcomingRows(container, items) {
+  const q = upcomingQuery.trim().toLowerCase();
+  const shown = [];
+  items.forEach((item, idx) => {
+    if (!q || item.title.toLowerCase().includes(q)) shown.push([item, idx]);
+  });
+  if (!shown.length) {
+    container.innerHTML = q ? upcomingNoResultsHtml(upcomingQuery.trim()) : UPCOMING_EMPTY_HTML();
+    return;
+  }
+  container.innerHTML = "";
+  for (const [i, [{id, title, poster_url, no_poster, added_at}, idx]] of shown.entries()) {
+    const row = createEditableRow(title, {
+      number: idx + 1,
+      addedAt: added_at,
+      posterUrl: poster_url,
+      noPoster: no_poster,
+      onRetryPoster: async () => (await apiPost("/api/upcoming/retry-poster", {title})).poster_url,
+      showPosterSlot: true,
+      searchEndpoint: "/api/upcoming/search-suggest",
+      onRename: (newTitle) => apiPost("/api/upcoming/rename", {id, new_title: newTitle}),
+      onDelete: () => apiPost("/api/upcoming/delete", {id}),
+      onRestore: () => apiPost("/api/upcoming/add", {title}),
+      onReload: () => loadUpcoming(),
+      onUndoSettled: () => checkUpcomingEmpty(container),
+    });
+    row.style.animationDelay = `${Math.min(i, 18) * 0.008}s`;
+    container.appendChild(row);
+  }
 }
 
 export async function loadUpcoming() {
@@ -46,43 +100,34 @@ export async function loadUpcoming() {
     // there's no stale content to fade out (see loadShowcase() for why
     // fading it here would hide it before it's ever painted).
     if (!isFreshView) await fadeOut(container);
-    if (!data.items.length) {
-      container.innerHTML = placeholderHtml("Пока нет ожидаемых тайтлов — добавь то, чего ждёшь, выше 👀", "🕐");
-      fadeIn(container);
-      return;
-    }
-    container.innerHTML = "";
-    for (const [idx, {id, title, poster_url, no_poster}] of data.items.entries()) {
-      const row = createEditableRow(title, {
-        number: idx + 1,
-        posterUrl: poster_url,
-        noPoster: no_poster,
-        onRetryPoster: async () => (await apiPost("/api/upcoming/retry-poster", {title})).poster_url,
-        showPosterSlot: true,
-        searchEndpoint: "/api/upcoming/search-suggest",
-        onRename: (newTitle) => apiPost("/api/upcoming/rename", {id, new_title: newTitle}),
-        onDelete: () => apiPost("/api/upcoming/delete", {id}),
-        onRestore: () => apiPost("/api/upcoming/add", {title}),
-        onReload: () => loadUpcoming(),
-        onUndoSettled: () => checkUpcomingEmpty(container),
-      });
-      row.style.animationDelay = `${Math.min(idx, 18) * 0.008}s`;
-      container.appendChild(row);
-    }
+    renderUpcomingRows(container, data.items);
     fadeIn(container);
   } catch (e) {
     showLoadError(container, e);
   }
 }
 
-document.getElementById("up-add-btn").onclick = async () => {
-  const input = document.getElementById("up-add-input");
+const applyUpcomingSearch = debounce((value) => {
+  upcomingQuery = value;
+  if (lastUpcomingRaw) renderUpcomingRows(document.getElementById("up-list-container"), lastUpcomingRaw);
+}, 150);
+
+document.getElementById("up-search-input").addEventListener("input", (ev) => {
+  syncUpAddButton();
+  applyUpcomingSearch(ev.target.value);
+});
+
+async function handleAddUpcoming() {
+  const input = document.getElementById("up-search-input");
   const title = input.value.trim();
   if (!title) return;
   const doAdd = async (finalTitle) => {
     try {
       await apiPost("/api/upcoming/add", {title: finalTitle});
+      // The typed text was an add, not a search any more: show the whole list.
       input.value = "";
+      upcomingQuery = "";
+      syncUpAddButton();
       loadUpcoming();
     } catch (e) { showToast(e.message, "error"); }
   };
@@ -90,7 +135,21 @@ document.getElementById("up-add-btn").onclick = async () => {
     onPick: doAdd,
     onFallback: () => doAdd(title),
   });
+}
+
+document.getElementById("up-add-btn").onclick = handleAddUpcoming;
+document.getElementById("up-search-clear").onclick = () => {
+  const input = document.getElementById("up-search-input");
+  input.value = "";
+  input.dispatchEvent(new Event("input"));
+  input.focus();
 };
+document.getElementById("up-search-input").addEventListener("keydown", (ev) => {
+  if (ev.key === "Enter" && !ev.isComposing) {
+    ev.preventDefault();
+    handleAddUpcoming();
+  }
+});
 
 const RU_MONTHS_NOM = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
 

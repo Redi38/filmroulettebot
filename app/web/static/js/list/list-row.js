@@ -78,6 +78,18 @@ function wirePosterRetry(stripe, retry) {
   };
 }
 
+// "Added on" caption. `addedAt` is unix seconds from the server (null for
+// titles that predate the column — those get no caption rather than a guess).
+// Formatted in the viewer's own timezone.
+function formatAddedAt(addedAt) {
+  const d = new Date(Number(addedAt) * 1000);
+  if (!Number.isFinite(d.getTime())) return null;
+  return {
+    short: d.toLocaleDateString("ru-RU", {day: "2-digit", month: "2-digit", year: "numeric"}),
+    full: d.toLocaleString("ru-RU", {dateStyle: "long", timeStyle: "short"}),
+  };
+}
+
 export function createEditableRow(title, opts) {
   const row = document.createElement("div");
   row.className = "list-row fade-in";
@@ -111,7 +123,20 @@ export function createEditableRow(title, opts) {
   span.textContent = title;
   span.title = "Нажмите, чтобы скопировать";
   span.onclick = () => copyToClipboard(title, span);
-  row.appendChild(span);
+  const added = opts.addedAt ? formatAddedAt(opts.addedAt) : null;
+  if (added) {
+    const body = document.createElement("div");
+    body.className = "list-row-body";
+    const date = document.createElement("span");
+    date.className = "list-row-date";
+    date.textContent = `добавлено ${added.short}`;
+    date.title = `Добавлено: ${added.full}`;
+    body.appendChild(span);
+    body.appendChild(date);
+    row.appendChild(body);
+  } else {
+    row.appendChild(span);
+  }
 
   if (opts.onMoveUp || opts.onMoveDown) {
     // Reordering a row IS how a user tunes its weighted-roulette odds —

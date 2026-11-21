@@ -2,6 +2,8 @@
 categories, upcoming movies, tracked series)."""
 from __future__ import annotations
 
+import time
+
 from .connection import check_table, conn, read_conn, retry_on_lock
 
 
@@ -29,7 +31,7 @@ async def get_items(table: str) -> list[str]:
             return [row[0] async for row in cur]
 
 
-async def get_items_with_ids(table: str) -> list[dict]:
+async def get_items_with_ids(table: str, *, with_added_at: bool = False) -> list[dict]:
     """Same as get_items(), but keeps each row's stable id (and, when
     known, is_series) alongside its title. Callers that let the user
     rename/delete a *specific row* (as opposed to a fire-and-forget add)
@@ -57,16 +59,24 @@ async def get_items_with_ids(table: str) -> list[dict]:
     happens for legacy rows never touched by move_item) rather than plain
     `id` so a user can reorder rows — see move_item() below — independently
     of when they were added; the weighted roulette mode reads a title's
-    odds straight off this order (title_weights() in app/services/titles.py)."""
+    odds straight off this order (title_weights() in app/services/titles.py).
+
+    with_added_at=True also returns each row's `added_at` (unix seconds, or
+    None for rows that predate the column). It is opt-in so the many callers
+    that only need id/title/is_series keep getting exactly that shape.
+    """
     check_table(table)
     async with read_conn() as db:
         async with db.execute(
-            f"SELECT id, title, is_series FROM {table} ORDER BY position, id"
+            f"SELECT id, title, is_series, added_at FROM {table} ORDER BY position, id"
         ) as cur:
-            return [
-                {"id": row[0], "title": row[1], "is_series": None if row[2] is None else bool(row[2])}
-                async for row in cur
-            ]
+            rows = []
+            async for row in cur:
+                item = {"id": row[0], "title": row[1], "is_series": None if row[2] is None else bool(row[2])}
+                if with_added_at:
+                    item["added_at"] = row[3]
+                rows.append(item)
+            return rows
 
 
 async def get_item_is_series(table: str, title: str) -> bool | None:
@@ -123,8 +133,8 @@ async def add_item(table: str, title: str, is_series: bool | None = None) -> Non
             row = await cur.fetchone()
         next_position = (row[0] if row else 0) + 1
         await db.execute(
-            f"INSERT OR IGNORE INTO {table} (title, is_series, position) VALUES (?, ?, ?)",
-            (title, None if is_series is None else int(is_series), next_position),
+            f"INSERT OR IGNORE INTO {table} (title, is_series, position, added_at) VALUES (?, ?, ?, ?)",
+            (title, None if is_series is None else int(is_series), next_position, time.time()),
         )
         await db.commit()
 

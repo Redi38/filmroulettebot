@@ -18,8 +18,8 @@ async def get_upcoming_movies() -> list[str]:
     return await get_items("upcoming_movies")
 
 
-async def get_upcoming_movies_with_ids() -> list[dict]:
-    return await get_items_with_ids("upcoming_movies")
+async def get_upcoming_movies_with_ids(*, with_added_at: bool = False) -> list[dict]:
+    return await get_items_with_ids("upcoming_movies", with_added_at=with_added_at)
 
 
 async def add_upcoming_movie(title: str) -> None:

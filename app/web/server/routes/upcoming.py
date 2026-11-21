@@ -32,7 +32,7 @@ router = APIRouter()
 
 @router.get("/api/upcoming")
 async def api_upcoming() -> dict:
-    items = await get_upcoming_movies_with_ids()
+    items = await get_upcoming_movies_with_ids(with_added_at=True)
     # Cache-only poster lookup (same as the category lists); a miss schedules a
     # background TMDb resolve so the next load has it.
     posters = await lookup_poster_info_many("movies", [(i["title"], None) for i in items])

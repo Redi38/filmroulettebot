@@ -62,7 +62,6 @@ export async function loadList(page) {
     return loadUpcoming();
   }
 
-  document.getElementById("add-row").style.display = "flex";
   const featured = document.getElementById("list-featured");
   const container = document.getElementById("list-container");
   const searchInput = document.getElementById("search-input");
@@ -72,6 +71,7 @@ export async function loadList(page) {
   if (isFreshView) {
     currentListQuery = "";
     searchInput.value = "";
+    syncAddButton();
     showSkeleton(container, skeletonListHtml());
     showSkeleton(featured, "");
     const countElReset = document.getElementById("list-count");
@@ -130,8 +130,8 @@ export async function loadList(page) {
     if (!data.total_count) {
       if (countEl) countEl.textContent = "";
       container.innerHTML = q
-        ? placeholderHtml(`Ничего не найдено по «${escapeHtml(q)}»`, "🔍")
-        : placeholderHtml("Пока здесь пусто — добавь первый тайтл выше 🍿", "📭");
+        ? noResultsHtml(q)
+        : placeholderHtml("Пока здесь пусто — введи название выше и нажми «+» 🍿", "📭");
       fadeIn(container);
       return;
     }
@@ -142,10 +142,11 @@ export async function loadList(page) {
     // result shows the same number the title has in the unfiltered list.
     const canReorder = !q; // filtered view skips a title's real neighbours, so
                            // "up"/"down" here wouldn't mean what it looks like
-    for (const [idx, {id, title, poster_url, no_poster, number}] of data.items.entries()) {
+    for (const [idx, {id, title, poster_url, no_poster, number, added_at}] of data.items.entries()) {
       const cat = uiState.currentCat;
       const row = createEditableRow(title, {
         number,
+        addedAt: added_at,
         posterUrl: poster_url,
         noPoster: no_poster,
         onRetryPoster: async () => (await apiPost(`/api/${cat}/retry-poster`, {title})).poster_url,
@@ -187,8 +188,14 @@ function checkListEmpty(container) {
   }
   const q = currentListQuery.trim();
   container.innerHTML = q
-    ? placeholderHtml(`Ничего не найдено по «${escapeHtml(q)}»`, "🔍")
-    : placeholderHtml("Пока здесь пусто — добавь первый тайтл выше 🍿", "📭");
+    ? noResultsHtml(q)
+    : placeholderHtml("Пока здесь пусто — введи название выше и нажми «+» 🍿", "📭");
+}
+
+// One bar searches AND adds, so an empty search is also the natural moment to
+// point at the add button: whatever was typed can be added as a new title.
+function noResultsHtml(q) {
+  return placeholderHtml(`Ничего не найдено по «${escapeHtml(q)}»<br>Можно добавить это название кнопкой «+» выше`, "🔍");
 }
 
 async function moveListItem(cat, id, direction, page, idx, totalPages, itemsOnPage) {
@@ -206,10 +213,24 @@ async function moveListItem(cat, id, direction, page, idx, totalPages, itemsOnPa
   } catch (e) { showToast(e.message, "fail"); }
 }
 
-document.getElementById("search-input").addEventListener("input", debounce((ev) => {
-  currentListQuery = ev.target.value;
+// The one bar: its text filters the list (debounced) and is also what the
+// "+" button / Enter adds, so the "+" only enables once there is text.
+function syncAddButton() {
+  const value = document.getElementById("search-input").value;
+  const btn = document.getElementById("add-btn");
+  if (btn) btn.disabled = !value.trim();
+  document.getElementById("search-clear").hidden = !value;
+}
+
+const applySearch = debounce((value) => {
+  currentListQuery = value;
   loadList();
-}, 300));
+}, 300);
+
+document.getElementById("search-input").addEventListener("input", (ev) => {
+  syncAddButton();
+  applySearch(ev.target.value);
+});
 
 function chevronSvg(dir) {
   const NS = "http://www.w3.org/2000/svg";
@@ -262,7 +283,7 @@ export function paginationRow(page, totalPages, onNav) {
 }
 
 async function handleAddTitle() {
-  const input = document.getElementById("add-input");
+  const input = document.getElementById("search-input");
   const title = input.value.trim();
   if (!title) return;
   const doAdd = async (finalTitle, suggestion) => {
@@ -271,7 +292,11 @@ async function handleAddTitle() {
         title: finalTitle,
         ...(suggestion ? {tmdb_id: suggestion.tmdb_id, is_series: suggestion.is_series} : {}),
       });
+      // The typed text was an add, not a search any more: clear the filter so
+      // the list shows everything again instead of a stale filtered view.
       input.value = "";
+      currentListQuery = "";
+      syncAddButton();
       loadList(currentListPage);
     } catch (e) { showToast(e.message, "error"); }
   };
@@ -283,8 +308,17 @@ async function handleAddTitle() {
 
 document.getElementById("add-btn").onclick = handleAddTitle;
 
-document.getElementById("add-input").addEventListener("keydown", (ev) => {
-  if (ev.key === "Enter") {
+// "×" empties the bar, which also drops the search filter (goes through the
+// normal input handler so the list reloads unfiltered).
+document.getElementById("search-clear").onclick = () => {
+  const input = document.getElementById("search-input");
+  input.value = "";
+  input.dispatchEvent(new Event("input"));
+  input.focus();
+};
+
+document.getElementById("search-input").addEventListener("keydown", (ev) => {
+  if (ev.key === "Enter" && !ev.isComposing) {
     ev.preventDefault();
     handleAddTitle();
   }

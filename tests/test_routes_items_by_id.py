@@ -110,7 +110,7 @@ async def test_items_endpoint_exposes_ids(client):
     items = r.json()["items"]
     # poster_url is a cache-only lookup (see shared/posters.py) — with no
     # TMDb cache entry for this title in tests, it's just None.
-    assert items and set(items[0].keys()) == {"id", "title", "number", "poster_url", "no_poster"}
+    assert items and set(items[0].keys()) == {"id", "title", "number", "poster_url", "no_poster", "added_at"}
 
 
 async def test_upcoming_rename_by_id_survives_a_stale_title(client):
@@ -141,3 +141,9 @@ async def test_items_number_is_position_in_full_list_even_when_searching(client)
         await add_item("movies", t)
     items = client.get("/api/movies/items", params={"q": "beta"}).json()["items"]
     assert [(i["title"], i["number"]) for i in items] == [("Beta", 2), ("Beta Two", 4)]
+
+
+async def test_upcoming_endpoint_exposes_added_at(client):
+    await add_upcoming_movie("Дюна 3")
+    items = client.get("/api/upcoming").json()["items"]
+    assert items and isinstance(items[0]["added_at"], float)

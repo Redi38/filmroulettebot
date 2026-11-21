@@ -374,6 +374,27 @@ html.vt-section::view-transition-new(main-content) {
 .search-row input:focus,
 .search-row input:focus-visible { outline: none; }
 .search-row input::placeholder { color: var(--muted); }
+/* The search box doubles as the add box: the "+" button to its right (outside
+   the bar, as the old add button was) adds whatever is typed through the TMDb
+   picker, while the same text filters the list. */
+/* "×" inside the bar: clears the field (shown only while it has text). */
+.search-clear-btn {
+  flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+  margin: -4px -6px -4px 0; padding: 6px; border: none; border-radius: 50%;
+  background: none; color: var(--muted); cursor: pointer; transition: color 0.15s, background 0.15s;
+}
+.search-clear-btn[hidden] { display: none; }
+.search-clear-btn:hover { color: var(--text); background: rgba(var(--primary-rgb), 0.16); }
+.search-clear-btn:focus-visible { outline: var(--focus-ring); outline-offset: 1px; }
+.search-add-row { display: flex; gap: 8px; align-items: stretch; margin-bottom: 14px; }
+.search-add-row .search-row { flex: 1; min-width: 0; margin-bottom: 0; }
+/* "added on <date>" caption under a list title. */
+.list-row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.list-row-body > .copy-title { flex: none; }
+.list-row-date {
+  padding-left: 10px; color: var(--muted); font-size: 0.72rem; line-height: 1.2;
+  font-variant-numeric: tabular-nums; letter-spacing: 0.01em;
+}
 .list-count {
   color: var(--muted); font-size: 0.82rem; margin: 0 2px 8px; letter-spacing: 0.01em;
   min-height: 1.3em;

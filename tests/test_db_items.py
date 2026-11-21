@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.db.database import add_item, delete_item, get_items, item_exists, rename_item
+from app.db.database import add_item, delete_item, get_items, get_items_with_ids, item_exists, rename_item
 
 pytestmark = pytest.mark.usefixtures("initialized_db")
 
@@ -94,3 +94,19 @@ async def test_items_are_isolated_per_table():
 async def test_unknown_table_is_rejected_by_every_entry_point(fn, args):
     with pytest.raises(ValueError):
         await fn(*args)
+
+
+async def test_add_item_stamps_added_at():
+    import time
+
+    before = time.time()
+    await add_item("movies", "Дюна")
+    after = time.time()
+    [row] = await get_items_with_ids("movies", with_added_at=True)
+    assert before <= row["added_at"] <= after
+
+
+async def test_get_items_with_ids_omits_added_at_by_default():
+    await add_item("movies", "Дюна")
+    [row] = await get_items_with_ids("movies")
+    assert "added_at" not in row

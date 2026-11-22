@@ -69,3 +69,12 @@ export function debounce(fn, wait) {
     t = setTimeout(() => fn(...args), wait);
   };
 }
+
+// TMDb's image CDN is blocked by some DNS resolvers/ISPs; route its posters
+// through our same-origin proxy (/api/img/...) so they load everywhere.
+const _TMDB_IMG = "https://image.tmdb.org/t/p/";
+export function imgSrc(url) {
+  return typeof url === "string" && url.startsWith(_TMDB_IMG)
+    ? "/api/img/" + url.slice(_TMDB_IMG.length)
+    : url;
+}

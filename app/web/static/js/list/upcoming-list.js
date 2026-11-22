@@ -5,7 +5,7 @@ import { openCategoryModal } from "../core/modal.js";
 import { skeletonListHtml } from "../core/skeleton.js";
 import { showToast } from "../core/toast.js";
 import { fadeIn, fadeOut } from "../core/transitions.js";
-import { debounce, escapeHtml, placeholderHtml } from "../core/utils.js";
+import { debounce, escapeHtml, imgSrc, placeholderHtml } from "../core/utils.js";
 import { showLoadError, showSkeleton } from "../core/view-load.js";
 import { createEditableRow, NO_POSTER_HTML } from "./list-row.js";
 import { humanizeShowcaseDate } from "../showcase/date.js";
@@ -191,7 +191,7 @@ function checkRowHtml(e, {action = false} = {}) {
   const own = e.tmdb_title !== e.title
     ? `<span class="check-sub">в списке: ${escapeHtml(e.title)}</span>` : "";
   const poster = e.poster_url
-    ? `<img class="list-row-poster" src="${escapeHtml(e.poster_url)}" alt="" width="36" height="54" loading="lazy" decoding="async">`
+    ? `<img class="list-row-poster" src="${escapeHtml(imgSrc(e.poster_url))}" alt="" width="36" height="54" loading="lazy" decoding="async">`
     : NO_POSTER_HTML; // straight from TMDb's own result, so no poster here means TMDb has none
   return `<div class="check-item fade-in" data-title="${escapeHtml(e.title)}">
     ${poster}<div class="check-main"><span class="check-title">${escapeHtml(e.tmdb_title)}</span>${own}</div>

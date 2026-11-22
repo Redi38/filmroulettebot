@@ -1,4 +1,4 @@
-import { escapeHtml } from "../core/utils.js";
+import { escapeHtml, imgSrc } from "../core/utils.js";
 import { buildShowcaseActionSlot } from "./actions.js";
 import { showcaseDateLine } from "./date.js";
 import { attachShowcaseDetailToggle } from "./detail.js";
@@ -74,7 +74,7 @@ export function showcaseRow(item, cat, isNewSeasons, addMode, skipScope, onSkipS
   // once the image decodes, and loading="lazy" keeps rows far below the
   // fold from fetching at all until they're scrolled near.
   const posterHtml = item.poster_url
-    ? `<img class="showcase-poster img-pending" src="${item.poster_url}" alt="" width="46" height="68" loading="lazy" decoding="async">`
+    ? `<img class="showcase-poster img-pending" src="${escapeHtml(imgSrc(item.poster_url))}" alt="" width="46" height="68" loading="lazy" decoding="async">`
     : `<div class="showcase-poster showcase-poster-placeholder">${item.is_series ? "📺" : "🎬"}</div>`;
   const dateLine = showcaseDateLine(item, cat, isNewSeasons, addMode);
 

@@ -1,5 +1,5 @@
 import { ALL_CATS } from "../core/constants.js";
-import { escapeHtml } from "../core/utils.js";
+import { escapeHtml, imgSrc } from "../core/utils.js";
 import { humanizeShowcaseDate } from "../showcase/date.js";
 import { isAutoWatchEnabled } from "../spin/settings/auto-watch-toggle.js";
 
@@ -33,7 +33,7 @@ export function renderCard(data, opts) {
   // (`aspect-ratio` in buttons-cards.css) until the bytes arrive, so the meta
   // lines below never shift down when the image finally paints.
   const poster = data.poster_url
-    ? `<img class="poster fade-in img-pending" src="${escapeHtml(data.poster_url)}" alt="" decoding="async">`
+    ? `<img class="poster fade-in img-pending" src="${escapeHtml(imgSrc(data.poster_url))}" alt="" decoding="async">`
     : "";
   const ratingNum = parseFloat(data.rating);
   const rating = (data.rating !== "—" && !isNaN(ratingNum))

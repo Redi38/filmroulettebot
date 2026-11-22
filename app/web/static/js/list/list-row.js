@@ -3,7 +3,7 @@ import { openRenameModal } from "../core/modal.js";
 import { ARROW_DOWN_ICON_SVG, ARROW_UP_ICON_SVG, PENCIL_ICON_SVG, TRASH_ICON_SVG } from "../core/icons.js";
 import { removeRowOptimistically, showInlineUndo } from "../core/rows.js";
 import { showToast } from "../core/toast.js";
-import { copyToClipboard } from "../core/utils.js";
+import { copyToClipboard, imgSrc } from "../core/utils.js";
 
 // Shared row renderer for "title + edit + delete-with-undo" lists.
 // Used by list-items.js (per-category lists) and upcoming-list.js.
@@ -52,7 +52,7 @@ function wirePosterRetry(stripe, retry) {
       if (url) {
         const poster = document.createElement("img");
         poster.className = "list-row-poster fade-in";
-        poster.src = url;
+        poster.src = imgSrc(url);
         poster.alt = "";
         stripe.replaceWith(poster);
         return;
@@ -104,7 +104,7 @@ export function createEditableRow(title, opts) {
   if (opts.posterUrl) {
     const poster = document.createElement("img");
     poster.className = "list-row-poster";
-    poster.src = opts.posterUrl;
+    poster.src = imgSrc(opts.posterUrl);
     poster.alt = "";
     poster.loading = "lazy";
     row.appendChild(poster);

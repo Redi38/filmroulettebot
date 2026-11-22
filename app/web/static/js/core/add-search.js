@@ -2,7 +2,7 @@ import { api } from "./api.js";
 import { onBackdropClick } from "./backdrop.js";
 import { overlay } from "./menu.js";
 import { skeletonSearchHtml } from "./skeleton.js";
-import { errorHtml, escapeHtml } from "./utils.js";
+import { errorHtml, escapeHtml, imgSrc } from "./utils.js";
 
 // Shared "pick from TMDb" modal for add-a-title flows: list-items.js,
 // upcoming-list.js, and the tracked-series add button in showcase.js all
@@ -54,7 +54,7 @@ export async function openAddSearchModal(searchEndpoint, query, {onPick, onFallb
       row.type = "button";
       row.className = "add-search-row";
       const poster = r.poster_url
-        ? `<img class="add-search-poster" src="${r.poster_url}" alt="">`
+        ? `<img class="add-search-poster" src="${escapeHtml(imgSrc(r.poster_url))}" alt="">`
         : `<div class="add-search-poster add-search-poster-empty"></div>`;
       row.innerHTML = `<span class="add-search-row-num">${i + 1}</span>${poster}<span class="add-search-row-title">${escapeHtml(r.title)}${r.year ? ` <span class="add-search-year">(${escapeHtml(r.year)})</span>` : ""}</span><span class="add-search-row-badge">${_addSearchTypeBadge(searchEndpoint, r.is_series)}</span>`;
       row.onclick = () => { close(); onPick(r.title, r); };

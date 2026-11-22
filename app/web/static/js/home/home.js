@@ -1,6 +1,6 @@
 import { api } from "../core/api.js";
 import { openPosterInfoModal } from "../core/modal.js";
-import { debounce } from "../core/utils.js";
+import { debounce, imgSrc } from "../core/utils.js";
 import { switchView } from "../core/views.js";
 
 // Home screen ("Афиша"): a CSS-only running poster marquee built from the
@@ -119,7 +119,7 @@ function setHeroBackdrop(posters) {
   const hero = document.querySelector(".home-hero");
   if (!hero) return;
   const pick = posters[Math.floor(Math.random() * posters.length)];
-  if (pick && pick.poster_url) hero.style.setProperty("--hero-backdrop", `url("${pick.poster_url}")`);
+  if (pick && pick.poster_url) hero.style.setProperty("--hero-backdrop", `url("${imgSrc(pick.poster_url)}")`);
 }
 
 function renderHomeMarquee(posters) {
@@ -236,7 +236,7 @@ function fillMarqueeTrack(track, posters) {
 
     const img = document.createElement("img");
     img.className = "marquee-poster";
-    img.src = item.poster_url;
+    img.src = imgSrc(item.poster_url);
     // The image is the button's only content, so its alt IS the button's name.
     img.alt = item.title || "";
     img.draggable = false;

@@ -1,3 +1,4 @@
+import { imgSrc } from "../../core/utils.js";
 import { isWheelPostersEnabled } from "../settings/poster-toggle.js";
 import { computeWheelBoundaries } from "./layout.js";
 import { playWheelTick } from "./wheel-audio.js";
@@ -135,7 +136,7 @@ function getLoadedPosterImage(canvas, url) {
       img._waiting.clear();
     };
     img.onerror = () => img._waiting.clear();
-    img.src = url;
+    img.src = imgSrc(url);
     if (posterImageCache.size >= POSTER_IMAGE_CACHE_MAX) {
       posterImageCache.delete(posterImageCache.keys().next().value);
     }

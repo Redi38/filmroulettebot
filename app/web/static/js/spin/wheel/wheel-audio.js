@@ -97,3 +97,79 @@ export function playWheelStop() {
   }
   if (navigator.vibrate) navigator.vibrate(theme.vibrate);
 }
+
+// ---- Break / repair effects --------------------------------------------
+// Same rules as the ticks: synthesized, silent when the wheel is muted.
+
+function _wheelAudioReady() {
+  if (isWheelMuted()) return null;
+  const ctx = _wheelAudioCtx;
+  if (!ctx) return null;
+  if (ctx.state === "suspended") { ctx.resume().catch(() => {}); return null; }
+  return ctx.state === "running" ? ctx : null;
+}
+
+// Filtered white-noise burst: cracks, tape rips, the rattle of a nail.
+function _playWheelNoise(durationMs, gainPeak, delayMs, hp, lp) {
+  const ctx = _wheelAudioReady();
+  if (!ctx) return;
+  const len = Math.max(1, Math.round(ctx.sampleRate * durationMs / 1000));
+  const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  const hpf = ctx.createBiquadFilter(); hpf.type = "highpass"; hpf.frequency.value = hp;
+  const lpf = ctx.createBiquadFilter(); lpf.type = "lowpass"; lpf.frequency.value = lp;
+  const gain = ctx.createGain();
+  const start = ctx.currentTime + delayMs / 1000;
+  gain.gain.setValueAtTime(0, start);
+  gain.gain.linearRampToValueAtTime(gainPeak, start + 0.006);
+  gain.gain.exponentialRampToValueAtTime(0.0001, start + durationMs / 1000);
+  src.connect(hpf).connect(lpf).connect(gain).connect(ctx.destination);
+  src.start(start);
+}
+
+// A pitch glide: the "sad trombone" after the crack, the hammer's thud.
+function _playWheelSweep(f0, f1, durationMs, gainPeak, delayMs, type) {
+  const ctx = _wheelAudioReady();
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  const start = ctx.currentTime + delayMs / 1000;
+  const end = start + durationMs / 1000;
+  osc.frequency.setValueAtTime(f0, start);
+  osc.frequency.exponentialRampToValueAtTime(f1, end);
+  gain.gain.setValueAtTime(0, start);
+  gain.gain.linearRampToValueAtTime(gainPeak, start + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, end);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(start);
+  osc.stop(end + 0.03);
+}
+
+const WHEEL_SFX = {
+  creak: () => _playWheelSweep(120, 72, 140, 0.035, 0, "sawtooth"),
+  crack: () => {
+    _playWheelNoise(180, 0.28, 0, 700, 9000);
+    _playWheelSweep(160, 45, 320, 0.3, 0, "sine");
+    _playWheelSweep(440, 130, 800, 0.07, 500, "triangle");
+    if (navigator.vibrate) navigator.vibrate([30, 40, 70]);
+  },
+  clack: () => _playWheelBlip(900, 30, 0.05, 0, "square"),
+  hammer: () => {
+    _playWheelSweep(240, 70, 110, 0.28, 0, "sine");
+    _playWheelNoise(45, 0.1, 0, 2200, 9000);
+  },
+  tape: () => _playWheelNoise(340, 0.1, 0, 1400, 7000),
+  fixed: () => {
+    _playWheelBlip(660, 110, 0.12, 0, "triangle");
+    _playWheelBlip(880, 220, 0.12, 110, "triangle");
+  },
+};
+
+export function playWheelSfx(name) {
+  const fn = WHEEL_SFX[name];
+  if (fn) fn();
+}

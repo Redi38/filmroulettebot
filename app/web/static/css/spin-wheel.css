@@ -710,3 +710,48 @@ body.dock-ready .wheel-audio-controls { opacity: 1; pointer-events: auto; }
   .sound-theme-dropdown.open .sound-theme-menu, .cat-select-dropdown.open .cat-select-menu,
   .sound-theme-chevron, .cat-select-chevron { transition: none; transform: none; }
 }
+
+/* ---- Wheel breaks under too many titles, then gets repaired ---------------- */
+/* Flying pieces must never make the page scroll. */
+.wheel-wrap--breaking { overflow: clip; }
+.wheel-patches {
+  position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+}
+.wheel-patches svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.wheel-patches .wb-in, .wheel-patches .wb-nail { transform-box: fill-box; transform-origin: center; }
+.wheel-break-stage { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+.wheel-break-shard {
+  position: absolute; inset: 0; background-repeat: no-repeat; background-size: 100% 100%;
+  will-change: translate, rotate;
+}
+.wheel-break-burst {
+  position: absolute; left: 50%; top: 50%; z-index: 4; width: 52%; aspect-ratio: 1;
+  translate: -50% -50%; display: grid; place-items: center; pointer-events: none;
+  background: #ffd23f; color: #1b1203; font-weight: 900; letter-spacing: 0.02em;
+  font-size: clamp(1.2rem, 4.2vw, 2.1rem); text-align: center;
+  clip-path: polygon(50% 0%, 61% 18%, 82% 8%, 80% 30%, 100% 38%, 82% 52%, 94% 74%, 72% 72%, 65% 96%, 50% 80%, 35% 96%, 28% 72%, 6% 74%, 18% 52%, 0% 38%, 20% 30%, 18% 8%, 39% 18%);
+}
+.wheel-break-chip {
+  position: absolute; left: 50%; top: 50%; z-index: 3; pointer-events: none;
+  background: #b0702f; border-radius: 1px;
+}
+.wheel-hammer-layer {
+  position: absolute; inset: 0; width: 100%; height: 100%; z-index: 3;
+  overflow: visible; pointer-events: none;
+}
+.wheel-repair-btn {
+  position: absolute; z-index: 6; translate: -50% -50%;
+  padding: 14px 26px; border-radius: 999px; border: 3px solid #3a1d00;
+  font-family: inherit; font-size: 1.25rem; font-weight: 800; cursor: pointer;
+  color: #2b1500; background: #ffd23f;
+  box-shadow: 0 0 0 0 rgba(255, 210, 63, 0.7), 0 8px 22px rgba(0, 0, 0, 0.5);
+  animation: wheelRepairFlash 0.9s ease-in-out infinite;
+}
+.wheel-repair-btn:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+@keyframes wheelRepairFlash {
+  0%, 100% { background: #ffd23f; scale: 1; box-shadow: 0 0 0 0 rgba(255, 210, 63, 0.7), 0 8px 22px rgba(0, 0, 0, 0.5); }
+  50% { background: #ff6b3d; scale: 1.08; box-shadow: 0 0 0 14px rgba(255, 107, 61, 0), 0 8px 22px rgba(0, 0, 0, 0.5); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wheel-repair-btn { animation: none; }
+}

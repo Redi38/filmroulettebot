@@ -12,6 +12,7 @@ import { setCanvasRotation } from "./spin.js";
 import { syncSpinResultClearance, wheelLayoutQuietFor } from "./viewport.js";
 import { WHEEL_WRAP_IDS, getWheelDPR, getWheelStyle } from "./wheel-constants.js";
 import { drawWheel, getCanvasRotationDeg, updatePointerTitle } from "./wheel-draw.js";
+import { attachWheelPatches, clearWheelBreak, isWheelPatched } from "./wheel-break.js";
 import { attachWheelHover, startWheelIdle } from "./wheel-idle.js";
 
 // Roulette wheel: DOM construction — the wrap/holder/canvas/hub markup
@@ -35,6 +36,7 @@ export function resetWheelWraps() {
   for (const id of WHEEL_WRAP_IDS) {
     const wrap = document.getElementById(id);
     if (!wrap) continue;
+    clearWheelBreak(wrap);
     wrap.innerHTML = "";
     wrap.classList.remove("wheel-done", "wheel-wrap--settling");
     wrap.style.display = "none";
@@ -234,6 +236,7 @@ export function buildWheel(wrapId, items, weights, posters, opts) {
       : getCanvasRotationDeg(prevCanvas))
     : 0;
 
+  clearWheelBreak(wrap);
   wrap.innerHTML = "";
   wrap.classList.remove("wheel-done");
   wrap.style.display = "flex";
@@ -301,6 +304,8 @@ export function buildWheel(wrapId, items, weights, posters, opts) {
   canvas._wheelItems = items;
   canvas._wheelTitleEl = titleEl;
   if (carriedRotation) setCanvasRotation(canvas, carriedRotation);
+  // Once repaired, the wheel keeps its planks and tape for the rest of the visit.
+  if (isWheelPatched()) attachWheelPatches(canvas, canvasMask);
   updatePointerTitle(canvas, carriedRotation);
   updateWheelScrollLock();
 

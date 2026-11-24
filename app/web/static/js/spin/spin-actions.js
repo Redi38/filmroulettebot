@@ -84,6 +84,16 @@ async function doWheelSpin(cat, isRandom) {
   cancelAutoWatchOpen();
   const wheel = await loadWheel();
   wheel.primeWheelAudio();
+  // Too many titles for one wheel: it falls apart instead of spinning (no
+  // server call, no cooldown, nothing lands in the history), and has to be
+  // repaired first. See spin/wheel/wheel-break.js.
+  const liveWrap = document.getElementById("spin-wheel-wrap");
+  if (wheel.isWheelBroken(liveWrap)) { wheel.nudgeRepair(liveWrap); return; }
+  if (wheel.shouldBreakWheel(liveWrap)) {
+    setDockLocked(true);
+    try { await wheel.breakWheel(liveWrap); } finally { setDockLocked(false); }
+    return;
+  }
   const result = resultEl();
   const wheelWrapId = "spin-wheel-wrap";
   const prevResultHtml = result.innerHTML;
@@ -275,6 +285,14 @@ export function doSpin() {
   return spinMode === "wheel" ? doWheelSpin(cat, isRandom) : doClassicSpin(cat, isRandom);
 }
 
+async function doRepair() {
+  if (dockLocked) return;
+  const wheel = await loadWheel();
+  setDockLocked(true);
+  try { await wheel.repairWheel(document.getElementById("spin-wheel-wrap")); } finally { setDockLocked(false); }
+}
+
 document.addEventListener("click", (e) => {
   if (e.target.closest("#spin-btn")) doSpin();
+  else if (e.target.closest(".wheel-repair-btn")) doRepair();
 });

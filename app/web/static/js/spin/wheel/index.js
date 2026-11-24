@@ -16,3 +16,4 @@ export { animateWheelWeights, drawWheel } from "./wheel-draw.js";
 export { highlightWheelWinner, spinWheelTo } from "./spin.js";
 export { primeWheelAudio } from "./wheel-audio.js";
 export { fireWheelConfetti } from "./confetti.js";
+export { breakWheel, isWheelBroken, nudgeRepair, repairWheel, shouldBreakWheel } from "./wheel-break.js";

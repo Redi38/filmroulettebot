@@ -8,7 +8,7 @@ COPY app/web/static/js app/web/static/js
 COPY app/web/static/css app/web/static/css
 RUN npm run build
 
-FROM python:3.14-slim AS base
+FROM python:3.15-slim AS base
 
 WORKDIR /app
 

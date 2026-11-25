@@ -8,12 +8,12 @@ import { hideWheelHoverLabel, stopWheelIdle, wheelIdleRedraw } from "./wheel-idl
 const WHEEL_REDUCED_MOTION_SPIN_MS = 500;
 const WHEEL_EXTRA_SPINS = 6;
 
-export function scheduleWheelFrame(cb) {
+function scheduleWheelFrame(cb) {
   return document.hidden
     ? {timeoutId: setTimeout(() => cb(performance.now()), 16)}
     : {rafId: requestAnimationFrame(cb)};
 }
-export function cancelWheelFrame(handle) {
+function cancelWheelFrame(handle) {
   if (!handle) return;
   if (handle.rafId != null) cancelAnimationFrame(handle.rafId);
   if (handle.timeoutId != null) clearTimeout(handle.timeoutId);
@@ -35,8 +35,6 @@ export function setCanvasRotation(canvas, deg) {
   // parsing it back out of a computed matrix.
   canvas._rotationDeg = deg;
   canvas.style.transform = `rotate(${deg}deg)`;
-  // A repaired wheel's planks and tape are glued to the disc, so they turn with it.
-  if (canvas._patchLayer) canvas._patchLayer.style.transform = `rotate(${deg}deg)`;
 }
 
 function flickWheelPointer(canvas) {

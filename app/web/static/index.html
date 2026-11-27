@@ -9,6 +9,31 @@
 <link rel="icon" type="image/png" href="/static/favicon.png">
 <link rel="preload" href="/static/fonts/manrope-cyrillic-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/static/fonts/manrope-latin-400.woff2" as="font" type="font/woff2" crossorigin>
+<script>
+  // New Year theme (css/newyear.css). Runs before first paint so there is no
+  // flash of the default palette. Auto: Dec 1 - Jan 14. Override for preview:
+  // ?season=newyear | ?season=off (remembered), ?season=auto (forget).
+  (function () {
+    try {
+      var KEY = "filmroulette_season";
+      var q = new URLSearchParams(location.search).get("season");
+      if (q === "newyear" || q === "off") localStorage.setItem(KEY, q);
+      else if (q === "auto") localStorage.removeItem(KEY);
+      var forced = localStorage.getItem(KEY);
+      var now = new Date(), month = now.getMonth(), year = now.getFullYear();
+      var on = forced ? forced === "newyear" : (month === 11 || (month === 0 && now.getDate() <= 14));
+      if (!on) return;
+      var ny = month === 11 ? year + 1 : month === 0 ? year : year + 1;
+      var days = Math.ceil((new Date(ny, 0, 1) - now) / 864e5);
+      var text = month === 0 && now.getDate() <= 14 ? "С Новым " + ny + " годом! 🎆"
+        : days <= 1 ? "Новый год уже сегодня ночью! 🎆"
+        : "🎄 До Нового " + ny + " года: " + days + " дн.";
+      var root = document.documentElement;
+      root.setAttribute("data-season", "newyear");
+      root.style.setProperty("--ny-pill", JSON.stringify(text));
+    } catch (e) {}
+  })();
+</script>
 <link rel="stylesheet" href="/static/css/dist/bundle.min.css?v={{CSS_BUNDLE_VERSION}}">
 </head>
 <body>

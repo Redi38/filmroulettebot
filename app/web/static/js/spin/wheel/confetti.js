@@ -5,6 +5,11 @@ const WHEEL_CONFETTI_COLORS = [
   "#f6c945", "#ef7fd1", "#5be3d0", "#f6975a",
 ];
 
+const NEW_YEAR_CONFETTI_COLORS = [
+  "#f6c453", "#ffe9a8", "#e5484d", "#ffffff",
+  "#5ec8ff", "#34d399", "#f6c453", "#ff8a8f",
+];
+
 export function fireWheelConfetti(wrapId) {
   const wrap = document.getElementById(wrapId);
   if (!wrap) return;
@@ -12,6 +17,8 @@ export function fireWheelConfetti(wrapId) {
 
   const rect = wrap.getBoundingClientRect();
   if (!rect.width || !rect.height) return;
+  const palette = document.documentElement.dataset.season === "newyear"
+    ? NEW_YEAR_CONFETTI_COLORS : WHEEL_CONFETTI_COLORS;
 
   const canvas = document.createElement("canvas");
   canvas.className = "wheel-confetti-canvas";
@@ -46,7 +53,7 @@ export function fireWheelConfetti(wrapId) {
       vy: Math.sin(angle) * speed - 3.5,
       drag: 0.985 + Math.random() * 0.01,
       size: 6 + Math.random() * 8,
-      color: WHEEL_CONFETTI_COLORS[Math.floor(Math.random() * WHEEL_CONFETTI_COLORS.length)],
+      color: palette[Math.floor(Math.random() * palette.length)],
       rot: Math.random() * Math.PI * 2,
       vr: (Math.random() - 0.5) * 0.5,
       sway: Math.random() * Math.PI * 2,

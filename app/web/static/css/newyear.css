@@ -1,0 +1,99 @@
+/* New Year season theme.
+   Switched on by the inline script in index.html's <head>, which sets
+   <html data-season="newyear"> (Dec 1 - Jan 14, or forced with ?season=newyear,
+   turned off with ?season=off, back to the calendar with ?season=auto) and
+   puts the countdown text into --ny-pill. Everything here is scoped to that
+   attribute, so deleting this file + the manifest line removes the theme.
+   Palette tokens go on :root, so Marvel/DC (set on <body>) still win for the
+   accent colours and only inherit the midnight background. */
+
+:root[data-season="newyear"] {
+  --bg-a: #0f2c4a; --bg-b: #3b1026; --bg-c: #0a0f1d;
+  --card: #151b2e; --sidebar-bg: #0d1324;
+  --muted: #9fa8c4; --border: #2b3250;
+  --primary: #f6c453; --primary-2: #e5484d;
+  --primary-rgb: 246, 196, 83; --primary-2-rgb: 229, 72, 77;
+  --primary-text: #f6c453; --on-primary: #1c1404; --on-pill: #1c1404;
+  --scrollbar-thumb: #343c5c; --scrollbar-thumb-hover: #49527a;
+}
+
+/* ---- snow + sparkles (bg-dust.js adds the motes) ------------------------ */
+[data-season="newyear"] .dust-mote {
+  bottom: auto; top: -4%; filter: none;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 70%);
+  animation-name: ny-snow-fall;
+}
+[data-season="newyear"] .dust-mote.sparkle {
+  background: radial-gradient(circle, rgba(255, 214, 102, 0.95) 0%, rgba(255, 214, 102, 0) 70%);
+  animation-name: ny-sparkle-fall;
+}
+@keyframes ny-snow-fall {
+  0%   { transform: translate(0, 0); opacity: 0; }
+  8%   { opacity: 0.9; }
+  50%  { transform: translate(-22px, 55vh); }
+  92%  { opacity: 0.5; }
+  100% { transform: translate(14px, 108vh); opacity: 0; }
+}
+@keyframes ny-sparkle-fall {
+  0%   { transform: translate(0, 0) scale(0.6); opacity: 0; }
+  10%  { opacity: 1; }
+  35%  { transform: translate(10px, 35vh) scale(1.15); opacity: 0.45; }
+  60%  { transform: translate(-8px, 65vh) scale(0.8); opacity: 1; }
+  100% { transform: translate(6px, 108vh) scale(0.6); opacity: 0; }
+}
+
+/* ---- garland of lights under the header ------------------------------- */
+[data-season="newyear"] header { position: relative; }
+[data-season="newyear"] header::before,
+[data-season="newyear"] header::after {
+  content: ""; position: absolute; top: 100%; left: 0; right: 0; height: 26px;
+  background-repeat: repeat-x; background-size: 160px 26px;
+  pointer-events: none; z-index: 5;
+}
+[data-season="newyear"] header::before {
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='160'%20height='26'%20viewBox='0%200%20160%2026'%3E%3Cpath%20d='M0%201Q20%209%2040%201Q60%209%2080%201Q100%209%20120%201Q140%209%20160%201'%20fill='none'%20stroke='%2358608a'%20stroke-width='1.6'/%3E%3Cline%20x1='20'%20y1='5'%20x2='20'%20y2='8'%20stroke='%2358608a'%20stroke-width='2'/%3E%3Ccircle%20cx='20'%20cy='12'%20r='10'%20fill='%23ff4d5a'%20opacity='.22'/%3E%3Cellipse%20cx='20'%20cy='12'%20rx='4.2'%20ry='5.6'%20fill='%23ff4d5a'/%3E%3Cellipse%20cx='19'%20cy='10.6'%20rx='1'%20ry='1.5'%20fill='white'%20opacity='.7'/%3E%3Cline%20x1='100'%20y1='5'%20x2='100'%20y2='8'%20stroke='%2358608a'%20stroke-width='2'/%3E%3Ccircle%20cx='100'%20cy='12'%20r='10'%20fill='%235ec8ff'%20opacity='.22'/%3E%3Cellipse%20cx='100'%20cy='12'%20rx='4.2'%20ry='5.6'%20fill='%235ec8ff'/%3E%3Cellipse%20cx='99'%20cy='10.6'%20rx='1'%20ry='1.5'%20fill='white'%20opacity='.7'/%3E%3C/svg%3E");
+  animation: ny-twinkle 2.4s ease-in-out infinite alternate;
+}
+[data-season="newyear"] header::after {
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='160'%20height='26'%20viewBox='0%200%20160%2026'%3E%3Cline%20x1='60'%20y1='5'%20x2='60'%20y2='8'%20stroke='%2358608a'%20stroke-width='2'/%3E%3Ccircle%20cx='60'%20cy='12'%20r='10'%20fill='%23ffd25e'%20opacity='.22'/%3E%3Cellipse%20cx='60'%20cy='12'%20rx='4.2'%20ry='5.6'%20fill='%23ffd25e'/%3E%3Cellipse%20cx='59'%20cy='10.6'%20rx='1'%20ry='1.5'%20fill='white'%20opacity='.7'/%3E%3Cline%20x1='140'%20y1='5'%20x2='140'%20y2='8'%20stroke='%2358608a'%20stroke-width='2'/%3E%3Ccircle%20cx='140'%20cy='12'%20r='10'%20fill='%2334d399'%20opacity='.22'/%3E%3Cellipse%20cx='140'%20cy='12'%20rx='4.2'%20ry='5.6'%20fill='%2334d399'/%3E%3Cellipse%20cx='139'%20cy='10.6'%20rx='1'%20ry='1.5'%20fill='white'%20opacity='.7'/%3E%3C/svg%3E");
+  animation: ny-twinkle 2.4s ease-in-out -1.2s infinite alternate;
+}
+@keyframes ny-twinkle {
+  from { opacity: 1; }
+  to   { opacity: 0.4; }
+}
+
+/* ---- brand + hero ---------------------------------------------------- */
+[data-season="newyear"] #sidebar-brand::after { content: "🎄"; margin-left: auto; }
+
+/* Countdown / greeting pill. --ny-pill is a quoted string set by the head script. */
+[data-season="newyear"] .home-hero-text::before {
+  content: var(--ny-pill, "🎄");
+  display: inline-block; margin-bottom: 10px; padding: 5px 12px;
+  font-size: 0.78rem; font-weight: 800; letter-spacing: 0.02em;
+  color: var(--on-primary); border-radius: 999px;
+  background: linear-gradient(100deg, #f6c453 0%, #fff0b8 45%, #f6c453 90%);
+  background-size: 220% 100%;
+  box-shadow: 0 0 18px rgba(var(--primary-rgb), 0.45);
+  animation: ny-shimmer 5s linear infinite;
+}
+@keyframes ny-shimmer {
+  from { background-position: 100% 0; }
+  to   { background-position: -120% 0; }
+}
+/* Warm glow + a few gold sparkles in the hero corner, on top of the existing tint. */
+[data-season="newyear"] .home-hero::after {
+  background:
+    radial-gradient(circle at 92% 14%, rgba(255, 224, 140, 0.55) 0 2px, transparent 3px),
+    radial-gradient(circle at 80% 30%, rgba(255, 224, 140, 0.4) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 96% 46%, rgba(255, 255, 255, 0.4) 0 1.5px, transparent 2.5px),
+    radial-gradient(ellipse 60% 70% at 100% 0%, rgba(var(--primary-rgb), 0.22), transparent 70%),
+    linear-gradient(135deg, rgba(var(--primary-rgb), 0.2), rgba(var(--primary-2-rgb), 0.16)),
+    linear-gradient(0deg, rgba(9, 8, 16, 0.55), rgba(9, 8, 16, 0.2));
+}
+
+@media (forced-colors: active) {
+  [data-season="newyear"] header::before,
+  [data-season="newyear"] header::after,
+  [data-season="newyear"] .dust-mote { display: none; }
+}

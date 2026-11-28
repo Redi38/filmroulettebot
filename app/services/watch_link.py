@@ -27,6 +27,18 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 _TIMEOUT = 5
+
+# kinogo-family sites answer non-browser clients (including a "…bot/1.0"
+# User-Agent) with 404 / bot-detection pages, so the search request is sent
+# with ordinary browser headers.
+_BROWSER_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "ru-RU,ru;q=0.9,en;q=0.8",
+}
 _MAX_RETRIES = 2
 _RETRY_DELAY = 0.7  # seconds
 _client: httpx.AsyncClient | None = None
@@ -34,6 +46,11 @@ _client: httpx.AsyncClient | None = None
 _cache: dict[str, tuple[str | None, float]] = {}
 _CACHE_TTL_HIT = 24 * 3600
 _CACHE_TTL_MISS = 3600
+
+# Some films are listed on the site as "<title>. Фильм" (e.g. "Боец. Фильм")
+# and don't show up when searching by the bare title — see _fetch_watch_page_url.
+_TITLE_LABELS = ("Фильм",)
+_LABEL_SUFFIX_RE = re.compile(r"\.\s*(?:%s)\s*$" % "|".join(map(re.escape, _TITLE_LABELS)), re.I)
 
 # .../<category-slug>/<numeric-id>-<title-slug>.html — matches kinogo.my,
 # kinogo.co, kinogo.cc, and similar DLE-engine sites' article URLs.
@@ -52,18 +69,34 @@ def _translit(text: str) -> str:
     return "".join(_TRANSLIT.get(ch, ch) for ch in text.lower())
 
 
+# Sites transliterate differently (ц -> c / ts, ю -> yu / ju / iu, я -> ya / ja ...),
+# so both the slug and our own transliteration are reduced to one rough key
+# before comparing; only used for matching, never shown anywhere.
+_KEY_REPLACEMENTS = (
+    ("shch", "sh"), ("sch", "sh"), ("tch", "ch"), ("ts", "c"), ("kh", "h"),
+    ("yu", "u"), ("ju", "u"), ("iu", "u"), ("ya", "a"), ("ja", "a"), ("ia", "a"),
+    ("yo", "o"), ("jo", "o"), ("ye", "e"), ("je", "e"), ("y", "i"), ("j", "i"),
+)
+
+
+def _key(word: str) -> str:
+    for old, new in _KEY_REPLACEMENTS:
+        word = word.replace(old, new)
+    return word
+
+
 def _slug_words(url: str) -> set[str]:
     """Extract the word tokens from a page URL's slug, e.g.
     ".../films/52629-djuna-chast-tretja.html" -> {"djuna", "chast", "tretja"}
     (the numeric id is dropped, it's never part of the title)."""
     slug = url.rsplit("/", 1)[-1].removesuffix(".html")
     slug = re.sub(r"^\d+-", "", slug)  # strip leading numeric id
-    return {w for w in slug.split("-") if w}
+    return {_key(w) for w in slug.split("-") if w}
 
 
 def _title_words(title: str) -> set[str]:
     translit = _translit(title)
-    return {w for w in re.split(r"[^a-z0-9]+", translit) if len(w) > 1}
+    return {_key(w) for w in re.split(r"[^a-z0-9]+", translit) if len(w) > 1}
 
 
 def _best_link(urls: list[str], title: str) -> str | None:
@@ -90,7 +123,7 @@ def _get_client() -> httpx.AsyncClient:
     if _client is None:
         _client = httpx.AsyncClient(
             timeout=_TIMEOUT,
-            headers={"User-Agent": "Mozilla/5.0 (compatible; filmroulettebot/1.0)"},
+            headers=_BROWSER_HEADERS,
             follow_redirects=True,
         )
     return _client
@@ -124,31 +157,54 @@ async def find_watch_page_url(title: str) -> str | None:
 
 
 async def _fetch_watch_page_url(title: str) -> str | None:
-    """Uncached: always hits the site."""
+    """Uncached: always hits the site.
+
+    Searches by the plain title first. If that finds no matching page, retries
+    as "<title>. Фильм": the site lists some films under that label and its
+    search doesn't find them by the bare title. If the site is unreachable we
+    stop right away instead of retrying with the label.
+    """
     template = settings.WATCH_LINK_TEMPLATE
     if not template:
         return None
 
-    search_url = template.format(query=quote_plus(title))
+    queries = [title]
+    if not _LABEL_SUFFIX_RE.search(title):
+        queries += [f"{title.strip()}. {label}" for label in _TITLE_LABELS]
 
-    resp = None
+    for query in queries:
+        resp = await _fetch_search_page(template, query)
+        if resp is None:
+            return None
+        url = _pick_page_url(resp, title)
+        if url:
+            if query != title:
+                logger.info("find_watch_page_url: %r found via label query %r", title, query)
+            return url
+    return None
+
+
+async def _fetch_search_page(template: str, query: str) -> httpx.Response | None:
+    """GET the site's search page for `query`, with retries; None on failure."""
+    search_url = template.format(query=quote_plus(query))
     for attempt in range(1, _MAX_RETRIES + 1):
         try:
             resp = await _get_client().get(search_url)
             resp.raise_for_status()
-            break
+            return resp
         except (httpx.HTTPError, httpx.TimeoutException) as e:
             if attempt == _MAX_RETRIES:
                 logger.warning("find_watch_page_url: request failed for %r after %d attempts: %s",
-                                title, attempt, e)
+                                query, attempt, e)
                 return None
             logger.info("find_watch_page_url: attempt %d failed for %r (%s), retrying…",
-                        attempt, title, e)
+                        attempt, query, e)
             await asyncio.sleep(_RETRY_DELAY)
+    return None
 
-    if resp is None:
-        return None
 
+def _pick_page_url(resp: httpx.Response, title: str) -> str | None:
+    """Best title page among the links on a search-results page."""
     # Сайт может редиректить на другое зеркало (например kinogo.my -> kinogomy.net) —
     # берём домен из ФИНАЛЬНОГО URL (resp.url), а не из исходного запроса,
     # иначе регулярка ищет ссылки не того домена и ничего не находит.
@@ -158,5 +214,9 @@ async def _fetch_watch_page_url(title: str) -> str | None:
 
     pattern = re.compile(_PAGE_LINK_RE.pattern.format(domain=re.escape(domain)), re.I)
     candidates = pattern.findall(resp.text)
-    seen = dict.fromkeys(candidates)
-    return _best_link(list(seen), title)
+    seen = list(dict.fromkeys(candidates))
+    best = _best_link(seen, title)
+    if best is None:
+        logger.info("find_watch_page_url: no match for %r among %d page links on %s, e.g. %s",
+                    title, len(seen), domain, [u.rsplit("/", 1)[-1] for u in seen[:5]])
+    return best
